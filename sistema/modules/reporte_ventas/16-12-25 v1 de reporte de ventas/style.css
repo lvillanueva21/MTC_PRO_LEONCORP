@@ -1,0 +1,18 @@
+/* modules/reportes/style.css */
+/* Estilos ligeros y específicos del listado de ventas (sin tocar globales) */
+
+/* Interacción básica */
+.js-row { cursor: pointer; }
+#tblVentas .js-row:hover { background: rgba(0,0,0,.03); }
+
+/* Aspecto de la fila secundaria (detalle) */
+#tblVentas .js-detail > td {
+  background: #f8fafc;
+  border-top: 1px dashed #e5e7eb;
+}
+#tblVentas .js-detail .border { border-color: #e5e7eb !important; }
+#tblVentas .js-detail .table { margin-bottom: 0; }
+#tblVentas .js-detail .fw-bold { font-weight: 700 !important; }
+
+/* Leve refuerzo de badges (ya usa Bootstrap) */
+#tblVentas .badge { font-weight: 600; }

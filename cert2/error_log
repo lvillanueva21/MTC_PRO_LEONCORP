@@ -1,0 +1,6 @@
+[22-Jan-2026 06:41:32 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Access denied for user 'leoncorp_lsistemas'@'localhost' (using password: YES) in /home/lsistemas/public_html/cert2/db.php:9
+Stack trace:
+#0 /home/lsistemas/public_html/cert2/db.php(9): mysqli->__construct('localhost', 'leoncorp_lsiste...', 'LSistemas@20#25', 'leoncorp_lsiste...')
+#1 /home/lsistemas/public_html/cert2/certificado.php(3): include('/home/lsistemas...')
+#2 {main}
+  thrown in /home/lsistemas/public_html/cert2/db.php on line 9

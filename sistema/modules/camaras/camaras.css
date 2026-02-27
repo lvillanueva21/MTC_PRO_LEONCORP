@@ -1,0 +1,351 @@
+/* Fondo general del módulo cámaras */
+.camscape {
+  position: relative;
+  min-height: 100%;
+}
+
+.camscape-bg {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: url('https://static.vecteezy.com/system/resources/previews/012/999/077/large_2x/cctv-camera-install-by-have-water-proof-cover-to-protect-camera-with-home-security-system-concept-free-photo.jpg') center center no-repeat;
+  background-size: cover;
+  filter: saturate(1.05);
+  z-index: 0;
+}
+
+.camscape-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1;
+}
+
+.camscape .content-header,
+.camscape .content {
+  position: relative;
+  z-index: 2;
+}
+
+/* Tarjeta principal estilo “Apple” */
+.cams-card {
+  max-width: 960px;
+  margin-bottom: 22px;
+  padding: 18px 22px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.2);
+  color: #111827;
+}
+
+.cams-card-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+/* Logo circular */
+.cams-brand {
+  display: flex;
+  align-items: center;
+}
+
+.cams-logo-wrap {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: rgba(248, 250, 252, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.35);
+  overflow: hidden;
+}
+
+.cams-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.cams-logo-placeholder {
+  font-size: 1.5rem;
+  color: #111827;
+}
+
+/* Texto empresa */
+.cams-brand-text {
+  margin-left: 12px;
+}
+
+.cams-company {
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #111827;
+}
+
+.cams-subtitle {
+  margin-top: 2px;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+/* Reloj y selector modo */
+.cams-meta {
+  min-width: 220px;
+  text-align: right;
+}
+
+.cams-clock {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  margin-bottom: 4px;
+  color: #111827;
+}
+
+.cams-mode-selector label {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.cams-mode-selector select {
+  font-size: 0.85rem;
+}
+
+/* Grid por departamentos */
+.cams-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-auto-rows: auto;          /* altura por fila = tarjeta más alta de esa fila */
+  column-gap: 16px;
+  row-gap: 16px;
+  align-items: stretch;          /* todas las tarjetas estiran al alto de la fila */
+}
+
+/* Tarjeta de departamento */
+.city-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 14px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;   /* todo el contenido siempre arriba */
+  overflow: hidden;
+  position: relative;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+
+  height: 100%;                 /* se estira al alto de la fila (grid) */
+  min-height: 160px;            /* mantiene look bonito con pocas cámaras */
+}
+
+.city-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.3);
+}
+
+/* Encabezado de departamento */
+.city-header-row {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 4px;
+}
+
+.city-title {
+  flex: 1;
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #111111;
+  display: flex;
+  align-items: flex-start; /* texto pegado a la parte superior del header */
+  justify-content: center;
+  text-align: center;
+}
+
+.city-title-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+  margin-right: 6px;
+  font-size: 0.9rem;
+}
+
+/* Botón de configuración del departamento */
+.cams-toggle-delete {
+  margin-left: 8px;
+}
+
+/* Contenedor de cámaras dentro del departamento */
+.city-links {
+  margin-top: 30px;
+  flex: 1 1 auto;
+  min-height: 0;                /* clave en flex para que overflow no haga cosas raras */
+  overflow: auto;
+  padding-right: 2px;
+
+  display: flex;                /* fuerza layout “de arriba hacia abajo” */
+  flex-direction: column;
+  justify-content: flex-start;  /* botones pegados arriba */
+  align-items: stretch;
+}
+
+/* Fila de cámara con botones de acción */
+.cam-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.cam-row:last-child {
+  margin-bottom: 0;
+}
+
+.cam-row .cam {
+  margin: 0 4px 0 0;            /* evita “aire” arriba/abajo */
+}
+
+/* Botón de cámara (abre DVR) */
+.city-links .cam {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding-top: 10px;
+  padding-right: 10px;
+  padding-bottom: 10px;
+  padding-left: 10px;
+  border-radius: 10px;
+  border-width: 0;
+  border-style: solid;
+  border-color: transparent;
+  color: #ffffff;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.city-links .cam:hover {
+  transform: scale(1.04);
+  filter: brightness(1.05);
+}
+
+/* Mini logo de empresa dentro del botón */
+.cam-logo-mini {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  margin-right: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  padding: 2px;
+}
+
+/* Botones de edición y eliminación:
+   ocultos por defecto, visibles solo en modo “configuración” del departamento */
+.cams-edit-btn,
+.cams-delete-btn {
+  display: none;
+}
+
+.city-card.show-delete .cams-edit-btn,
+.city-card.show-delete .cams-delete-btn {
+  display: inline-block;
+}
+
+/* Botón flotante para crear cámaras */
+.cams-fab {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 1050;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+/* ====== HDD PANEL ====== */
+.hdd-panel {
+  font-size: 0.9rem;
+}
+
+.hdd-header .badge {
+  margin-left: 4px;
+}
+
+.hdd-card {
+  border-radius: 14px;
+  border: 0;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
+}
+
+.hdd-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #111827;
+}
+
+.hdd-meta div {
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+
+.hdd-consumo-ultimo {
+  font-size: 0.85rem;
+  color: #111827;
+}
+
+.hdd-consumo-list .hdd-table-wrapper,
+.hdd-retirados-list .hdd-table-wrapper {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+/* ====== HDD: botón dorado cuando se registró consumo hoy ====== */
+.btn-hdd-camara {
+  border-radius: 999px;
+}
+
+.btn-hdd-done-today {
+  background: linear-gradient(135deg, #facc15, #fef9c3) !important;
+  border-color: #fbbf24 !important;
+  color: #92400e !important;
+  box-shadow: 0 0 8px rgba(250, 204, 21, 0.75);
+}
+
+.btn-hdd-done-today:hover {
+  background: linear-gradient(135deg, #fde68a, #ffffff) !important;
+  border-color: #facc15 !important;
+  color: #92400e !important;
+}
+
+/* ====== HDD: gráfico simple ====== */
+.hdd-chart-card {
+  padding-bottom: 4px;
+}
+
+#hddConsumoChart {
+  width: 100%;
+  height: 160px;
+}

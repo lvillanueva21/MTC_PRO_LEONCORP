@@ -1,0 +1,382 @@
+/* Layout general izquierda / derecha */
+.cert-layout-row {
+  margin-top: 10px;
+}
+
+.cert-layout-left {
+  border-right: 1px dashed #999;
+  padding: 20px;
+}
+
+.cert-layout-right {
+  padding: 20px;
+}
+
+/* En pantallas pequeñas quitar la línea vertical */
+@media (max-width: 767.98px) {
+  .cert-layout-left {
+    border-right: none;
+    border-bottom: 1px dashed #999;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+  }
+}
+
+/* --- FORMULARIO EMITIR CERTIFICADO --- */
+
+.cert-form-title {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.cert-form-code {
+  font-weight: 700;
+  color: #f29bad;  /* rosado del diseño */
+}
+
+.cert-form .form-group {
+  margin-bottom: 10px;
+}
+
+.cert-form .form-control {
+  border-radius: 8px;
+  border: 1px solid #000;
+  height: 38px;
+  font-size: 14px;
+}
+
+.btn-cert-generar {
+  background: #a00026;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 24px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-cert-generar:hover {
+  opacity: 0.9;
+}
+
+/* --- LISTADO CERTIFICADOS EMITIDOS --- */
+
+.cert-list-title {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+/* Filtros superiores */
+.cert-filters .form-group {
+  margin-bottom: 10px;
+}
+
+.cert-filters .form-control {
+  border-radius: 8px;
+  border: 1px solid #000;
+  height: 38px;
+  font-size: 14px;
+}
+
+/* Tabla */
+.table-cert {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.table-cert th,
+.table-cert td {
+  border: 1px solid #555;
+  padding: 6px 8px;
+  vertical-align: middle;
+}
+
+.table-cert th {
+  background: #4b5563;
+  color: #fff;
+}
+
+/* Estado (Activo, Inactivo, Vencido) */
+.badge-status {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 11px;
+  border-radius: 3px;
+  margin-top: 4px;
+}
+
+.status-activo {
+  background: #00ff00;
+}
+
+.status-inactivo {
+  background: #777;
+  color: #fff;
+}
+
+.status-vencido {
+  background: #ff4d4d;
+  color: #fff;
+}
+
+/* Botones de acción */
+.cert-actions {
+  white-space: nowrap;
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: none;
+  margin-right: 3px;
+  cursor: pointer;
+  color: #fff;
+  font-size: 14px;
+}
+
+.btn-icon-qr {
+  background: #d9a700; /* amarillo */
+}
+
+.btn-icon-pdf {
+  background: #2e7d32; /* verde */
+}
+
+.btn-icon-edit {
+  background: #1565c0; /* azul */
+}
+
+.btn-icon-del {
+  background: #c62828; /* rojo */
+}
+
+/* Paginación */
+.cert-pagination {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.page-btn {
+  display: inline-block;
+  min-width: 32px;
+  height: 32px;
+  line-height: 32px;
+  border-radius: 4px;
+  border: 1px solid #0d6efd;
+  background: #fff;
+  color: #0d6efd;
+  margin: 0 2px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.page-btn.active,
+.page-btn:hover {
+  background: #0d6efd;
+  color: #fff;
+}
+
+.page-sep {
+  margin: 0 4px;
+}
+/* --- MODAL DETALLE CERTIFICADO --- */
+
+.cert-modal {
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.cert-modal-header {
+  background: #4b5563;
+  color: #ffffff;
+  border-bottom: none;
+}
+
+.cert-modal-header .modal-title {
+  font-weight: 600;
+}
+
+.cert-modal-header .close {
+  color: #ffffff;
+  opacity: 0.8;
+}
+
+.cert-modal-header .close:hover {
+  opacity: 1;
+}
+
+.cert-modal-body {
+  background: #f9fafb;
+}
+
+.cert-modal-footer {
+  border-top: none;
+}
+
+.cert-detail-modal {
+  font-size: 14px;
+}
+
+.cert-detail-top {
+  background: #fff4d7;
+  border: 1px solid #f2c97f;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 15px;
+}
+
+.cert-detail-top-line {
+  margin-bottom: 2px;
+}
+
+.cert-detail-top-line:last-child {
+  margin-bottom: 0;
+}
+
+.cert-detail-sep {
+  margin: 0 6px;
+  color: #555555;
+}
+
+.cert-detail-grid {
+  margin-top: 5px;
+}
+
+.cert-detail-col {
+  margin-bottom: 10px;
+}
+
+.cert-detail-block {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.cert-detail-label {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.cert-detail-value {
+  font-size: 14px;
+}
+
+/* --- Modal detalle de certificado + QR --- */
+
+.cert-modal {
+  border-radius: 12px;
+  border: none;
+  overflow: hidden;
+}
+
+.cert-modal-header {
+  background: #a00026;
+  color: #ffffff;
+  border-bottom: none;
+}
+
+.cert-modal-body {
+  background: #f9fafb;
+}
+
+.cert-modal-footer {
+  background: #f9fafb;
+  border-top: none;
+}
+
+.cert-detail-modal {
+  font-size: 14px;
+  color: #111827;
+}
+
+.cert-detail-top {
+  margin-bottom: 10px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.cert-detail-top-line {
+  margin-bottom: 2px;
+}
+
+.cert-detail-sep {
+  margin: 0 4px;
+  color: #9ca3af;
+}
+
+.cert-detail-grid {
+  margin-top: 4px;
+}
+
+.cert-detail-col {
+  margin-bottom: 6px;
+}
+
+.cert-detail-block {
+  margin-bottom: 6px;
+}
+
+.cert-detail-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #6b7280;
+}
+
+.cert-detail-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+}
+
+.cert-detail-qr-wrapper {
+  margin-top: 14px;
+  text-align: center;
+}
+
+.cert-detail-qr {
+  display: inline-block;
+}
+
+.cert-detail-qr-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.cert-detail-qr-img-wrap {
+  display: inline-block;
+  padding: 8px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+}
+
+.cert-detail-qr-img {
+  width: 160px;
+  height: 160px;
+}
+
+.cert-detail-qr-link {
+  margin-top: 6px;
+}
+
+.cert-detail-qr-link a {
+  font-size: 13px;
+  text-decoration: none;
+  color: #a00026;
+}
+
+.cert-detail-qr-link a:hover {
+  text-decoration: underline;
+}

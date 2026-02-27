@@ -1,0 +1,227 @@
+/* UI moderna, sin recargar páginas, con drawer lateral */
+.inv-wrapper { background: linear-gradient(180deg,#f8fafc 0,#f5f6f9 100%); }
+.inv-title { font-weight:800; letter-spacing:.2px; }
+.inv-tabs .nav-link { font-weight:700; border-radius:999px; }
+.inv-tabs .nav-link.active { background:#111827; }
+
+.inv-toolbar .form-select,
+.inv-toolbar .form-control { min-height:38px; }
+
+/* Cards de resumen */
+.inv-card {
+  background:#fff; border:1px solid #e5e7eb; border-radius:16px;
+  padding:14px; box-shadow:0 8px 20px rgba(0,0,0,.06);
+}
+.inv-card .h { font-weight:800; font-size:13px; color:#475569; text-transform:uppercase; }
+.inv-card .n { font-weight:900; font-size:22px; }
+.inv-card .mut { color:#64748b; font-size:12px; }
+
+/* Drawer */
+.inv-drawer {
+  position:fixed; top:0; right:-420px; width:420px; max-width:100%;
+  height:100%; background:#0b1220; color:#fff;
+  z-index:1050; box-shadow:-10px 0 30px rgba(0,0,0,.35);
+  transition:right .25s ease;
+}
+.inv-drawer.open { right:0; }
+.inv-mask {
+  position:fixed; inset:0; background:rgba(0,0,0,.25); backdrop-filter:saturate(60%) blur(2px);
+  z-index:1040; opacity:0; pointer-events:none; transition:opacity .2s ease;
+}
+.inv-mask.show { opacity:1; pointer-events:auto; }
+
+.inv-drawer-head {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 16px; background:#0f172a; border-bottom:1px solid rgba(255,255,255,.08);
+}
+.inv-drawer-body { padding:16px; overflow:auto; height:calc(100% - 56px); }
+.inv-drawer .form-label { font-size:13px; color:#cbd5e1; }
+.inv-drawer .form-control, .inv-drawer .form-select, .inv-drawer textarea {
+  background:#0b1220; color:#fff; border:1px solid #243b55;
+}
+.inv-drawer .form-control::placeholder { color:#6b7280; }
+
+/* ===========================
+   Multi-empresa + Botón Print
+   =========================== */
+
+/* Botón Imprimir / PDF (rojo degradado estilo "premium") */
+.inv-btn-print{
+  display:inline-flex;
+  align-items:center;
+  gap:.45rem;
+  border:0;
+  color:#fff !important;
+  font-weight:800;
+  letter-spacing:.2px;
+  padding:.55rem .85rem;
+  border-radius:999px;
+  background: linear-gradient(135deg,#ff3b3b 0%, #d80032 55%, #b0002a 100%);
+  box-shadow: 0 10px 22px rgba(216,0,50,.22), 0 2px 0 rgba(0,0,0,.10);
+  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+  text-decoration:none;
+  white-space:nowrap;
+}
+.inv-btn-print:hover{
+  filter: brightness(1.03) saturate(1.05);
+  box-shadow: 0 14px 28px rgba(216,0,50,.28), 0 2px 0 rgba(0,0,0,.12);
+  transform: translateY(-1px);
+  color:#fff !important;
+}
+.inv-btn-print:active{
+  transform: translateY(0px);
+  box-shadow: 0 8px 18px rgba(216,0,50,.22), 0 1px 0 rgba(0,0,0,.12);
+}
+.inv-btn-print:focus{
+  outline:0;
+  box-shadow: 0 0 0 .2rem rgba(255,59,59,.25), 0 10px 22px rgba(216,0,50,.22);
+}
+
+/* Contenedor del select de empresas (color recomendado: indigo/azul petróleo) */
+.inv-empresa-wrap{
+  display:flex;
+  align-items:center;
+  gap:.45rem;
+  padding:.35rem .55rem;
+  border-radius:999px;
+  border:1px solid rgba(17,24,39,.18);
+  background: linear-gradient(180deg,#ffffff 0%, #f6f8fb 100%);
+  box-shadow: 0 8px 20px rgba(0,0,0,.06);
+}
+.inv-empresa-ico{
+  color:#1f3a8a; /* indigo/azul petróleo: combina con #111827 */
+  opacity:.95;
+  margin-left:.25rem;
+}
+
+/* Select custom (sin romper Bootstrap) */
+.inv-empresa-select{
+  border:0 !important;
+  background: transparent !important;
+  padding-right: 1.6rem; /* espacio para flecha nativa */
+  min-width: 280px;
+  font-weight:800;
+  color:#111827;
+}
+.inv-empresa-select:focus{
+  box-shadow:none !important;
+}
+.inv-empresa-wrap:focus-within{
+  border-color: rgba(31,58,138,.35);
+  box-shadow: 0 0 0 .2rem rgba(31,58,138,.14), 0 10px 22px rgba(0,0,0,.06);
+}
+/* ===========================
+   Header superior (moderno)
+   =========================== */
+.inv-top{
+  background:#fff;
+  border:1px solid #e5e7eb;
+  border-radius:18px;
+  padding:14px 14px 10px 14px;
+  box-shadow:0 10px 24px rgba(0,0,0,.06);
+}
+
+.inv-top-row{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+.inv-top-left{
+  min-width:260px;
+}
+
+.inv-subtitle{
+  color:#64748b;
+  font-size:13px;
+  margin-top:4px;
+}
+
+.inv-top-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.inv-top-divider{
+  height:1px;
+  background:linear-gradient(90deg, rgba(17,24,39,.08), rgba(17,24,39,0));
+  margin:12px 0 10px 0;
+}
+
+/* ===========================
+   Botón Imprimir / PDF (rojo pro)
+   =========================== */
+.inv-btn-print{
+  display:inline-flex;
+  align-items:center;
+  gap:.45rem;
+  border:0;
+  color:#fff !important;
+  font-weight:800;
+  letter-spacing:.2px;
+  padding:.55rem .85rem;
+  border-radius:999px;
+  background: linear-gradient(135deg,#ff3b3b 0%, #d80032 55%, #b0002a 100%);
+  box-shadow: 0 10px 22px rgba(216,0,50,.22), 0 2px 0 rgba(0,0,0,.10);
+  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+  text-decoration:none;
+  white-space:nowrap;
+}
+.inv-btn-print:hover{
+  filter: brightness(1.03) saturate(1.05);
+  box-shadow: 0 14px 28px rgba(216,0,50,.28), 0 2px 0 rgba(0,0,0,.12);
+  transform: translateY(-1px);
+  color:#fff !important;
+}
+.inv-btn-print:active{
+  transform: translateY(0px);
+  box-shadow: 0 8px 18px rgba(216,0,50,.22), 0 1px 0 rgba(0,0,0,.12);
+}
+.inv-btn-print:focus{
+  outline:0;
+  box-shadow: 0 0 0 .2rem rgba(255,59,59,.25), 0 10px 22px rgba(216,0,50,.22);
+}
+
+/* ===========================
+   Select empresas (si lo usas en multi-empresa)
+   Color recomendado: indigo/azul petróleo
+   =========================== */
+.inv-empresa-wrap{
+  display:flex;
+  align-items:center;
+  gap:.45rem;
+  padding:.35rem .55rem;
+  border-radius:999px;
+  border:1px solid rgba(17,24,39,.18);
+  background: linear-gradient(180deg,#ffffff 0%, #f6f8fb 100%);
+  box-shadow: 0 8px 20px rgba(0,0,0,.06);
+}
+
+.inv-empresa-ico{
+  color:#1f3a8a;
+  opacity:.95;
+  margin-left:.25rem;
+}
+
+.inv-empresa-select{
+  border:0 !important;
+  background: transparent !important;
+  padding-right: 1.6rem;
+  min-width: 280px;
+  font-weight:800;
+  color:#111827;
+}
+
+.inv-empresa-select:focus{
+  box-shadow:none !important;
+}
+
+.inv-empresa-wrap:focus-within{
+  border-color: rgba(31,58,138,.35);
+  box-shadow: 0 0 0 .2rem rgba(31,58,138,.14), 0 10px 22px rgba(0,0,0,.06);
+}
+

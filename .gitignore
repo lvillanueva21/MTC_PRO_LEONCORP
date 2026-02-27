@@ -1,0 +1,13 @@
+# uploads por fecha (contenido de usuarios)
+/sistema/almacen/20*/
+
+# cosas típicas que no se suben
+/vendor/
+/node_modules/
+.env
+*.log
+*.sql
+*.zip
+*.rar
+.DS_Store
+Thumbs.db

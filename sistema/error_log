@@ -1,0 +1,7 @@
+[28-Aug-2025 18:08:04 America/Lima] PHP Parse error:  syntax error, unexpected '<', expecting end of file in /home/leoncorp/public_html/ventas/includes/sidebar.php on line 61
+[28-Aug-2025 18:09:32 America/Lima] PHP Parse error:  syntax error, unexpected '<', expecting end of file in /home/leoncorp/public_html/ventas/includes/sidebar.php on line 61
+[28-Aug-2025 18:18:42 America/Lima] PHP Parse error:  syntax error, unexpected '<', expecting end of file in /home/leoncorp/public_html/ventas/includes/sidebar.php on line 61
+[29-Aug-2025 12:01:21 America/Lima] PHP Parse error:  syntax error, unexpected token "<", expecting end of file in /home/leoncorp/public_html/ventas/includes/sidebar.php on line 61
+[29-Aug-2025 12:01:27 America/Lima] PHP Parse error:  syntax error, unexpected token "<", expecting end of file in /home/leoncorp/public_html/ventas/includes/sidebar.php on line 61
+[02-Sep-2025 12:06:13 America/Lima] PHP Parse error:  syntax error, unexpected token "<", expecting end of file in /home/leoncorp/public_html/ventas/includes/sidebar.php on line 61
+[23-Jan-2026 05:13:51 UTC] PHP Deprecated:  trim(): Passing null to parameter #1 ($string) of type string is deprecated in /home/lsistemas/public_html/sistema/test_exec.php on line 4

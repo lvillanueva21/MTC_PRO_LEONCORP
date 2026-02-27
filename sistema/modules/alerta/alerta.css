@@ -1,0 +1,43 @@
+/* Estilo moderno con drawer, cards y contadores */
+.al-wrapper { background: linear-gradient(180deg,#f8fafc 0,#f5f6f9 100%); }
+.al-title { font-weight:800; letter-spacing:.2px; }
+
+#al-cards .al-card {
+  background:#fff; border:1px solid #e5e7eb; border-radius:16px;
+  padding:14px; box-shadow:0 8px 20px rgba(0,0,0,.06);
+}
+.al-card .h { font-weight:800; font-size:13px; color:#475569; text-transform:uppercase; }
+.al-card .n { font-weight:900; font-size:22px; }
+.al-card .mut { color:#64748b; font-size:12px; }
+
+.badge-pill { border-radius:999px; padding:.25rem .6rem; font-weight:700; }
+.badge-soft-green { background:#e9fdf3; color:#166534; }
+.badge-soft-amber { background:#fff7ed; color:#92400e; }
+.badge-soft-red   { background:#fee2e2; color:#991b1b; }
+.badge-soft-blue  { background:#e0f2fe; color:#075985; }
+.badge-soft-gray  { background:#f1f5f9; color:#334155; }
+
+.table td, .table th { vertical-align: middle; }
+.al-countdown { font-variant-numeric: tabular-nums; font-weight:700; }
+
+.al-drawer {
+  position:fixed; top:0; right:-460px; width:460px; max-width:100%;
+  height:100%; background:#0b1220; color:#fff; z-index:1050;
+  box-shadow:-10px 0 30px rgba(0,0,0,.35); transition:right .25s ease;
+}
+.al-drawer.open { right:0; }
+.al-mask {
+  position:fixed; inset:0; background:rgba(0,0,0,.25); backdrop-filter:saturate(60%) blur(2px);
+  z-index:1040; opacity:0; pointer-events:none; transition:opacity .2s ease;
+}
+.al-mask.show { opacity:1; pointer-events:auto; }
+.al-drawer-head {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 16px; background:#0f172a; border-bottom:1px solid rgba(255,255,255,.08);
+}
+.al-drawer-body { padding:16px; overflow:auto; height:calc(100% - 56px); }
+.al-drawer .form-label { font-size:13px; color:#cbd5e1; }
+.al-drawer .form-control, .al-drawer .form-select, .al-drawer textarea {
+  background:#0b1220; color:#fff; border:1px solid #243b55;
+}
+.al-drawer .form-control::placeholder { color:#6b7280; }

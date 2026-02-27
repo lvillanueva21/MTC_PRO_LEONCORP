@@ -1,0 +1,39 @@
+/* modules/reporte_abonos/style.css */
+/* Estilos específicos para el listado de abonos */
+
+/* Interacción básica */
+.js-row {
+  cursor: pointer;
+}
+
+#tblAbonos .js-row:hover {
+  background: rgba(0, 0, 0, .03);
+}
+
+/* Fila secundaria (detalle) */
+#tblAbonos .js-detail > td {
+  background: #f8fafc;
+  border-top: 1px dashed #e5e7eb;
+}
+
+#tblAbonos .js-detail .border {
+  border-color: #e5e7eb !important;
+}
+
+#tblAbonos .js-detail .table {
+  margin-bottom: 0;
+}
+
+#tblAbonos .js-detail .fw-bold {
+  font-weight: 700 !important;
+}
+
+/* Refuerzo de badges (ya usa Bootstrap) */
+#tblAbonos .badge {
+  font-weight: 600;
+}
+
+/* Ajustes pequeños */
+.text-xs {
+  font-size: 0.75rem;
+}

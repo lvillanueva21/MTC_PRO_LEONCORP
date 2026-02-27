@@ -1,0 +1,1 @@
+<p>Vista clientes registrados para adm y recep</p>

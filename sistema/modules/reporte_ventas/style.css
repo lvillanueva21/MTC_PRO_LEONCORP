@@ -1,0 +1,44 @@
+/* modules/reporte_ventas/style.css */
+/* Estilos ligeros y específicos del listado de ventas avanzado */
+
+/* Interacción básica de filas */
+#tblVentas .js-row {
+  cursor: default;
+}
+#tblVentas .js-row:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+/* Fila secundaria (detalle) */
+#tblVentas .js-detail > td {
+  background: #f8fafc;
+  border-top: 1px dashed #e5e7eb;
+}
+#tblVentas .js-detail .border {
+  border-color: #e5e7eb !important;
+}
+#tblVentas .js-detail .table {
+  margin-bottom: 0;
+}
+#tblVentas .js-detail .fw-bold {
+  font-weight: 700 !important;
+}
+
+/* Refuerzo de badges */
+#tblVentas .badge {
+  font-weight: 600;
+}
+
+/* Cards de resumen superiores */
+.summary-card .info-box-text {
+  font-size: 0.8rem;
+}
+.summary-card .info-box-number {
+  font-size: 1.05rem;
+}
+.summary-card .info-box-icon {
+  border-radius: 0.5rem;
+}
+.summary-card .info-box {
+  min-height: 80px;
+}

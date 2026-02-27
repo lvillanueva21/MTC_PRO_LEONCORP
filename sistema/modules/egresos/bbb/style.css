@@ -1,0 +1,337 @@
+:root {
+    --eg-primary: #9387FE;
+    --eg-primary-soft: #f2f0ff;
+    --eg-border-soft: #e5e7eb;
+    --eg-bg-card: #ffffff;
+}
+
+/* Barra superior */
+.eg-bar {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 18px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #9387FE, #6f63f8);
+    color: #fff;
+    margin-bottom: 8px;
+}
+
+.eg-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.eg-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, .12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+}
+
+.eg-titles {
+    min-width: 0;
+}
+
+.eg-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.eg-subtitle {
+    font-size: .82rem;
+    opacity: .9;
+}
+
+.eg-bar-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    text-align: right;
+}
+
+.eg-caja-pill {
+    background: rgba(0, 0, 0, .16);
+    border-radius: 999px;
+    padding: 3px 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .8rem;
+}
+
+.eg-caja-pill .label {
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    font-size: .7rem;
+    opacity: .9;
+}
+
+.eg-caja-alert {
+    padding: 8px 12px;
+    font-size: .85rem;
+}
+
+/* Tarjetas principales */
+.eg-card {
+    border-radius: 16px;
+    border: 1px solid var(--eg-border-soft);
+}
+
+/* Grupo de chips para tipo de comprobante */
+.eg-chip-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.eg-chip {
+    border-radius: 999px;
+    border: 1px solid #d4d4ff;
+    padding: 4px 10px;
+    font-size: .8rem;
+    background: #fff;
+    color: #4b4b7a;
+    cursor: pointer;
+    outline: none;
+    transition: all .15s ease-in-out;
+}
+
+.eg-chip:hover {
+    background: #f7f5ff;
+}
+
+.eg-chip.active {
+    background: var(--eg-primary);
+    border-color: var(--eg-primary);
+    color: #fff;
+    box-shadow: 0 0 0 2px rgba(147, 135, 254, .25);
+}
+
+/* Formulario */
+#egForm .form-group label {
+    font-size: .82rem;
+    font-weight: 600;
+}
+
+#egForm .form-control,
+#egForm .input-group-text {
+    border-radius: 8px;
+}
+
+#egForm textarea.form-control {
+    resize: vertical;
+}
+
+/* Acciones del formulario */
+.eg-form-actions .btn {
+    border-radius: 999px;
+}
+
+.eg-form-actions .btn-primary {
+    background-color: var(--eg-primary);
+    border-color: var(--eg-primary);
+}
+
+.eg-form-actions .btn-primary:hover {
+    background-color: #7d70ff;
+    border-color: #7d70ff;
+}
+
+/* Tabla */
+#egTable thead th {
+    font-size: .8rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+#egTable tbody td {
+    font-size: .8rem;
+}
+
+.eg-row-anulado td {
+    background-color: #fff5f5;
+    color: #b71c1c;
+}
+
+.eg-row-anulado td .badge-success {
+    background-color: #b71c1c !important;
+}
+
+#egPager .page-link {
+    border-radius: 999px;
+}
+
+/* Voucher / recibo */
+.eg-voucher-wrapper {
+    display: flex;
+    justify-content: center;
+}
+
+.eg-voucher {
+    width: 100%;
+    max-width: 850px;
+    border: 1px solid #000;
+    padding: 18px 22px;
+    border-radius: 4px;
+    background: #fff;
+    font-size: .85rem;
+}
+
+.eg-voucher-head {
+    display: grid;
+    grid-template-columns: 90px 1fr 120px;
+    gap: 10px;
+    align-items: center;
+}
+
+.eg-voucher-logo {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 1px solid #000;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.eg-voucher-logo img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.eg-voucher-logo-placeholder {
+    background: #f3f3f3;
+}
+
+.eg-voucher-head-main {
+    text-align: center;
+}
+
+.eg-voucher-empresa {
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.eg-voucher-amount-box {
+    border: 1px solid #000;
+    border-radius: 10px;
+    padding: 8px 10px;
+    text-align: center;
+    font-weight: 700;
+}
+
+.eg-voucher-amount-box .label {
+    font-size: .8rem;
+}
+
+.eg-voucher-amount-box .value {
+    font-size: 1.1rem;
+}
+
+.eg-voucher-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.eg-voucher-block {
+    border: 1px solid #000;
+    padding: 6px 8px;
+    min-height: 44px;
+}
+
+.eg-voucher-block-wide {
+    grid-column: span 2;
+}
+
+.eg-voucher-block .label {
+    font-size: .75rem;
+    font-weight: 600;
+}
+
+.eg-voucher-block .value {
+    margin-top: 2px;
+}
+
+.eg-voucher-section {
+    border: 1px solid #000;
+    padding: 6px 8px;
+    min-height: 70px;
+}
+
+.eg-voucher-section .label {
+    font-size: .75rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.eg-voucher-concepto {
+    white-space: pre-wrap;
+}
+
+.eg-voucher-footer {
+    margin-top: 26px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.eg-voucher-firma {
+    width: 260px;
+    text-align: center;
+    font-size: .8rem;
+}
+
+.eg-voucher-firma .line {
+    border-bottom: 1px solid #000;
+    margin-bottom: 4px;
+}
+
+/* Utilidades */
+.gap-2 {
+    gap: .5rem;
+}
+
+/* Responsive */
+@media (max-width: 991.98px) {
+    .eg-bar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .eg-bar-right {
+        align-items: flex-start;
+        text-align: left;
+    }
+
+    .eg-voucher-head {
+        grid-template-columns: 70px 1fr;
+        grid-template-rows: auto auto;
+    }
+
+    .eg-voucher-amount-box {
+        grid-column: 1 / -1;
+        justify-self: flex-end;
+        margin-top: 6px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .eg-voucher-row {
+        grid-template-columns: 1fr;
+    }
+
+    .eg-voucher-block-wide {
+        grid-column: span 1;
+    }
+}

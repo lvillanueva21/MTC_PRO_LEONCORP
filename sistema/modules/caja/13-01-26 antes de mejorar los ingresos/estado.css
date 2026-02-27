@@ -1,0 +1,246 @@
+/* /modules/caja/estado.css */
+/* Sin trucos de altura: dejamos que AdminLTE+Bootstrap manejen el layout */
+
+.cashbar{
+  background:#f9d66b;
+  border:1px solid #e3c052;
+  border-radius:14px;
+  padding:14px;
+}
+.cashbar .cashbar-row{
+  display:flex; align-items:center; justify-content:space-between; gap:14px;
+}
+.cashbar .top{ padding-bottom:8px; border-bottom:1px dashed rgba(0,0,0,.15); }
+.cashbar .bottom{ padding-top:10px; }
+
+.cashbar .brand{ display:flex; align-items:center; gap:12px; }
+.cashbar .brand .ico{
+  background:#111; color:#fff; width:44px; height:44px; border-radius:12px;
+  display:flex; align-items:center; justify-content:center; font-size:20px;
+  box-shadow:0 6px 16px rgba(0,0,0,.2);
+}
+.cashbar .brand .title{ font-weight:800; letter-spacing:.2px; }
+.cashbar .brand .meta{ color:#1f2937; font-size:.95rem; }
+
+.cashbar .actions .btn{ border-radius:10px; }
+
+/* Chips */
+.chip-group{ display:flex; flex-wrap:wrap; gap:10px; }
+.chip{
+  background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:8px 10px;
+  display:flex; align-items:center; gap:8px; box-shadow:0 2px 6px rgba(0,0,0,.04);
+}
+.chip .dot{ width:10px; height:10px; border-radius:50%; background:#ef4444; box-shadow:0 0 0 2px rgba(0,0,0,.08) inset; }
+.chip .dot.on{ background:#16a34a; }  /* verde */
+.chip .dot.muted{ opacity:.55; }
+.chip .label{ font-weight:800; }
+.chip .code{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size:.9rem; background:#f3f4f6; padding:.1rem .4rem; border-radius:6px;
+}
+.chip .code.disabled{ opacity:.6; }
+.chip .aux{ font-size:.85rem; color:#6b7280; border:1px dashed #e5e7eb; padding:.1rem .4rem; border-radius:6px; }
+
+.card, .box{ border-radius:14px; }
+.btn, .btn-sm, .btn-lg { border-radius:12px; }
+
+@media (min-width: 992px){
+  .sticky-right{ position: sticky; top: 1rem; }
+}
+/* ===== POS Servicios (cards, chips y modal) ===== */
+.chip-btn{ border:1px solid #e5e7eb; background:#fff; border-radius:12px; padding:6px 10px; cursor:pointer; }
+.chip-btn.active{ background:#111; color:#fff; border-color:#111; }
+.svc-card{ border-radius:14px; }
+.svc-price{ font-size:1.25rem; font-weight:800; letter-spacing:.3px; }
+.svc-note{ font-size:.9rem; color:#374151; }
+.list-group-item input[type="radio"]{ width:18px; height:18px; }
+
+/* ===== Carrito (Detalle de venta) ===== */
+.cart-empty{
+  background:#f8fafc; border:1px dashed #e5e7eb; border-radius:12px; color:#111;
+}
+.cart-item{ padding:4px 2px; }
+
+.cart-thumb{
+  width:40px; height:40px;            /* tamaño fijo */
+  flex:0 0 40px;                      /* que NO se estire */
+  border:1px solid #e5e7eb; border-radius:8px;
+  background:#fff; overflow:hidden; display:flex; align-items:center; justify-content:center;
+}
+.cart-thumb img{
+  width:100%; height:100%;            /* obliga a respetar 40x40 */
+  object-fit:contain; display:block;  /* evita que se deforme o salga del cuadro */
+}
+
+.ci-name{ font-weight:700; }
+.ci-controls{ display:flex; align-items:center; gap:8px; font-size:.9rem; color:#374151; }
+.qty-btn{ width:24px; height:24px; border:1px solid #d1d5db; background:#fff; border-radius:8px; line-height:1; }
+.ci-price{ margin-left:6px; font-weight:700; }
+/* Total por línea: ajustable sin desbordar */
+.ci-line-total{
+  font-weight:900;
+  text-align:right;
+  white-space:nowrap;         /* en pantallas normales no parte */
+}
+
+/* Evita que el contenido central empuje y cause overflow */
+.cart-item .flex-grow-1{ min-width:0; }
+
+/* Permite que la fila pueda partir en dos líneas si hace falta */
+.cart-item > .d-flex{ flex-wrap: wrap; }
+
+/* En vistas angostas o con zoom alto, el total baja a una segunda línea */
+@media (max-width: 480px){
+  .ci-line-total{
+    flex: 0 0 100%;
+    order: 3;
+    margin-left: auto;
+    margin-top: 4px;
+    white-space: normal;     /* permite partir si fuera necesario */
+  }
+  .ci-controls{ flex-wrap: wrap; row-gap: 6px; }
+}
+
+
+/* ==== POS: Modal Registrar Pago (rediseño y responsive) ==== */
+#payModal .modal-content{ border-radius:16px; }
+#payModal .modal-header{ border-top-left-radius:16px; border-top-right-radius:16px; }
+
+.pay-box{
+  border:1px solid #e5e7eb;
+  border-radius:14px;
+  padding:12px;
+  background:#fff;
+  box-shadow:0 1px 2px rgba(0,0,0,.03);
+}
+.pay-box .form-label{ margin-bottom:.25rem; }
+.pay-box .form-control,
+.pay-box .form-select{
+  border-radius:10px;
+  min-height:36px;
+}
+
+@media (min-width: 992px){
+  .pay-box{ padding:14px; }
+}
+
+/* Lista de items con miniaturas (Detalles de pago) */
+#pmDetalleList{ display:flex; flex-direction:column; gap:8px; }
+.pm-item{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:12px; padding:6px 0;
+}
+.pm-item + .pm-item{ border-top:1px dashed #e5e7eb; }
+.pm-left{ display:flex; align-items:center; gap:10px; }
+.pm-thumb{
+  width:36px; height:36px; flex:0 0 36px;
+  border:1px solid #e5e7eb; border-radius:8px; background:#fff;
+  overflow:hidden; display:flex; align-items:center; justify-content:center;
+}
+.pm-thumb img{ width:100%; height:100%; object-fit:contain; }
+.pm-title{ font-weight:800; font-size:.92rem; text-transform:uppercase; line-height:1.1; }
+.pm-sub{ font-size:.8rem; color:#6b7280; }
+.pm-amount{ font-weight:800; white-space:nowrap; }
+
+/* === PM: Acciones del bloque "2. Datos de cliente" (grid responsivo con columnas iguales y botones del mismo tamaño) === */
+.pm-actions{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));  /* 4 columnas iguales en pantallas grandes */
+  gap: 8px;
+  align-items: stretch;        /* estira los ítems a la altura de la fila */
+  grid-auto-rows: 1fr;         /* todas las filas con misma altura (igual a la más alta) */
+}
+
+@media (max-width: 1199.98px){
+  .pm-actions{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 575.98px){
+  .pm-actions{ grid-template-columns: 1fr; }
+}
+
+/* Cada botón debe llenar el tamaño de su celda de grid */
+.pm-actions > .pm-chip{
+  width: 100%;
+  height: 100%;
+}
+
+.pm-chip{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 8px 10px;
+
+  /* Alto mínimo común (la fila ya iguala alturas, esto evita botones demasiado bajos) */
+  min-height: 44px;
+
+  font-weight: 700;
+  font-size: .9rem;
+  line-height: 1.2;
+
+  /* Permite que el texto parta en varias líneas */
+  white-space: normal;
+  word-break: break-word;
+}
+
+.pm-chip i{ font-size: 15px; flex: 0 0 auto; }
+.pm-chip span{ display: block; }
+
+/* Variantes de color (sin cambios visuales de grosor que alteren altura) */
+.pm-chip-red{    background:#fecaca; border-color:#ef4444; color:#7f1d1d; }
+.pm-chip-blue{   background:#bfdbfe; border-color:#3b82f6; color:#1e3a8a; }
+.pm-chip-yellow{ background:#fde68a; border-color:#f59e0b; color:#78350f; }
+.pm-chip-dark{   background:#e5e7eb; border-color:#9ca3af; color:#111827; }
+
+/* Forzar etiquetas ARRIBA del campo dentro del modal de pago */
+#payModal .form-label{
+  display: block;
+  margin-bottom: .35rem;
+}
+
+/* ==== Voucher / Recibo de venta ==== */
+.voucher{ font-size:.92rem; }
+.voucher .v-box{
+  border:1px solid #e5e7eb; border-radius:12px; padding:10px; background:#fff;
+  box-shadow:0 1px 2px rgba(0,0,0,.02); margin-bottom:8px;
+}
+.voucher .v-title{ font-weight:800; text-transform:uppercase; font-size:.95rem; margin-bottom:6px; }
+.voucher .v-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:6px 12px; }
+.voucher .t{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.voucher table{ width:100%; border-collapse:collapse; }
+.voucher th, .voucher td{ padding:6px 8px; border-bottom:1px dashed #e5e7eb; }
+.voucher .v-total{ font-weight:900; font-size:1.1rem; text-align:right; }
+
+@media (max-width: 575.98px){
+  .voucher .v-grid{ grid-template-columns: 1fr; }
+}
+
+.voucher{ font-size:.92rem; max-width:760px; margin:0 auto; }
+
+/* ==== POS: Panel "El conductor es otra persona" ==== */
+.driver-box{
+  background:#eef2ff;
+  border:2px dashed #94a3b8;
+  border-radius:12px;
+  padding:12px;
+}
+.driver-box .title{
+  font-weight:800;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:6px;
+}
+/* Alertas embebidas en modales */
+.modal-inline-alert { margin-bottom: 8px; }
+
+/* Refuerzo visual (Bootstrap ya pinta is-invalid, aquí aseguramos contraste) */
+.form-control.is-invalid, .form-select.is-invalid {
+  border-color: #dc3545 !important;
+  box-shadow: none;
+}
+

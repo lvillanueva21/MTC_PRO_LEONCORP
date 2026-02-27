@@ -1,0 +1,85 @@
+/* Consola - estilos inspirados en tu mock de “bloques de color” */
+
+:root {
+  --radius: 16px;
+  --shadow: 0 10px 24px rgba(0,0,0,.15);
+  --shadow-hover: 0 14px 30px rgba(0,0,0,.22);
+  --gap: 18px;
+}
+
+/* Cabecera oscura (faixa superior) */
+.console-hero {
+  background: #2a1916; /* marrón oscuro cercano al mock */
+  color: #fff;
+  padding: 14px 0;
+  box-shadow: inset 0 -4px 0 rgba(255,255,255,.08);
+}
+.console-hero h1 {
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: .3px;
+}
+
+/* GRID: 4 columnas en desktop, se adapta hacia abajo */
+.console-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--gap);
+}
+@media (min-width: 1200px) {
+  .console-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+/* TILE: bloque sólido de color con icono + nombre */
+.tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 86px;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--c, #0ea5e9);
+  color: #fff;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+  outline: none;
+}
+
+/* Sutileza de brillo */
+.tile::after {
+  content: "";
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255,255,255,.2) 0%, rgba(255,255,255,0) 45%);
+  pointer-events: none;
+}
+
+.tile:hover,
+.tile:focus {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+  filter: saturate(1.05);
+}
+
+.tile-ico {
+  font-size: 1.4rem;
+  line-height: 1;
+  width: 2rem;
+  text-align: center;
+  opacity: .95;
+}
+.tile-label {
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-shadow: 0 1px 2px rgba(0,0,0,.25);
+}
+
+/* Modal: el header toma el color dinámico */
+#consoleModal .modal-header {
+  background: var(--modal-color, #0ea5e9);
+  color: #fff;
+}
+#consoleModal .modal-title { font-weight: 800; }

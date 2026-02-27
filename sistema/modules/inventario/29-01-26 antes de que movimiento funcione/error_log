@@ -1,0 +1,30 @@
+[26-Jan-2026 17:46:26 America/Lima] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in /home/lsistemas/public_html/sistema/modules/inventario/api.php:361
+Stack trace:
+#0 /home/lsistemas/public_html/sistema/modules/inventario/api.php(361): mysqli_stmt->bind_param('isssssssdssiiis...', 1, 'EQUIPO', 'C\xC3\x81MARA HIKVISI...', 'En buen estado,...', 'HIKVISION', 'GTT-334-F', '625454545F', NULL, 1.0, 'UND', 'BUENO', 1, 1, NULL, NULL, NULL, 'GGGGGGGGGG', 1)
+#1 {main}
+  thrown in /home/lsistemas/public_html/sistema/modules/inventario/api.php on line 361
+[26-Jan-2026 17:46:40 America/Lima] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in /home/lsistemas/public_html/sistema/modules/inventario/api.php:361
+Stack trace:
+#0 /home/lsistemas/public_html/sistema/modules/inventario/api.php(361): mysqli_stmt->bind_param('isssssssdssiiis...', 1, 'EQUIPO', 'C\xC3\x81MARA HIKVISI...', 'En buen estado,...', 'HIKVISION', 'GTT-334-F', '625454545F', NULL, 1.0, 'UND', 'BUENO', 1, 1, NULL, NULL, NULL, 'GGGGGGGGGG', 1)
+#1 {main}
+  thrown in /home/lsistemas/public_html/sistema/modules/inventario/api.php on line 361
+[26-Jan-2026 17:46:56 America/Lima] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in /home/lsistemas/public_html/sistema/modules/inventario/api.php:361
+Stack trace:
+#0 /home/lsistemas/public_html/sistema/modules/inventario/api.php(361): mysqli_stmt->bind_param('isssssssdssiiis...', 1, 'EQUIPO', 'asdasd', 'asdas', 'asdas', 'asdas', 'asdasd', 'asdas', 1.0, 'UND', 'BUENO', NULL, NULL, NULL, NULL, NULL, 'asdasd', 1)
+#1 {main}
+  thrown in /home/lsistemas/public_html/sistema/modules/inventario/api.php on line 361
+[26-Jan-2026 17:47:04 America/Lima] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in /home/lsistemas/public_html/sistema/modules/inventario/api.php:361
+Stack trace:
+#0 /home/lsistemas/public_html/sistema/modules/inventario/api.php(361): mysqli_stmt->bind_param('isssssssdssiiis...', 1, 'EQUIPO', 'asdasd', 'asdas', 'asdas', 'asdas', 'asdasd', 'asdas', 1.0, 'UND', 'BUENO', 1, 1, NULL, NULL, NULL, 'asdasd', 1)
+#1 {main}
+  thrown in /home/lsistemas/public_html/sistema/modules/inventario/api.php on line 361
+[26-Jan-2026 17:54:05 America/Lima] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in /home/lsistemas/public_html/sistema/modules/inventario/api.php:361
+Stack trace:
+#0 /home/lsistemas/public_html/sistema/modules/inventario/api.php(361): mysqli_stmt->bind_param('isssssssdssiiis...', 1, 'EQUIPO', 'HG', 'H', 'H', 'HG', 'H', 'H', 1.0, 'UND', 'BUENO', NULL, NULL, NULL, NULL, NULL, 'H', 0)
+#1 {main}
+  thrown in /home/lsistemas/public_html/sistema/modules/inventario/api.php on line 361
+[26-Jan-2026 17:54:15 America/Lima] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in /home/lsistemas/public_html/sistema/modules/inventario/api.php:361
+Stack trace:
+#0 /home/lsistemas/public_html/sistema/modules/inventario/api.php(361): mysqli_stmt->bind_param('isssssssdssiiis...', 1, 'EQUIPO', 'HG', 'H', 'H', 'HG', 'H', 'H', 1.0, 'UND', 'BUENO', 1, NULL, 'HJ', 'H', 'HJH', 'H', 0)
+#1 {main}
+  thrown in /home/lsistemas/public_html/sistema/modules/inventario/api.php on line 361

@@ -1,0 +1,144 @@
+/* /modules/certificados/estilos.css */
+.certbar {
+  background: #a00026;          /* rojo tipo figura 01 */
+  color: #fff;
+  border-radius: 18px;
+  padding: 10px 18px;
+  margin-bottom: 10px;
+}
+
+.certbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* IZQUIERDA: ICONO + TEXTO */
+.cert-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.cert-logo {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  background: #000;              /* fondo negro puro */
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cert-logo i {
+  color: #fff;                   /* iconos blancos garantizados */
+}
+
+.cert-logo .main-ico {
+  font-size: 32px;
+}
+
+.cert-logo .sub-ico {
+  position: absolute;
+  right: 8px;
+  top: 8px;
+  font-size: 16px;
+}
+
+.cert-title {
+  font-size: 18px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cert-meta {
+  font-size: 12px;
+  margin-top: 4px;
+  opacity: 0.9;
+}
+
+/* DERECHA: TARJETA BLANCA */
+.cert-panel {
+  background: #ffffff;
+  color: #000;
+  border-radius: 14px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.25);
+  min-width: 260px;
+}
+
+.cert-panel-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.cert-panel-label {
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.cert-panel-total {
+  margin-top: 4px;
+  font-weight: 700;
+  color: #a00026;
+}
+
+/* separador punteado vertical */
+.cert-panel-divider {
+  width: 1px;
+  align-self: stretch;
+  border-left: 1px dashed #888;
+  margin: 0 16px;
+}
+
+/* Fast / Aula Virtual */
+.cert-panel-right {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.panel-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel-name {
+  font-weight: 600;
+}
+
+.panel-value {
+  font-weight: 700;
+  color: #d9a700;   /* amarillo suave como en fig.01 */
+}
+
+/* Ajuste responsive: si la pantalla es pequeña, apila */
+@media (max-width: 768px) {
+  .certbar-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .cert-panel {
+    align-self: stretch;
+  }
+
+  .cert-title {
+    white-space: normal;
+  }
+}
+/* División vertical simple */
+.left-box {
+  border-right: 1px dashed #999;
+  padding: 20px;
+}
+
+.right-box {
+  padding: 20px;
+}

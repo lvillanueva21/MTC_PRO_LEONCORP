@@ -1,0 +1,36 @@
+/* modules/reporte_clientes/style.css */
+/* Estilos específicos para la Central de clientes */
+
+.clientes-summary-card .icon {
+    font-size: 1.8rem;
+    opacity: 0.8;
+}
+
+.clientes-summary-card .small-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+/* Tabla de clientes */
+#tblClientes .js-row-cliente {
+    cursor: pointer;
+}
+
+#tblClientes .js-row-cliente:hover {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+#tblClientes .js-detail-cliente > td {
+    background-color: #f8fafc;
+    border-top: 1px dashed #e5e7eb;
+}
+
+#tblClientes .titulo-bloque {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+#tblClientes .badge {
+    font-weight: 600;
+}

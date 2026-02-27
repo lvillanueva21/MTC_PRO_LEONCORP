@@ -1,0 +1,55 @@
+[03-Sep-2025 20:53:11 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Access denied for user 'USUARIO'@'localhost' (using password: YES) in /home/leoncorp/public_html/ventas/includes/info_tecnica.php:27
+Stack trace:
+#0 /home/leoncorp/public_html/ventas/includes/info_tecnica.php(27): mysqli->__construct('localhost', 'USUARIO', 'CONTRASE\xC3\x91A', 'BASE_DATOS')
+#1 {main}
+  thrown in /home/leoncorp/public_html/ventas/includes/info_tecnica.php on line 27
+[03-Sep-2025 20:56:00 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Access denied for user 'USUARIO'@'localhost' (using password: YES) in /home/leoncorp/public_html/ventas/includes/perfil_tecnico.php:22
+Stack trace:
+#0 /home/leoncorp/public_html/ventas/includes/perfil_tecnico.php(22): mysqli->__construct('localhost', 'USUARIO', 'CONTRASE\xC3\x91A', 'BASE_DATOS')
+#1 {main}
+  thrown in /home/leoncorp/public_html/ventas/includes/perfil_tecnico.php on line 22
+[03-Sep-2025 15:57:19 America/Lima] PHP Fatal error:  Uncaught mysqli_sql_exception: Access denied for user 'USUARIO'@'localhost' (using password: YES) in /home/leoncorp/public_html/ventas/includes/info_servidor.php:20
+Stack trace:
+#0 /home/leoncorp/public_html/ventas/includes/info_servidor.php(20): mysqli->__construct('localhost', 'USUARIO', 'CONTRASE\x810\x885A', 'BASE_DATOS')
+#1 {main}
+  thrown in /home/leoncorp/public_html/ventas/includes/info_servidor.php on line 20
+[03-Sep-2025 20:57:44 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Access denied for user 'USUARIO'@'localhost' (using password: YES) in /home/leoncorp/public_html/ventas/includes/info_servidor.php:22
+Stack trace:
+#0 /home/leoncorp/public_html/ventas/includes/info_servidor.php(22): mysqli->__construct('localhost', 'USUARIO', 'CONTRASE\x810\x885A', 'BASE_DATOS')
+#1 {main}
+  thrown in /home/leoncorp/public_html/ventas/includes/info_servidor.php on line 22
+[03-Sep-2025 20:57:44 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Access denied for user 'USUARIO'@'localhost' (using password: YES) in /home/leoncorp/public_html/ventas/includes/info_servidor.php:22
+Stack trace:
+#0 /home/leoncorp/public_html/ventas/includes/info_servidor.php(22): mysqli->__construct('localhost', 'USUARIO', 'CONTRASE\x810\x885A', 'BASE_DATOS')
+#1 {main}
+  thrown in /home/leoncorp/public_html/ventas/includes/info_servidor.php on line 22
+[03-Sep-2025 20:57:54 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Access denied for user 'USUARIO'@'localhost' (using password: YES) in /home/leoncorp/public_html/ventas/includes/info_servidor.php:27
+Stack trace:
+#0 /home/leoncorp/public_html/ventas/includes/info_servidor.php(27): mysqli->__construct('localhost', 'USUARIO', 'CONTRASE\x810\x885A', 'BASE_DATOS')
+#1 {main}
+  thrown in /home/leoncorp/public_html/ventas/includes/info_servidor.php on line 27
+[03-Sep-2025 15:58:16 America/Lima] PHP Fatal error:  Uncaught mysqli_sql_exception: Access denied for user 'USUARIO'@'localhost' (using password: YES) in /home/leoncorp/public_html/ventas/includes/info_servidor.php:20
+Stack trace:
+#0 /home/leoncorp/public_html/ventas/includes/info_servidor.php(20): mysqli->__construct('localhost', 'USUARIO', 'CONTRASE\xC3\x91A', 'BASE_DATOS')
+#1 {main}
+  thrown in /home/leoncorp/public_html/ventas/includes/info_servidor.php on line 20
+[03-Sep-2025 20:58:24 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Access denied for user 'USUARIO'@'localhost' (using password: YES) in /home/leoncorp/public_html/ventas/includes/info_servidor.php:27
+Stack trace:
+#0 /home/leoncorp/public_html/ventas/includes/info_servidor.php(27): mysqli->__construct('localhost', 'USUARIO', 'CONTRASE\xC3\x91A', 'BASE_DATOS')
+#1 {main}
+  thrown in /home/leoncorp/public_html/ventas/includes/info_servidor.php on line 27
+[03-Sep-2025 20:59:16 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Access denied for user 'USUARIO'@'localhost' (using password: YES) in /home/leoncorp/public_html/ventas/includes/info_servidor.php:22
+Stack trace:
+#0 /home/leoncorp/public_html/ventas/includes/info_servidor.php(22): mysqli->__construct('localhost', 'USUARIO', 'CONTRASE\xC3\x91A', 'BASE_DATOS')
+#1 {main}
+  thrown in /home/leoncorp/public_html/ventas/includes/info_servidor.php on line 22
+[03-Sep-2025 20:59:17 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Access denied for user 'USUARIO'@'localhost' (using password: YES) in /home/leoncorp/public_html/ventas/includes/info_servidor.php:22
+Stack trace:
+#0 /home/leoncorp/public_html/ventas/includes/info_servidor.php(22): mysqli->__construct('localhost', 'USUARIO', 'CONTRASE\xC3\x91A', 'BASE_DATOS')
+#1 {main}
+  thrown in /home/leoncorp/public_html/ventas/includes/info_servidor.php on line 22
+[03-Sep-2025 20:59:24 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Access denied for user 'USUARIO'@'localhost' (using password: YES) in /home/leoncorp/public_html/ventas/includes/info_servidor.php:27
+Stack trace:
+#0 /home/leoncorp/public_html/ventas/includes/info_servidor.php(27): mysqli->__construct('localhost', 'USUARIO', 'CONTRASE\xC3\x91A', 'BASE_DATOS')
+#1 {main}
+  thrown in /home/leoncorp/public_html/ventas/includes/info_servidor.php on line 27
