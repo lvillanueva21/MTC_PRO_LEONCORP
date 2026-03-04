@@ -13,7 +13,7 @@ $acciones=[
   ['key'=>'precios',      'label'=>'Gestión de precios',      'icon'=>'fas fa-tags',             'color'=>'#facc15','href'=>'precios/gestion.php'],
   ['key'=>'cajas',        'label'=>'Gestión de cajas',        'icon'=>'fas fa-boxes',            'color'=>'#a855f7','href'=>'cajas/gestion.php'],
   ['key'=>'usuarios',     'label'=>'Gestión de usuarios',     'icon'=>'fas fa-users',            'color'=>'#0ea5e9','href'=>'usuarios/gestion.php'],
-  ['key'=>'camaras',      'label'=>'Gestión de cámaras',      'icon'=>'fas fa-video',            'color'=>'#ef4444','href'=>'camaras/gestion.php'],
+  ['key'=>'comprobantes', 'label'=>'Gestión de comprobantes', 'icon'=>'fas fa-receipt',          'color'=>'#ef4444','href'=>'comprobantes/gestion.php'],
   ['key'=>'cursos',       'label'=>'Gestión de cursos',       'icon'=>'fas fa-graduation-cap',   'color'=>'#8b5cf6','href'=>'cursos/gestion.php'],
   ['key'=>'empresas',     'label'=>'Gestión de empresas',     'icon'=>'fas fa-building',         'color'=>'#111827','href'=>'empresas/gestion.php'],
   ['key'=>'inventarios',  'label'=>'Gestión de inventarios',  'icon'=>'fas fa-clipboard-list',   'color'=>'#a16207','href'=>'inventarios/gestion.php'],

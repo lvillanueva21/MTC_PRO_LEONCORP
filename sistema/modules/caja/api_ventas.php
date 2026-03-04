@@ -44,6 +44,25 @@ function getDiariaAbierta(mysqli $db, int $empId){
   $st->bind_param('i',$empId); $st->execute();
   return $st->get_result()->fetch_assoc() ?: null;
 }
+function getUltimaCajaDiaria(mysqli $db, int $empId){
+  $st = $db->prepare("SELECT id, fecha, codigo, estado
+                      FROM mod_caja_diaria
+                      WHERE id_empresa=?
+                      ORDER BY fecha DESC, id DESC
+                      LIMIT 1");
+  $st->bind_param('i',$empId); $st->execute();
+  return $st->get_result()->fetch_assoc() ?: null;
+}
+function is_valid_ymd($value){
+  if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$value)) return false;
+  $dt = DateTime::createFromFormat('Y-m-d', (string)$value);
+  return $dt && $dt->format('Y-m-d') === (string)$value;
+}
+function human_date($value){
+  if (!is_valid_ymd($value)) return (string)$value;
+  $dt = DateTime::createFromFormat('Y-m-d', (string)$value);
+  return $dt ? $dt->format('d/m/Y') : (string)$value;
+}
 function map_medios_pago_activos(mysqli $db): array {
   $rs = $db->query("SELECT id, nombre, requiere_ref FROM pos_medios_pago WHERE activo=1");
   $out = [];
@@ -91,26 +110,86 @@ try {
   if ($accion === 'ventas_buscar') {
     $q      = trim((string)($_GET['q'] ?? ''));
     $estado = $_GET['estado'] ?? 'pending'; // pending | paid | void | refund | all
+    $scope  = trim((string)($_GET['scope'] ?? 'latest')); // latest | date | range
+    $fecha  = trim((string)($_GET['fecha'] ?? ''));
+    $desde  = trim((string)($_GET['desde'] ?? ''));
+    $hasta  = trim((string)($_GET['hasta'] ?? ''));
     $page   = max(1, (int)($_GET['page'] ?? 1));
-    $per    = min(30, max(5, (int)($_GET['per'] ?? 5))); // por defecto 5
+    $per    = min(50, max(10, (int)($_GET['per'] ?? 10))); // por defecto 10
 
     $where = ["v.id_empresa=?"];
     $types = "i";
     $pars  = [$empId];
+    $context = [
+      'scope'  => 'latest',
+      'title'  => 'Ultima caja',
+      'detail' => 'Sin contexto disponible.'
+    ];
+
+    if ($scope !== 'date' && $scope !== 'range') {
+      $scope = 'latest';
+    }
+
+    if ($scope === 'date') {
+      if (!is_valid_ymd($fecha)) json_err('Selecciona una fecha valida.');
+      $where[] = "cd.fecha=?";
+      $types  .= "s";
+      $pars[]  = $fecha;
+      $context = [
+        'scope'  => 'date',
+        'title'  => 'Fecha seleccionada',
+        'detail' => human_date($fecha)
+      ];
+    } elseif ($scope === 'range') {
+      if (!is_valid_ymd($desde) || !is_valid_ymd($hasta)) json_err('Selecciona un rango de fechas valido.');
+      if ($desde > $hasta) json_err('La fecha inicial no puede ser mayor que la final.');
+      $where[] = "cd.fecha BETWEEN ? AND ?";
+      $types  .= "ss";
+      $pars[]  = $desde;
+      $pars[]  = $hasta;
+      $context = [
+        'scope'  => 'range',
+        'title'  => 'Rango seleccionado',
+        'detail' => human_date($desde).' al '.human_date($hasta)
+      ];
+    } else {
+      $ultimaCaja = getUltimaCajaDiaria($db, $empId);
+      if ($ultimaCaja) {
+        $where[] = "v.caja_diaria_id=?";
+        $types  .= "i";
+        $pars[]  = (int)$ultimaCaja['id'];
+        $context = [
+          'scope'       => 'latest',
+          'title'       => 'Ultima caja',
+          'detail'      => $ultimaCaja['codigo'].' | '.human_date($ultimaCaja['fecha']).' | '.ucfirst((string)$ultimaCaja['estado']),
+          'caja_id'     => (int)$ultimaCaja['id'],
+          'caja_codigo' => $ultimaCaja['codigo'],
+          'caja_fecha'  => $ultimaCaja['fecha'],
+          'caja_estado' => $ultimaCaja['estado']
+        ];
+      } else {
+        $where[] = "1=0";
+        $context = [
+          'scope'  => 'latest',
+          'title'  => 'Ultima caja',
+          'detail' => 'No hay cajas diarias registradas.'
+        ];
+      }
+    }
 
     // Búsqueda universal (solo si hay query)
     if ($q !== '') {
       $where[] = "("
-        . "c.doc_numero LIKE ? OR c.nombre LIKE ?"
-        . " OR v.contratante_doc_numero LIKE ?"
+        . "c.doc_tipo LIKE ? OR c.doc_numero LIKE ? OR c.nombre LIKE ?"
+        . " OR v.contratante_doc_tipo LIKE ? OR v.contratante_doc_numero LIKE ?"
         . " OR CONCAT_WS(' ', v.contratante_nombres, v.contratante_apellidos) LIKE ?"
-        . " OR d.doc_numero LIKE ?"
+        . " OR d.doc_tipo LIKE ? OR d.doc_numero LIKE ?"
         . " OR CONCAT_WS(' ', d.nombres, d.apellidos) LIKE ?"
         . " OR CONCAT(v.serie,'-',LPAD(v.numero,4,'0')) LIKE ?"
         . ")";
-      $types .= "sssssss";
+      $types .= "ssssssssss";
       $like = like_wrap($q);
-      array_push($pars, $like, $like, $like, $like, $like, $like, $like);
+      array_push($pars, $like, $like, $like, $like, $like, $like, $like, $like, $like, $like);
     }
 
     // Filtro por estado (basado en saldo + devoluciones + anulación)
@@ -139,6 +218,7 @@ try {
     // Conteo
     $sqlCount = "SELECT COUNT(DISTINCT v.id) c
                  FROM pos_ventas v
+                 LEFT JOIN mod_caja_diaria cd ON cd.id=v.caja_diaria_id
                  LEFT JOIN pos_clientes c ON c.id=v.cliente_id
                  LEFT JOIN pos_venta_conductores vc ON vc.venta_id=v.id AND vc.es_principal=1
                  LEFT JOIN pos_conductores d ON d.id=vc.conductor_id
@@ -159,6 +239,9 @@ try {
     $sql = "SELECT
               v.id, v.fecha_emision, v.serie, v.numero,
               v.total, v.total_pagado, v.saldo, v.estado,
+              cd.codigo AS caja_codigo,
+              cd.fecha  AS caja_fecha,
+              cd.estado AS caja_estado,
               COALESCE(r.devuelto_total,0) AS devuelto_total,
               c.doc_tipo  AS c_doc_tipo,
               c.doc_numero AS c_doc_num,
@@ -172,6 +255,7 @@ try {
               d.nombres    AS d_nombres,
               d.apellidos  AS d_apellidos
             FROM pos_ventas v
+            LEFT JOIN mod_caja_diaria cd ON cd.id=v.caja_diaria_id
             LEFT JOIN pos_clientes c ON c.id=v.cliente_id
             LEFT JOIN pos_venta_conductores vc ON vc.venta_id=v.id AND vc.es_principal=1
             LEFT JOIN pos_conductores d ON d.id=vc.conductor_id
@@ -182,7 +266,7 @@ try {
             ) r ON r.venta_id=v.id
             $W
             GROUP BY v.id
-            ORDER BY v.id DESC
+            ORDER BY v.fecha_emision DESC, v.id DESC
             LIMIT ?, ?";
     $types2 = $types . "ii";
     $pars2  = array_merge($pars, [$offset, $per]);
@@ -241,13 +325,22 @@ try {
         'estado'       => $estado_text,
         'estado_code'  => $estado_code,
         'estado_venta' => $estadoVenta,
+        'caja_codigo'  => $r['caja_codigo'] ?? '',
+        'caja_fecha'   => $r['caja_fecha'] ?? null,
+        'caja_estado'  => $r['caja_estado'] ?? '',
         'cliente'      => $cliDisp,
         'contratante'  => $ctrDisp,
         'conductor'    => $condDisp
       ];
     }
 
-    json_ok(['data'=>$out, 'page'=>$page, 'per'=>$per, 'total'=>$total]);
+    json_ok([
+      'data'    => $out,
+      'page'    => $page,
+      'per'     => $per,
+      'total'   => $total,
+      'context' => $context
+    ]);
   }
 
   /* =======================

@@ -59,7 +59,7 @@ function getMensualPeriodo(mysqli $db, int $empId, int $Y, int $m){
   return $st->get_result()->fetch_assoc() ?: null;
 }
 function getMensualAbierta(mysqli $db, int $empId){
-  $st = $db->prepare("SELECT * FROM mod_caja_mensual WHERE id_empresa=? AND estado='abierta' LIMIT 1");
+  $st = $db->prepare("SELECT * FROM mod_caja_mensual WHERE id_empresa=? AND estado='abierta' ORDER BY anio ASC, mes ASC, id ASC LIMIT 1");
   $st->bind_param('i',$empId); $st->execute();
   return $st->get_result()->fetch_assoc() ?: null;
 }
@@ -69,7 +69,7 @@ function getDiariaFecha(mysqli $db, int $empId, string $fecha){
   return $st->get_result()->fetch_assoc() ?: null;
 }
 function getDiariaAbierta(mysqli $db, int $empId){
-  $st = $db->prepare("SELECT * FROM mod_caja_diaria WHERE id_empresa=? AND estado='abierta' LIMIT 1");
+  $st = $db->prepare("SELECT * FROM mod_caja_diaria WHERE id_empresa=? AND estado='abierta' ORDER BY fecha ASC, id ASC LIMIT 1");
   $st->bind_param('i',$empId); $st->execute();
   return $st->get_result()->fetch_assoc() ?: null;
 }
@@ -78,15 +78,115 @@ function hayDiariasAbiertasMensual(mysqli $db, int $idMensual){
   $st->bind_param('i',$idMensual); $st->execute();
   return (int)$st->get_result()->fetch_assoc()['c'] > 0;
 }
+function cajaTextoLimite($texto, $max=255){
+  $texto = trim((string)$texto);
+  if ($texto === '') return null;
+
+  $max = max(4, (int)$max);
+  if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+    if (mb_strlen($texto, 'UTF-8') <= $max) return $texto;
+    return rtrim(mb_substr($texto, 0, $max - 3, 'UTF-8')).'...';
+  }
+
+  if (strlen($texto) <= $max) return $texto;
+  return rtrim(substr($texto, 0, $max - 3)).'...';
+}
+function normalizarEventoAuditoriaCaja($evento){
+  $evento = trim((string)$evento);
+  $map = [
+    'abrir_mensual'               => 'abrir_mensual',
+    'cerrar_mensual'              => 'cerrar_mensual',
+    'cerrar_mensual_extemporanea' => 'cerrar_mensual',
+    'abrir_diaria'                => 'abrir_diaria',
+    'cerrar_diaria'               => 'cerrar_diaria',
+    'cerrar_diaria_extemporanea'  => 'cerrar_diaria',
+    'eliminar_mensual'            => 'eliminar_mensual',
+    'eliminar_diaria'             => 'eliminar_diaria'
+  ];
+  if (isset($map[$evento])) return $map[$evento];
+
+  $evt = strtolower($evento);
+  if (strpos($evt, 'abrir_') === 0 && strpos($evt, 'mensual') !== false) return 'abrir_mensual';
+  if (strpos($evt, 'cerrar_') === 0 && strpos($evt, 'mensual') !== false) return 'cerrar_mensual';
+  if (strpos($evt, 'eliminar_') === 0 && strpos($evt, 'mensual') !== false) return 'eliminar_mensual';
+  if (strpos($evt, 'abrir_') === 0 && strpos($evt, 'diaria') !== false) return 'abrir_diaria';
+  if (strpos($evt, 'cerrar_') === 0 && strpos($evt, 'diaria') !== false) return 'cerrar_diaria';
+  if (strpos($evt, 'eliminar_') === 0 && strpos($evt, 'diaria') !== false) return 'eliminar_diaria';
+
+  return null;
+}
+function logCajaLocal($scope, array $context=[]){
+  static $logFile = null;
+  if ($logFile === null) {
+    $logFile = __DIR__ . '/caja_cierre_pendiente.log';
+  }
+
+  $payload = [
+    'ts'    => date('Y-m-d H:i:s'),
+    'scope' => (string)$scope,
+    'ip'    => $_SERVER['REMOTE_ADDR'] ?? null
+  ] + $context;
+
+  $line = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+  if ($line === false) {
+    $line = '['.date('Y-m-d H:i:s').'] '.$scope;
+  }
+
+  try {
+    error_log($line . PHP_EOL, 3, $logFile);
+  } catch (Throwable $e) {
+    // El log local nunca debe romper el flujo principal.
+  }
+}
 function logAuditoriaCaja(mysqli $db, $evento, $idEmpresa, $idMensual=null, $idDiaria=null, $detalle=null, $u=null){
   $uid = (int)($u['id'] ?? 0);
   $actorUsuario = (string)($u['usuario'] ?? '');
   $actorNombre  = trim(($u['nombres'] ?? '').' '.($u['apellidos'] ?? ''));
   $ip = $_SERVER['REMOTE_ADDR'] ?? null;
-  $st = $db->prepare("INSERT INTO mod_caja_auditoria(id_empresa,id_caja_mensual,id_caja_diaria,evento,detalle,actor_id,actor_usuario,actor_nombre,ip)
-                     VALUES (?,?,?,?,?,?,?,?,?)");
-  $st->bind_param('iiississs', $idEmpresa, $idMensual, $idDiaria, $evento, $detalle, $uid, $actorUsuario, $actorNombre, $ip);
-  $st->execute();
+  $eventoOriginal = trim((string)$evento);
+  $eventoSeguro   = normalizarEventoAuditoriaCaja($eventoOriginal);
+  $detalleSeguro  = cajaTextoLimite($detalle, 255);
+
+  if ($eventoSeguro === null) {
+    logCajaLocal('auditoria.evento_no_soportado', [
+      'empresa_id'      => $idEmpresa,
+      'usuario_id'      => $uid,
+      'evento_original' => $eventoOriginal,
+      'id_caja_mensual' => $idMensual,
+      'id_caja_diaria'  => $idDiaria
+    ]);
+    return false;
+  }
+
+  try {
+    $st = $db->prepare("INSERT INTO mod_caja_auditoria(id_empresa,id_caja_mensual,id_caja_diaria,evento,detalle,actor_id,actor_usuario,actor_nombre,ip)
+                       VALUES (?,?,?,?,?,?,?,?,?)");
+    $st->bind_param('iiississs', $idEmpresa, $idMensual, $idDiaria, $eventoSeguro, $detalleSeguro, $uid, $actorUsuario, $actorNombre, $ip);
+    $st->execute();
+    return true;
+  } catch (Throwable $e) {
+    $detalleLen = 0;
+    if ($detalleSeguro !== null) {
+      $detalleLen = function_exists('mb_strlen')
+        ? mb_strlen($detalleSeguro, 'UTF-8')
+        : strlen($detalleSeguro);
+    }
+
+    // La auditoría no debe impedir abrir/cerrar cajas; dejamos traza local para revisión.
+    logCajaLocal('auditoria.insert_error', [
+      'empresa_id'         => $idEmpresa,
+      'usuario_id'         => $uid,
+      'evento_original'    => $eventoOriginal,
+      'evento_normalizado' => $eventoSeguro,
+      'detalle_len'        => $detalleLen,
+      'id_caja_mensual'    => $idMensual,
+      'id_caja_diaria'     => $idDiaria,
+      'error_class'        => get_class($e),
+      'error_code'         => $e->getCode(),
+      'error_message'      => $e->getMessage()
+    ]);
+    return false;
+  }
 }
 
 /* =========================
@@ -550,19 +650,45 @@ try {
 /* ======== CERRAR MENSUAL PENDIENTE (cierre extemporáneo) ======== */
 if ($accion === 'cerrar_mensual_pendiente') {
   $motivo = trim($_POST['motivo'] ?? '');
-  if ($motivo === '') { json_err('Debes indicar un motivo para el cierre extemporáneo.'); }
+  if ($motivo === '') {
+    logCajaLocal('cerrar_mensual_pendiente.validacion', [
+      'empresa_id'  => $empId,
+      'usuario_id'  => $uid,
+      'motivo_len'  => 0,
+      'motivo_vacio'=> true
+    ]);
+    json_err('Debes indicar un motivo para el cierre extemporáneo.');
+  }
 
   $db->begin_transaction();
   try{
     // Mensual ABIERTA (la que sea)
-    $q = $db->prepare("SELECT id, codigo FROM mod_caja_mensual WHERE id_empresa=? AND estado='abierta' LIMIT 1 FOR UPDATE");
+    $q = $db->prepare("SELECT id, codigo FROM mod_caja_mensual WHERE id_empresa=? AND estado='abierta' ORDER BY anio ASC, mes ASC, id ASC LIMIT 1 FOR UPDATE");
     $q->bind_param('i',$empId); $q->execute();
     $cm = $q->get_result()->fetch_assoc();
-    if (!$cm) { $db->rollback(); json_err_code(400,'No hay caja mensual abierta para cerrar.'); }
+    if (!$cm) {
+      $db->rollback();
+      logCajaLocal('cerrar_mensual_pendiente.fail', [
+        'empresa_id' => $empId,
+        'usuario_id' => $uid,
+        'motivo_len' => strlen($motivo),
+        'reason'     => 'no_hay_mensual_abierta'
+      ]);
+      json_err_code(400,'No hay caja mensual abierta para cerrar.');
+    }
 
     // No puede tener diarias abiertas
     if (hayDiariasAbiertasMensual($db,(int)$cm['id'])) {
-      $db->rollback(); json_err_code(409,'Hay caja(s) diaria(s) abierta(s) en este período. Ciérralas primero.');
+      $db->rollback();
+      logCajaLocal('cerrar_mensual_pendiente.fail', [
+        'empresa_id'  => $empId,
+        'usuario_id'  => $uid,
+        'motivo_len'  => strlen($motivo),
+        'reason'      => 'hay_diarias_abiertas',
+        'mensual_id'  => (int)$cm['id'],
+        'mensual_codigo' => $cm['codigo']
+      ]);
+      json_err_code(409,'Hay caja(s) diaria(s) abierta(s) en este período. Ciérralas primero.');
     }
 
     // Cerrar mensual
@@ -571,12 +697,23 @@ if ($accion === 'cerrar_mensual_pendiente') {
 
     // Auditoría
     $detalle = "Cierre extemporáneo CM {$cm['codigo']}. Motivo: ".$motivo;
-    logAuditoriaCaja($db,'cerrar_mensual_extemporanea',$empId,(int)$cm['id'],null,$detalle,$u);
+    logAuditoriaCaja($db,'cerrar_mensual',$empId,(int)$cm['id'],null,$detalle,$u);
 
     $db->commit();
     json_ok(['msg'=>'Caja mensual cerrada (extemporánea).']);
   }catch(Throwable $e){
-    $db->rollback(); json_err_code(500,'No se pudo cerrar la mensual pendiente',['dev'=>$e->getMessage()]);
+    $db->rollback();
+    logCajaLocal('cerrar_mensual_pendiente.exception', [
+      'empresa_id'    => $empId,
+      'usuario_id'    => $uid,
+      'motivo_len'    => strlen($motivo),
+      'error_class'   => get_class($e),
+      'error_code'    => $e->getCode(),
+      'error_message' => $e->getMessage(),
+      'error_file'    => $e->getFile(),
+      'error_line'    => $e->getLine()
+    ]);
+    json_err_code(500,'No se pudo cerrar la mensual pendiente',['dev'=>$e->getMessage()]);
   }
 }
 
@@ -653,15 +790,32 @@ if ($accion === 'cerrar_mensual_pendiente') {
 /* ======== CERRAR DIARIA PENDIENTE (cierre extemporáneo) ======== */
 if ($accion === 'cerrar_diaria_pendiente') {
   $motivo = trim($_POST['motivo'] ?? '');
-  if ($motivo === '') { json_err('Debes indicar un motivo para el cierre extemporáneo.'); }
+  if ($motivo === '') {
+    logCajaLocal('cerrar_diaria_pendiente.validacion', [
+      'empresa_id'  => $empId,
+      'usuario_id'  => $uid,
+      'motivo_len'  => 0,
+      'motivo_vacio'=> true
+    ]);
+    json_err('Debes indicar un motivo para el cierre extemporáneo.');
+  }
 
   $db->begin_transaction();
   try{
     // Buscar la diaria ABIERTA (la que sea)
-    $q = $db->prepare("SELECT id, fecha, codigo, id_caja_mensual FROM mod_caja_diaria WHERE id_empresa=? AND estado='abierta' LIMIT 1 FOR UPDATE");
+    $q = $db->prepare("SELECT id, fecha, codigo, id_caja_mensual FROM mod_caja_diaria WHERE id_empresa=? AND estado='abierta' ORDER BY fecha ASC, id ASC LIMIT 1 FOR UPDATE");
     $q->bind_param('i',$empId); $q->execute();
     $cd = $q->get_result()->fetch_assoc();
-    if (!$cd) { $db->rollback(); json_err_code(400,'No hay caja diaria abierta para cerrar.'); }
+    if (!$cd) {
+      $db->rollback();
+      logCajaLocal('cerrar_diaria_pendiente.fail', [
+        'empresa_id' => $empId,
+        'usuario_id' => $uid,
+        'motivo_len' => strlen($motivo),
+        'reason'     => 'no_hay_diaria_abierta'
+      ]);
+      json_err_code(400,'No hay caja diaria abierta para cerrar.');
+    }
 
     // La mensual a la que pertenece debe estar ABIERTA
     $qm = $db->prepare("SELECT id, codigo, estado FROM mod_caja_mensual WHERE id=? LIMIT 1 FOR UPDATE");
@@ -669,7 +823,20 @@ if ($accion === 'cerrar_diaria_pendiente') {
     $cm = $qm->get_result()->fetch_assoc();
     if (!$cm || $cm['estado']!=='abierta') {
       $db->rollback();
-      json_err_code(409,'La caja mensual del período ('.$cm['codigo'].') no está abierta. Ábrela primero para cerrar la diaria pendiente.');
+      logCajaLocal('cerrar_diaria_pendiente.fail', [
+        'empresa_id'     => $empId,
+        'usuario_id'     => $uid,
+        'motivo_len'     => strlen($motivo),
+        'reason'         => 'mensual_no_abierta',
+        'diaria_id'      => (int)$cd['id'],
+        'diaria_codigo'  => $cd['codigo'],
+        'diaria_fecha'   => $cd['fecha'],
+        'mensual_id'     => (int)($cm['id'] ?? 0),
+        'mensual_codigo' => $cm['codigo'] ?? null,
+        'mensual_estado' => $cm['estado'] ?? null
+      ]);
+      $cmCodigo = $cm['codigo'] ?? ('ID '.$cd['id_caja_mensual']);
+      json_err_code(409,'La caja mensual del período ('.$cmCodigo.') no está abierta. Ábrela primero para cerrar la diaria pendiente.');
     }
 
     // Cerrar diaria
@@ -678,12 +845,29 @@ if ($accion === 'cerrar_diaria_pendiente') {
 
     // Auditoría
     $detalle = "Cierre extemporáneo CD {$cd['codigo']} (fecha {$cd['fecha']}). Motivo: ".$motivo;
-    logAuditoriaCaja($db,'cerrar_diaria_extemporanea',$empId,(int)$cm['id'],(int)$cd['id'],$detalle,$u);
+    logAuditoriaCaja($db,'cerrar_diaria',$empId,(int)$cm['id'],(int)$cd['id'],$detalle,$u);
 
     $db->commit();
     json_ok(['msg'=>'Caja diaria cerrada (extemporánea).']);
   }catch(Throwable $e){
-    $db->rollback(); json_err_code(500,'No se pudo cerrar la diaria pendiente',['dev'=>$e->getMessage()]);
+    $db->rollback();
+    logCajaLocal('cerrar_diaria_pendiente.exception', [
+      'empresa_id'     => $empId,
+      'usuario_id'     => $uid,
+      'motivo_len'     => strlen($motivo),
+      'error_class'    => get_class($e),
+      'error_code'     => $e->getCode(),
+      'error_message'  => $e->getMessage(),
+      'error_file'     => $e->getFile(),
+      'error_line'     => $e->getLine(),
+      'diaria_id'      => isset($cd['id']) ? (int)$cd['id'] : null,
+      'diaria_codigo'  => $cd['codigo'] ?? null,
+      'diaria_fecha'   => $cd['fecha'] ?? null,
+      'mensual_id'     => isset($cm['id']) ? (int)$cm['id'] : null,
+      'mensual_codigo' => $cm['codigo'] ?? null,
+      'mensual_estado' => $cm['estado'] ?? null
+    ]);
+    json_err_code(500,'No se pudo cerrar la diaria pendiente',['dev'=>$e->getMessage()]);
   }
 }
 

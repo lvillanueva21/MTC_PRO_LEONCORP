@@ -59,11 +59,25 @@ function vpMapApiError(msg){
 function vpRenderCounter(total, page, per, currentCount){
   const el = document.querySelector('#vpCounter');
   if(!el) return;
-  if (total<=0){ el.textContent = 'Sin resultados'; return; }
+  if (total <= 0){
+    el.textContent = 'Sin resultados para este filtro.';
+    return;
+  }
   const pages = Math.max(1, Math.ceil(total / per));
-  const a = (page-1)*per + (currentCount>0 ? 1 : 0);
-  const b = Math.min(total, (page-1)*per + currentCount);
-  el.textContent = `Mostrando ${a}–${b} de ${total} • ${total} resultados (página ${page} de ${pages})`;
+  const a = (page - 1) * per + (currentCount > 0 ? 1 : 0);
+  const b = Math.min(total, (page - 1) * per + currentCount);
+  el.textContent = `Mostrando ${a}-${b} de ${total} | pagina ${page} de ${pages}`;
+}
+function vpRenderScopeInfo(context){
+  const el = document.querySelector('#vpScopeInfo');
+  if (!el) return;
+  if (!context) {
+    el.innerHTML = '';
+    return;
+  }
+  const title = esc(context.title || 'Contexto');
+  const detail = esc(context.detail || '');
+  el.innerHTML = `<span class="badge badge-light border mr-2">${title}</span><span>${detail}</span>`;
 }
 
   // =========================================================
@@ -72,19 +86,33 @@ function vpRenderCounter(total, page, per, currentCount){
   const card = document.querySelector('#vpCard');
   if (!card) return; // si no existe el contenedor, no hacemos nada
 
-  const qInput = document.querySelector('#vpQ');
-  const qClear = document.querySelector('#vpClear');
-  const tbody  = document.querySelector('#vpTBody');
-  const pager  = document.querySelector('#vpPager');
-  const estadoBtns = Array.from(document.querySelectorAll('[data-vp-estado]'));
+  const qInput        = document.querySelector('#vpQ');
+  const qClear        = document.querySelector('#vpClear');
+  const tbody         = document.querySelector('#vpTBody');
+  const pager         = document.querySelector('#vpPager');
+  const estadoSelect  = document.querySelector('#vpEstado');
+  const scopeSelect   = document.querySelector('#vpScope');
+  const fechaWrap     = document.querySelector('#vpFechaWrap');
+  const fechaInput    = document.querySelector('#vpFecha');
+  const desdeWrap     = document.querySelector('#vpDesdeWrap');
+  const desdeInput    = document.querySelector('#vpDesde');
+  const hastaWrap     = document.querySelector('#vpHastaWrap');
+  const hastaInput    = document.querySelector('#vpHasta');
+  const applyBtn      = document.querySelector('#vpApply');
+  const resetScopeBtn = document.querySelector('#vpResetScope');
 
   const STATE = {
     q: '',
     estado: 'pending',
+    scope: 'latest',
+    fecha: '',
+    desde: '',
+    hasta: '',
     page: 1,
-    per: 5,     // <- paginación por defecto de 5 en 5
+    per: 10,
     total: 0,
-    rows: []
+    rows: [],
+    context: null
   };
 
   function pm_money(n){ return 'S/ ' + Number(n||0).toFixed(2); }
@@ -126,9 +154,11 @@ function vpRenderCounter(total, page, per, currentCount){
 // =========================================================
 function renderRows() {
   const rows = STATE.rows || [];
+  vpRenderScopeInfo(STATE.context);
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="8" class="text-muted small">Sin resultados</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="text-muted small">No hay ventas para este filtro.</td></tr>`;
     pager.innerHTML = '';
+    vpRenderCounter(STATE.total, STATE.page, STATE.per, 0);
     return;
   }
 
@@ -216,16 +246,99 @@ function renderPager() {
   // =========================================================
   // Búsqueda
   // =========================================================
+  function vpSetScopeUI(){
+    const scope = scopeSelect ? scopeSelect.value : 'latest';
+    if (fechaWrap) fechaWrap.classList.toggle('d-none', scope !== 'date');
+    if (desdeWrap) desdeWrap.classList.toggle('d-none', scope !== 'range');
+    if (hastaWrap) hastaWrap.classList.toggle('d-none', scope !== 'range');
+    if (resetScopeBtn) {
+      const isDefault = scope === 'latest' && !fechaInput.value && !desdeInput.value && !hastaInput.value;
+      resetScopeBtn.disabled = isDefault;
+    }
+  }
+
+  function vpApplyTemporalFilter(){
+    const scope = scopeSelect ? scopeSelect.value : 'latest';
+    if (scope === 'date') {
+      const fecha = (fechaInput.value || '').trim();
+      if (!fecha) {
+        showMsg('Aviso', 'Selecciona una fecha para filtrar las ventas.', 'danger');
+        return;
+      }
+      STATE.scope = 'date';
+      STATE.fecha = fecha;
+      STATE.desde = '';
+      STATE.hasta = '';
+    } else if (scope === 'range') {
+      const desde = (desdeInput.value || '').trim();
+      const hasta = (hastaInput.value || '').trim();
+      if (!desde || !hasta) {
+        showMsg('Aviso', 'Completa las fechas Desde y Hasta para aplicar el rango.', 'danger');
+        return;
+      }
+      if (desde > hasta) {
+        showMsg('Aviso', 'La fecha inicial no puede ser mayor que la final.', 'danger');
+        return;
+      }
+      STATE.scope = 'range';
+      STATE.desde = desde;
+      STATE.hasta = hasta;
+      STATE.fecha = '';
+    } else {
+      STATE.scope = 'latest';
+      STATE.fecha = '';
+      STATE.desde = '';
+      STATE.hasta = '';
+      if (fechaInput) fechaInput.value = '';
+      if (desdeInput) desdeInput.value = '';
+      if (hastaInput) hastaInput.value = '';
+    }
+    STATE.page = 1;
+    vpSetScopeUI();
+    doSearch();
+  }
+
   async function doSearch() {
     const q = (qInput.value||'').trim();
     STATE.q = q;
 
     try{
-      const j = await vpGET({ action:'ventas_buscar', q: q, estado: STATE.estado, page: STATE.page, per: STATE.per });
+      const params = {
+        action: 'ventas_buscar',
+        q: q,
+        estado: STATE.estado,
+        scope: STATE.scope,
+        page: STATE.page,
+        per: STATE.per
+      };
+      if (STATE.scope === 'date' && STATE.fecha) {
+        params.fecha = STATE.fecha;
+      } else if (STATE.scope === 'range' && STATE.desde && STATE.hasta) {
+        params.desde = STATE.desde;
+        params.hasta = STATE.hasta;
+      }
+
+      const j = await vpGET(params);
       STATE.rows = j.data || [];
       STATE.total = Number(j.total||0);
+      STATE.context = j.context || null;
+      if (STATE.total <= 0) {
+        STATE.page = 1;
+      }
+
+      const pages = Math.max(1, Math.ceil(STATE.total / STATE.per));
+      if (STATE.total > 0 && STATE.page > pages) {
+        STATE.page = pages;
+        return doSearch();
+      }
+
       renderRows();
     }catch(e){
+      STATE.rows = [];
+      STATE.total = 0;
+      STATE.context = null;
+      vpRenderScopeInfo(null);
+      vpRenderCounter(0, STATE.page, STATE.per, 0);
       tbody.innerHTML = `<tr><td colspan="8" class="text-danger">${esc(e.message)}</td></tr>`;
       pager.innerHTML = '';
     }
@@ -242,19 +355,69 @@ function renderPager() {
     if(!isNaN(p)){ STATE.page=p; doSearch(); }
   });
 
-    estadoBtns.forEach(b=>{
-    b.addEventListener('click', ()=>{
-      estadoBtns.forEach(x=>x.classList.remove('active','btn-outline-primary'));
-      estadoBtns.forEach(x=>x.classList.add('btn-outline-secondary'));
-      b.classList.add('active');
-      b.classList.remove('btn-outline-secondary');
-      if (!b.classList.contains('btn-outline-primary')) b.classList.add('btn-outline-primary');
-
-      STATE.estado = b.dataset.vpEstado || 'pending';
+  if (estadoSelect) {
+    estadoSelect.addEventListener('change', ()=>{
+      STATE.estado = estadoSelect.value || 'pending';
       STATE.page = 1;
       doSearch();
     });
+  }
+
+  if (scopeSelect) {
+    scopeSelect.addEventListener('change', ()=>{
+      if (scopeSelect.value === 'latest') {
+        if (fechaInput) fechaInput.value = '';
+        if (desdeInput) desdeInput.value = '';
+        if (hastaInput) hastaInput.value = '';
+        STATE.scope = 'latest';
+        STATE.fecha = '';
+        STATE.desde = '';
+        STATE.hasta = '';
+        STATE.page = 1;
+        vpSetScopeUI();
+        doSearch();
+        return;
+      }
+      vpSetScopeUI();
+    });
+  }
+
+  if (applyBtn) {
+    applyBtn.addEventListener('click', ()=>{
+      vpApplyTemporalFilter();
+    });
+  }
+
+  if (resetScopeBtn) {
+    resetScopeBtn.addEventListener('click', ()=>{
+      if (scopeSelect) scopeSelect.value = 'latest';
+      if (fechaInput) fechaInput.value = '';
+      if (desdeInput) desdeInput.value = '';
+      if (hastaInput) hastaInput.value = '';
+      STATE.scope = 'latest';
+      STATE.fecha = '';
+      STATE.desde = '';
+      STATE.hasta = '';
+      STATE.page = 1;
+      vpSetScopeUI();
+      doSearch();
+    });
+  }
+
+  [fechaInput, desdeInput, hastaInput].forEach((input)=>{
+    if (!input) return;
+    input.addEventListener('keydown', (e)=>{
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        vpApplyTemporalFilter();
+      }
+    });
   });
+
+  window.refreshVentasPendientes = async function(options){
+    if (options && options.resetPage) STATE.page = 1;
+    return doSearch();
+  };
 
   // =========================================================
   // Modales (creados dinámicamente)
@@ -490,7 +653,7 @@ async function openAbonar(ventaId){
         <div class="row g-2 align-items-end mb-2">
           <div class="col-12 col-sm-3">
             <label class="form-label small mb-1">Medio de pago</label>
-            <select id="vpMedio" class="form-select form-select-sm">
+            <select id="vpMedio" class="form-control form-control-sm">
               ${medios.map(m => `<option value="${m.id}" data-req="${m.requiere_ref ? '1' : '0'}">${esc(m.nombre)}</option>`).join('')}
             </select>
           </div>
@@ -797,7 +960,9 @@ async function openAbonar(ventaId){
   });
 
   // Estado inicial
-    STATE.estado = 'pending';
+  STATE.estado = estadoSelect ? (estadoSelect.value || 'pending') : 'pending';
+  STATE.scope = scopeSelect ? (scopeSelect.value || 'latest') : 'latest';
   STATE.page = 1;
+  vpSetScopeUI();
   doSearch();
 })();

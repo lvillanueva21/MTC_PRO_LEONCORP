@@ -211,25 +211,66 @@ include __DIR__ . '/../../includes/header.php';
         <div class="d-flex align-items-center justify-content-between mb-2">
   <h5 class="mb-0">Pagos pendientes</h5>
 </div>
-<div class="row g-2 align-items-center mb-1">
-  <div class="col-12 col-md-8 col-lg-9">
-    <div class="input-group">
-      <span class="input-group-text bg-white border-end-0"><i class="fas fa-search"></i></span>
-      <input id="vpQ" class="form-control border-start-0" placeholder="DNI/CE/RUC, nombres, apellidos, razón social o conductor">
-      <button class="btn btn-outline-secondary" id="vpClear" title="Limpiar"><i class="fas fa-times"></i></button>
+<div class="vp-filters mb-2">
+  <div class="vp-filter-row vp-filter-row-main">
+    <div class="row g-3 align-items-end">
+      <div class="col-12 col-xl-6">
+        <label class="form-label small mb-1">Buscar</label>
+        <div class="input-group vp-search-group">
+          <span class="input-group-text bg-white border-end-0"><i class="fas fa-search"></i></span>
+          <input id="vpQ" class="form-control border-start-0" placeholder="DNI, CE, RUC, nro. documento, nombres, razon social, conductor o ticket">
+          <button class="btn btn-outline-secondary" id="vpClear" title="Limpiar busqueda"><i class="fas fa-times"></i></button>
+        </div>
+      </div>
+      <div class="col-12 col-sm-6 col-xl-3">
+        <label class="form-label small mb-1">Estado</label>
+        <select id="vpEstado" class="form-control form-control-sm">
+          <option value="pending" selected>Pendientes</option>
+          <option value="paid">Pagadas</option>
+          <option value="void">Anuladas</option>
+          <option value="refund">Con devolucion</option>
+          <option value="all">Todas</option>
+        </select>
+      </div>
+      <div class="col-12 col-sm-6 col-xl-3">
+        <label class="form-label small mb-1">Periodo</label>
+        <select id="vpScope" class="form-control form-control-sm">
+          <option value="latest" selected>Ultima caja</option>
+          <option value="date">Fecha</option>
+          <option value="range">Rango</option>
+        </select>
+      </div>
     </div>
   </div>
-  <div class="col-12 col-md-4 col-lg-3">
-    <div class="d-flex flex-wrap gap-2 justify-content-md-end">
-      <button class="btn btn-sm btn-outline-primary active" data-vp-estado="pending">Pendientes</button>
-      <button class="btn btn-sm btn-outline-secondary" data-vp-estado="paid">Pagadas</button>
-      <button class="btn btn-sm btn-outline-secondary" data-vp-estado="void">Anuladas</button>
-      <button class="btn btn-sm btn-outline-secondary" data-vp-estado="refund">Con devolución</button>
-      <button class="btn btn-sm btn-outline-secondary" data-vp-estado="all">Todas</button>
+
+  <div class="vp-filter-row vp-filter-row-extra">
+    <div class="row g-3 align-items-end">
+      <div class="col-12 col-md-4 col-xl-3 d-none" id="vpFechaWrap">
+        <label class="form-label small mb-1">Fecha</label>
+        <input id="vpFecha" type="date" class="form-control form-control-sm">
+      </div>
+      <div class="col-12 col-sm-6 col-xl-3 d-none" id="vpDesdeWrap">
+        <label class="form-label small mb-1">Desde</label>
+        <input id="vpDesde" type="date" class="form-control form-control-sm">
+      </div>
+      <div class="col-12 col-sm-6 col-xl-3 d-none" id="vpHastaWrap">
+        <label class="form-label small mb-1">Hasta</label>
+        <input id="vpHasta" type="date" class="form-control form-control-sm">
+      </div>
+      <div class="col-12 col-xl">
+        <div class="d-flex flex-wrap gap-2 vp-filter-actions">
+          <button class="btn btn-sm btn-primary" id="vpApply" type="button"><i class="fas fa-filter me-1"></i>Aplicar</button>
+          <button class="btn btn-sm btn-outline-secondary" id="vpResetScope" type="button"><i class="fas fa-history me-1"></i>Volver a ultima caja</button>
+        </div>
+      </div>
     </div>
+  </div>
+
+  <div class="vp-filter-meta">
+    <div id="vpScopeInfo" class="small text-muted"></div>
+    <div id="vpCounter" class="small text-muted"></div>
   </div>
 </div>
-<div id="vpCounter" class="small text-muted mb-2"></div>
 
         <div class="table-responsive">
           <table class="table table-sm align-middle mb-2" id="vpTable">
@@ -320,7 +361,7 @@ include __DIR__ . '/../../includes/header.php';
               <div class="row g-2 align-items-end">
                               <div class="col-12 col-md-6">
                   <label>Tipo Doc.*</label>
-                  <select id="pmDocTipo" class="form-select form-select-sm">
+                  <select id="pmDocTipo" class="form-control form-control-sm">
                     <option value="DNI">DNI</option>
                     <option value="CE">CE</option>
                     <option value="BREVETE">BREVETE</option>
@@ -340,7 +381,7 @@ include __DIR__ . '/../../includes/header.php';
                 <!-- Documento del contratante (solo cuando es RUC) -->
 <div class="col-12 col-md-6 pm-ctr d-none">
   <label>Tipo Doc. contratante*</label>
-  <select id="pmCtDocTipo" class="form-select form-select-sm">
+  <select id="pmCtDocTipo" class="form-control form-control-sm">
     <option value="DNI">DNI</option>
     <option value="CE">CE</option>
     <option value="BREVETE">BREVETE</option>
@@ -391,7 +432,7 @@ include __DIR__ . '/../../includes/header.php';
                 <div class="row g-2">
                   <div class="col-12 col-md-4">
                     <label class="form-label small mb-1">Tipo Doc.*</label>
-                    <select id="pmCoDocTipo" class="form-select form-select-sm">
+                    <select id="pmCoDocTipo" class="form-control form-control-sm">
                       <option value="DNI">DNI</option>
                       <option value="CE">CE</option>
                       <option value="BREVETE">BREVETE</option>
@@ -434,7 +475,7 @@ include __DIR__ . '/../../includes/header.php';
               <div class="row g-2 align-items-end mb-2">
                 <div class="col-12 col-sm-3">
                   <label class="form-label small mb-1">Medio de pago</label>
-                  <select id="pmMedio" class="form-select form-select-sm"></select>
+                  <select id="pmMedio" class="form-control form-control-sm"></select>
                 </div>
                 <div class="col-12 col-sm-2">
                   <label class="form-label small mb-1">Monto</label>
@@ -1458,6 +1499,9 @@ document.addEventListener('click',(e)=>{
         });
 
         cartClear('Venta completada.');
+        if (typeof window.refreshVentasPendientes === 'function') {
+          await window.refreshVentasPendientes({ resetPage: true });
+        }
         await refreshDebugPanels();
       }catch(e){
         showInlineAlert('payModal','danger', mapApiError(e.message||''));
