@@ -2,6 +2,74 @@
 // modules/reporte_ventas/funciones.php
 // Lógica para el reporte avanzado de ventas: filtros, paginación, detalles, resumenes y contexto.
 
+if (!function_exists('reporte_row_pick')) {
+  function reporte_row_pick(array $row, array $keys, $default = '') {
+    foreach ($keys as $key) {
+      if (array_key_exists($key, $row) && $row[$key] !== null && $row[$key] !== '') {
+        return $row[$key];
+      }
+    }
+    return $default;
+  }
+}
+
+if (!function_exists('reporte_row_has_any')) {
+  function reporte_row_has_any(array $row, array $keys): bool {
+    foreach ($keys as $key) {
+      if (array_key_exists($key, $row) && $row[$key] !== null && $row[$key] !== '') {
+        return true;
+      }
+    }
+    return false;
+  }
+}
+
+if (!function_exists('reporte_resolver_conductor')) {
+  function reporte_resolver_conductor(array $venta, array $raw = []): array {
+    $row = array_merge($venta, $raw);
+    $tipoRelacion = strtoupper((string)reporte_row_pick($row, ['conductor_tipo', 'vc_conductor_tipo'], ''));
+    $hasRegistrado = reporte_row_has_any($row, ['doc_tipo', 'doc_numero', 'nombres', 'apellidos', 'telefono']);
+    if (($tipoRelacion === 'REGISTRADO' || $tipoRelacion === '') && $hasRegistrado) {
+      return [
+        'conductor_tipo' => 'REGISTRADO',
+        'doc_tipo'       => (string)reporte_row_pick($row, ['doc_tipo']),
+        'doc_numero'     => (string)reporte_row_pick($row, ['doc_numero']),
+        'nombres'        => (string)reporte_row_pick($row, ['nombres']),
+        'apellidos'      => (string)reporte_row_pick($row, ['apellidos']),
+        'telefono'       => (string)reporte_row_pick($row, ['telefono'])
+      ];
+    }
+    if ($tipoRelacion === 'PENDIENTE') {
+      return [
+        'conductor_tipo' => 'PENDIENTE',
+        'doc_tipo'       => '',
+        'doc_numero'     => '',
+        'nombres'        => 'Pendiente de definir',
+        'apellidos'      => '',
+        'telefono'       => ''
+      ];
+    }
+    if (reporte_row_has_any($row, ['contratante_doc_tipo', 'contratante_doc_numero', 'contratante_nombres', 'contratante_apellidos'])) {
+      return [
+        'conductor_tipo' => 'CLIENTE',
+        'doc_tipo'       => (string)reporte_row_pick($row, ['contratante_doc_tipo']),
+        'doc_numero'     => (string)reporte_row_pick($row, ['contratante_doc_numero']),
+        'nombres'        => (string)reporte_row_pick($row, ['contratante_nombres']),
+        'apellidos'      => (string)reporte_row_pick($row, ['contratante_apellidos']),
+        'telefono'       => (string)reporte_row_pick($row, ['contratante_telefono'])
+      ];
+    }
+    return [
+      'conductor_tipo' => 'CLIENTE',
+      'doc_tipo'       => (string)reporte_row_pick($row, ['cliente_doc_tipo']),
+      'doc_numero'     => (string)reporte_row_pick($row, ['cliente_doc_numero']),
+      'nombres'        => (string)reporte_row_pick($row, ['cliente']),
+      'apellidos'      => '',
+      'telefono'       => (string)reporte_row_pick($row, ['cliente_telefono'])
+    ];
+  }
+}
+
 /**
  * Lista ventas de la empresa y agrega:
  *  - servicio_principal por venta
@@ -33,7 +101,8 @@ if (!function_exists('listar_ventas_con_detalles')) {
               v.creado_por,
               c.nombre      AS cliente,
               c.doc_tipo    AS cliente_doc_tipo,
-              c.doc_numero  AS cliente_doc_numero
+              c.doc_numero  AS cliente_doc_numero,
+              c.telefono    AS cliente_telefono
             FROM pos_ventas v
             LEFT JOIN pos_clientes c ON c.id = v.cliente_id
             WHERE v.id_empresa = ?
@@ -237,8 +306,17 @@ if (!function_exists('reporte_cargar_detalles_ventas')) {
     // ---------- Adjuntar a cada venta ----------
     foreach ($ventas as &$r) {
       $vid = (int)$r['id'];
+      $conductores = [];
+      if (isset($conductoresByVenta[$vid])) {
+        foreach ($conductoresByVenta[$vid] as $rawCond) {
+          $conductores[] = reporte_resolver_conductor($r, $rawCond);
+        }
+      }
+      if (!$conductores) {
+        $conductores[] = reporte_resolver_conductor($r, []);
+      }
       $r['servicio_principal'] = isset($svcByVenta[$vid]) ? $svcByVenta[$vid] : '';
-      $r['conductores']        = isset($conductoresByVenta[$vid]) ? $conductoresByVenta[$vid] : [];
+      $r['conductores']        = $conductores;
       $r['abonos']             = isset($abonosByVenta[$vid]) ? $abonosByVenta[$vid] : [];
       $r['detalles']           = isset($detallesByVenta[$vid]) ? $detallesByVenta[$vid] : [];
     }
@@ -463,7 +541,8 @@ if (!function_exists('buscar_ventas_con_detalles')) {
               v.creado_por,
               c.nombre      AS cliente,
               c.doc_tipo    AS cliente_doc_tipo,
-              c.doc_numero  AS cliente_doc_numero
+              c.doc_numero  AS cliente_doc_numero,
+              c.telefono    AS cliente_telefono
             FROM pos_ventas v
             LEFT JOIN pos_clientes c ON c.id = v.cliente_id
             WHERE $whereSql
