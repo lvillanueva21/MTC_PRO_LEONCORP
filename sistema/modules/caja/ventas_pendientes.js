@@ -129,22 +129,18 @@ function vpRenderScopeInfo(context){
         razon: H?.cliente?.nombre || '',
         nombres: '',
         apellidos: '',
-        telefono: H?.contratante?.telefono || ''
+        telefono: H?.cliente?.telefono || H?.contratante?.telefono || ''
       };
     } else {
       const full = String(H?.cliente?.nombre||'').trim();
-      // Heurística simple: último token como apellido, resto nombres
-      const parts = full.split(/\s+/);
-      const apellidos = parts.length>1 ? parts.pop() : '';
-      const nombres  = parts.join(' ') || full;
       return {
         tipo_persona: 'NATURAL',
         tipo: H?.cliente?.doc_tipo || '',
         doc: H?.cliente?.doc || '',
         razon: '',
-        nombres,
-        apellidos,
-        telefono: H?.contratante?.telefono || ''
+        nombres: full,
+        apellidos: '',
+        telefono: H?.cliente?.telefono || H?.contratante?.telefono || ''
       };
     }
   }
@@ -548,6 +544,7 @@ async function openDetalle(ventaId){
           <div class="fw-bold mb-1">Cliente</div>
           <div class="small">Doc: ${esc(H.cliente.doc_tipo||'')} ${esc(H.cliente.doc||'')}</div>
           <div class="small">Nombre: ${esc(H.cliente.nombre||'')}</div>
+          <div class="small">Teléfono: ${esc(H.cliente.telefono||'—')}</div>
         </div>
         <div class="vp-box">
           <div class="fw-bold mb-1">Contratante</div>
@@ -613,7 +610,7 @@ async function openAbonar(ventaId){
   ensureModals();
   try{
     const j = await vpGET({ action:'venta_detalle', id: ventaId });
-    const H = j.cabecera, ABH = j.abonos||[];
+    const H = j.cabecera, ABH = j.abonos||[], ITEMS = j.items||[];
     const medios = await loadMediosPago();
 
     const hist = ABH.length
@@ -639,6 +636,7 @@ async function openAbonar(ventaId){
           <div class="small">Ticket: <strong>${esc(H.ticket)}</strong></div>
           <div class="small">Fecha: ${fmtDT(H.fecha)||'—'}</div>
           <div class="small">Cliente: ${esc(H.cliente.nombre||'')}</div>
+          <div class="small">Teléfono cliente: ${esc(H.cliente.telefono||'—')}</div>
           <div class="small">Contratante: ${esc(((H.contratante.nombres||'')+' '+(H.contratante.apellidos||'')).trim() || '—')}</div>
         </div>
         <div class="vp-box">
@@ -839,7 +837,6 @@ async function openAbonar(ventaId){
           histBody.appendChild(tr);
         });
 
-        const abnCodes = r.nuevos.map(n => 'ABN-' + pad6(n.abono_id));
         const abonosForVoucher = r.nuevos.map(n => ({
           medio: n.medio,
           monto: n.monto,
@@ -847,6 +844,14 @@ async function openAbonar(ventaId){
         }));
 
         const clienteVoucher = buildClienteForVoucher(H);
+        const ctr = H.contratante || {};
+        const contratanteVoucher = {
+          tipo: ctr.doc_tipo || '',
+          doc: ctr.doc || '',
+          nombres: ctr.nombres || '',
+          apellidos: ctr.apellidos || '',
+          telefono: ctr.telefono || ''
+        };
         const cond = H.conductor || {};
         const voucherConductor = {
           tipo: cond.doc_tipo || '',
@@ -859,13 +864,21 @@ async function openAbonar(ventaId){
         if (window.jQuery) jQuery('#vpAbonoModal').modal('hide');
 
         openVoucher({
+          kind: 'abono',
+          venta_id: Number(H.id||0),
+          abono_ids: (r.nuevos || []).map(n => Number(n.abono_id||0)).filter(x=>x>0),
           empresa: EMPRESA_NOMBRE,
-          ticket: `${r.ticket} • Abono(s): ${abnCodes.join(', ')}`,
+          ticket: r.ticket,
           fecha: new Date().toLocaleString(),
           cajero: USUARIO_NOMBRE,
           cliente: clienteVoucher,
+          contratante: contratanteVoucher,
           conductor: voucherConductor,
-          items: [],
+          items: ITEMS.map(it => ({
+            nombre: it.servicio_nombre || 'Servicio',
+            qty: Number(it.cantidad||0),
+            precio: Number(it.precio_unitario||0)
+          })),
           abonos: abonosForVoucher,
           totales: { total: r.total, pagado: r.pagado, saldo: r.saldo }
         });

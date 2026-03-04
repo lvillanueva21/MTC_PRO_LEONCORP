@@ -611,6 +611,7 @@ const USUARIO_NOMBRE = '<?= h($usrNom) ?>';
 const EMPRESA_LOGO   = '<?= h($empLogoRel ?? "") ?>';
 // Imagen placeholder inline (evita petición externa y mejora FCP)
 const SVC_IMG_PLACEHOLDER = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="640" height="396"><rect width="100%" height="100%" fill="%23f8fafc"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="20" fill="%2394a3b8">Servicio</text></svg>';
+let VOUCHER_CTX = { kind:'venta', venta_id:0, abono_ids:[] };
 
 // Control de peticiones de servicios (cancelación + cache en memoria)
 let _svcAbort = null;                                // AbortController actual
@@ -1080,9 +1081,39 @@ function renderAbonosTable(){
   qs('#pmSaldo').textContent       = pm_money(PM.saldo);
 }
 
+function normalizeVoucherCtx(v){
+  const kind = (String(v?.kind || 'venta').toLowerCase() === 'abono') ? 'abono' : 'venta';
+  const ventaId = Number(v?.venta_id || 0);
+  const abonoIds = Array.isArray(v?.abono_ids)
+    ? v.abono_ids.map(x=>parseInt(x,10)).filter(x=>Number.isFinite(x) && x>0)
+    : [];
+  return { kind, venta_id: (Number.isFinite(ventaId) ? Math.trunc(ventaId) : 0), abono_ids: abonoIds };
+}
+
+function buildVoucherPdfUrl(size){
+  if (!VOUCHER_CTX || !(VOUCHER_CTX.venta_id > 0)) return '';
+  const s = (size === 'a4' || size === 'ticket58' || size === 'ticket80') ? size : 'ticket80';
+  const p = new URLSearchParams({
+    action: 'voucher_pdf',
+    venta_id: String(VOUCHER_CTX.venta_id),
+    kind: VOUCHER_CTX.kind === 'abono' ? 'abono' : 'venta',
+    size: s
+  });
+  if (Array.isArray(VOUCHER_CTX.abono_ids) && VOUCHER_CTX.abono_ids.length){
+    p.set('abono_ids', VOUCHER_CTX.abono_ids.join(','));
+  }
+  return `${BASE_URL}/modules/caja/api_ventas.php?${p.toString()}`;
+}
+
 function openVoucher(v){
+  VOUCHER_CTX = normalizeVoucherCtx(v || {});
+  const isAbono = (VOUCHER_CTX.kind === 'abono');
+
   const el  = qs('#voucherBody');
   const fmt = (n)=>'S/ ' + Number(n||0).toFixed(2);
+  const modalTitle = isAbono ? 'Voucher de abono' : 'Voucher de venta';
+  const titleEl = qs('#voucherModalTitle');
+  if (titleEl) titleEl.innerHTML = `<i class="fas fa-receipt me-2"></i>${modalTitle}`;
 
   // Logo opcional
   const logoHtml = (EMPRESA_LOGO && EMPRESA_LOGO.trim() !== '')
@@ -1107,6 +1138,21 @@ function openVoucher(v){
       </div>`;
   }
 
+  const hasContratante = !!(v.contratante && (
+    (v.contratante.tipo && v.contratante.doc) ||
+    v.contratante.nombres || v.contratante.apellidos || v.contratante.telefono
+  ));
+  const contratanteBlock = hasContratante ? `
+    <div class="v-box">
+      <div class="v-title">Contratante</div>
+      <div class="v-grid">
+        <div class="text-muted">Documento</div> <div>${esc(v.contratante.tipo||'')} ${esc(v.contratante.doc||'')}</div>
+        <div class="text-muted">Nombre</div>    <div>${esc(v.contratante.nombres||'')} ${esc(v.contratante.apellidos||'')}</div>
+        <div class="text-muted">Teléfono</div>  <div>${esc(v.contratante.telefono||'—')}</div>
+      </div>
+    </div>
+  ` : '';
+
   // Conductor (siempre mostramos sección)
   const condDoc = (v.conductor.tipo && v.conductor.doc) ? `${esc(v.conductor.tipo)} ${esc(v.conductor.doc)}` : '—';
   const conductorBlock = `
@@ -1116,15 +1162,17 @@ function openVoucher(v){
       <div class="text-muted">Teléfono</div>  <div>${esc(v.conductor.telefono||'—')}</div>
     </div>`;
 
-  const itemsRows = (v.items||[]).map(it=>`
-    <tr>
-      <td>
-        ${esc(it.nombre)}
-        <div class="text-muted small">x${it.qty} · ${fmt(it.precio)}</div>
-      </td>
-      <td class="text-end">${fmt(it.qty * it.precio)}</td>
-    </tr>
-  `).join('');
+  const itemsRows = (v.items && v.items.length)
+    ? v.items.map(it=>`
+      <tr>
+        <td>
+          ${esc(it.nombre)}
+          <div class="text-muted small">x${it.qty} · ${fmt(it.precio)}</div>
+        </td>
+        <td class="text-end">${fmt(it.qty * it.precio)}</td>
+      </tr>
+    `).join('')
+    : `<tr><td colspan="2" class="text-muted small">— Sin ítems —</td></tr>`;
 
   const abonoRows = (v.abonos && v.abonos.length)
     ? v.abonos.map(a=>`
@@ -1153,18 +1201,20 @@ function openVoucher(v){
         ${clienteBlock}
       </div>
 
+      ${contratanteBlock}
+
       <div class="v-box">
         <div class="v-title">Conductor</div>
         ${conductorBlock}
       </div>
 
       <div class="v-box">
-        <div class="v-title">Items</div>
+        <div class="v-title">${isAbono ? 'Detalle de venta' : 'Items'}</div>
         <table><tbody>${itemsRows}</tbody></table>
       </div>
 
       <div class="v-box">
-        <div class="v-title">Abonos</div>
+        <div class="v-title">${isAbono ? 'Abonos registrados' : 'Abonos'}</div>
         <table><tbody>${abonoRows}</tbody></table>
       </div>
 
@@ -1242,8 +1292,16 @@ document.addEventListener('click', (e)=>{
   if (!b) return;
   e.preventDefault();
   e.stopImmediatePropagation(); // evita que otro handler (si quedara) dispare otra impresión
-  const node = qs('#voucherBody');
   const size = (qs('#voucherSize')?.value) || 'a4';
+  const pdfUrl = buildVoucherPdfUrl(size);
+  if (pdfUrl){
+    const win = window.open(pdfUrl, 'voucher_pdf');
+    if (!win){
+      showMsg('Aviso','Tu navegador bloqueó la ventana del PDF. Habilita pop-ups para este sitio.','danger');
+    }
+    return;
+  }
+  const node = qs('#voucherBody');
   if (node) printVoucherNode(node, size);
 });
 
@@ -1482,6 +1540,9 @@ document.addEventListener('click',(e)=>{
             );
 
         openVoucher({
+          kind: 'venta',
+          venta_id: Number(j.venta_id||0),
+          abono_ids: [],
           empresa: EMPRESA_NOMBRE,
           ticket: j.ticket,
           fecha: new Date().toLocaleString(),
@@ -1492,6 +1553,7 @@ document.addEventListener('click',(e)=>{
             razon: isRUC ? razon : '',
             nombres, apellidos, telefono: tel
           },
+          contratante: isRUC ? { tipo: ctDocTipo, doc: ctDocNum, nombres, apellidos, telefono: tel } : null,
           conductor: voucherConductor,
           items: PM.ventaItems.slice(),
           abonos: PM.abonos.slice(),

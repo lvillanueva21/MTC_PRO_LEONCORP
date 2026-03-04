@@ -159,6 +159,484 @@ function fetch_principal_conductor(mysqli $db, int $ventaId){
   return $q->get_result()->fetch_assoc() ?: null;
 }
 
+function voucher_norm_size($size): string {
+  $s = strtolower(trim((string)$size));
+  if (in_array($s, ['ticket58', 't58', '58', '58mm'], true)) return 'ticket58';
+  if (in_array($s, ['a4'], true)) return 'a4';
+  return 'ticket80';
+}
+
+function voucher_parse_ids_csv($value): array {
+  $raw = trim((string)$value);
+  if ($raw === '') return [];
+  $parts = preg_split('/\s*,\s*/', $raw);
+  $out = [];
+  foreach ($parts as $p) {
+    $id = (int)$p;
+    if ($id > 0) $out[$id] = $id;
+  }
+  return array_values($out);
+}
+
+function voucher_fmt_money($n): string {
+  return 'S/ ' . number_format((float)$n, 2, '.', ',');
+}
+
+function voucher_fmt_dt($value): string {
+  if (!$value) return '';
+  try {
+    $dt = new DateTime((string)$value);
+    return $dt->format('d/m/Y H:i');
+  } catch (Throwable $e) {
+    return (string)$value;
+  }
+}
+
+function voucher_h($s): string {
+  return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
+}
+
+function voucher_norm_person_text($value): string {
+  $txt = strtoupper(trim((string)$value));
+  if ($txt === '') return '';
+  if (function_exists('iconv')) {
+    $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $txt);
+    if (is_string($ascii) && $ascii !== '') {
+      $txt = $ascii;
+    }
+  }
+  $txt = preg_replace('/[^A-Z0-9 ]+/', ' ', $txt);
+  $txt = preg_replace('/\s+/', ' ', trim((string)$txt));
+  return (string)$txt;
+}
+
+function voucher_norm_doc_key($doc): string {
+  return str_replace(' ', '', voucher_norm_person_text($doc));
+}
+
+function voucher_norm_phone_key($phone): string {
+  return preg_replace('/\D+/', '', (string)$phone) ?: '';
+}
+
+function voucher_same_person_cliente_conductor(array $cliente, array $conductor): bool {
+  $clienteDocRaw = voucher_norm_person_text((string)($cliente['doc'] ?? ''));
+  $condNameRaw = voucher_norm_person_text((string)($conductor['nombre'] ?? ''));
+
+  // Si cliente es RUC, el conductor debe mostrarse siempre.
+  $clienteDocTight = str_replace(' ', '', $clienteDocRaw);
+  if ($clienteDocTight !== '' && substr($clienteDocTight, 0, 3) === 'RUC') {
+    return false;
+  }
+  if ($condNameRaw === '' || $condNameRaw === 'NO ESPECIFICADO' || $condNameRaw === 'PENDIENTE DE DEFINIR') {
+    return false;
+  }
+
+  $clienteDoc = voucher_norm_doc_key((string)($cliente['doc'] ?? ''));
+  $condDoc = voucher_norm_doc_key((string)($conductor['doc'] ?? ''));
+  if ($clienteDoc !== '' && $condDoc !== '' && $clienteDoc === $condDoc) {
+    return true;
+  }
+
+  $clienteName = voucher_norm_person_text((string)($cliente['nombre'] ?? ''));
+  $condName = $condNameRaw;
+  if ($clienteName !== '' && $condName !== '' && $clienteName === $condName) {
+    $clienteTel = voucher_norm_phone_key((string)($cliente['telefono'] ?? ''));
+    $condTel = voucher_norm_phone_key((string)($conductor['telefono'] ?? ''));
+    if ($clienteTel !== '' && $condTel !== '' && $clienteTel !== $condTel) {
+      return false;
+    }
+    return true;
+  }
+
+  return false;
+}
+
+function voucher_fetch_empresa(mysqli $db, int $empId): ?array {
+  $q = $db->prepare("SELECT id, nombre, razon_social, ruc, direccion, logo_path FROM mtp_empresas WHERE id=? LIMIT 1");
+  $q->bind_param('i', $empId);
+  $q->execute();
+  return $q->get_result()->fetch_assoc() ?: null;
+}
+
+function voucher_logo_data_uri(?string $logoPath): string {
+  $path = trim((string)$logoPath);
+  $candidates = [];
+  if ($path !== '') {
+    $candidates[] = __DIR__ . '/../../' . ltrim($path, '/');
+  }
+  $candidates[] = __DIR__ . '/../../dist/img/AdminLTELogo.png';
+
+  $abs = '';
+  foreach ($candidates as $c) {
+    if (is_file($c)) {
+      $abs = $c;
+      break;
+    }
+  }
+  if ($abs === '') return '';
+
+  $bin = @file_get_contents($abs);
+  if ($bin === false || $bin === '') return '';
+
+  $mime = 'image/png';
+  if (function_exists('finfo_open')) {
+    $fi = @finfo_open(FILEINFO_MIME_TYPE);
+    if ($fi) {
+      $m = @finfo_file($fi, $abs);
+      if (is_string($m) && strpos($m, 'image/') === 0) {
+        $mime = $m;
+      }
+      @finfo_close($fi);
+    }
+  }
+  return 'data:' . $mime . ';base64,' . base64_encode($bin);
+}
+
+function voucher_fetch_items(mysqli $db, int $ventaId): array {
+  $q = $db->prepare("SELECT servicio_nombre, cantidad, precio_unitario, total_linea
+                     FROM pos_venta_detalles
+                     WHERE venta_id=?
+                     ORDER BY id ASC");
+  $q->bind_param('i', $ventaId);
+  $q->execute();
+  return $q->get_result()->fetch_all(MYSQLI_ASSOC) ?: [];
+}
+
+function voucher_fetch_abonos(mysqli $db, int $ventaId, array $abonoIds = []): array {
+  if ($abonoIds) {
+    $in = implode(',', array_fill(0, count($abonoIds), '?'));
+    $types = 'i' . str_repeat('i', count($abonoIds));
+    $pars = array_merge([$ventaId], $abonoIds);
+    $sql = "SELECT
+              a.id AS abono_id,
+              a.fecha,
+              a.monto,
+              COALESCE(SUM(apl.monto_aplicado),0) AS monto_aplicado,
+              a.referencia,
+              mp.nombre AS medio
+            FROM pos_abono_aplicaciones apl
+            JOIN pos_abonos a ON a.id=apl.abono_id
+            LEFT JOIN pos_medios_pago mp ON mp.id=a.medio_id
+            WHERE apl.venta_id=? AND a.id IN ($in)
+            GROUP BY a.id, a.fecha, a.monto, a.referencia, mp.nombre
+            ORDER BY a.fecha ASC, a.id ASC";
+    $q = $db->prepare($sql);
+    $refs = [];
+    $params = array_merge([$types], $pars);
+    foreach ($params as $k => $v) {
+      $refs[$k] = &$params[$k];
+    }
+    call_user_func_array([$q, 'bind_param'], $refs);
+    $q->execute();
+    return $q->get_result()->fetch_all(MYSQLI_ASSOC) ?: [];
+  }
+
+  $q = $db->prepare("SELECT
+                       a.id AS abono_id,
+                       a.fecha,
+                       a.monto,
+                       COALESCE(SUM(apl.monto_aplicado),0) AS monto_aplicado,
+                       a.referencia,
+                       mp.nombre AS medio
+                     FROM pos_abono_aplicaciones apl
+                     JOIN pos_abonos a ON a.id=apl.abono_id
+                     LEFT JOIN pos_medios_pago mp ON mp.id=a.medio_id
+                     WHERE apl.venta_id=?
+                     GROUP BY a.id, a.fecha, a.monto, a.referencia, mp.nombre
+                     ORDER BY a.fecha ASC, a.id ASC");
+  $q->bind_param('i', $ventaId);
+  $q->execute();
+  return $q->get_result()->fetch_all(MYSQLI_ASSOC) ?: [];
+}
+
+function voucher_estimate_ticket_height(array $data, string $size): float {
+  $charsLine = ($size === 'ticket58') ? 22 : 34;
+  $lineMm = ($size === 'ticket58') ? 3.1 : 3.4;
+  $baseLines = 34;
+
+  $pieces = [];
+  $pieces[] = (string)($data['empresa']['nombre'] ?? '');
+  $pieces[] = (string)($data['empresa']['razon_social'] ?? '');
+  $pieces[] = (string)($data['empresa']['ruc'] ?? '');
+  $pieces[] = (string)($data['empresa']['direccion'] ?? '');
+  $pieces[] = (string)($data['meta']['ticket'] ?? '');
+  $pieces[] = (string)($data['meta']['fecha'] ?? '');
+  $pieces[] = (string)($data['meta']['fecha_venta'] ?? '');
+  $pieces[] = (string)($data['meta']['cajero'] ?? '');
+  $pieces[] = (string)($data['cliente']['doc'] ?? '');
+  $pieces[] = (string)($data['cliente']['nombre'] ?? '');
+  $pieces[] = (string)($data['cliente']['telefono'] ?? '');
+  $pieces[] = (string)($data['contratante']['doc'] ?? '');
+  $pieces[] = (string)($data['contratante']['nombre'] ?? '');
+  $pieces[] = (string)($data['contratante']['telefono'] ?? '');
+  $pieces[] = (string)($data['conductor']['doc'] ?? '');
+  $pieces[] = (string)($data['conductor']['nombre'] ?? '');
+  $pieces[] = (string)($data['conductor']['telefono'] ?? '');
+
+  foreach (($data['items'] ?? []) as $it) {
+    $pieces[] = (string)($it['nombre'] ?? '');
+  }
+  foreach (($data['abonos'] ?? []) as $ab) {
+    $pieces[] = (string)($ab['medio'] ?? '');
+    $pieces[] = (string)($ab['referencia'] ?? '');
+    $pieces[] = (string)($ab['fecha'] ?? '');
+  }
+
+  $extraLines = 0;
+  foreach ($pieces as $p) {
+    $len = function_exists('mb_strlen') ? mb_strlen($p, 'UTF-8') : strlen($p);
+    if ($len > 0) $extraLines += (int)ceil($len / $charsLine);
+  }
+
+  $estimated = ($baseLines + $extraLines) * $lineMm + 14;
+  if ($estimated < 95) $estimated = 95;
+  if ($estimated > 4000) $estimated = 4000;
+  return $estimated;
+}
+
+function voucher_render_pdf(array $data, string $size, string $kind): void {
+  $tcpdfFile = __DIR__ . '/../TCPDF/tcpdf.php';
+  if (!file_exists($tcpdfFile)) {
+    throw new RuntimeException('TCPDF no encontrado en modules/TCPDF.');
+  }
+  require_once $tcpdfFile;
+
+  $size = voucher_norm_size($size);
+  $kind = ($kind === 'abono') ? 'abono' : 'venta';
+
+  if ($size === 'a4') {
+    $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
+    $margin = 10.0;
+  } else {
+    $w = ($size === 'ticket58') ? 58.0 : 80.0;
+    $h = voucher_estimate_ticket_height($data, $size);
+    $pdf = new TCPDF('P', 'mm', [$w, $h], true, 'UTF-8', false);
+    $margin = ($size === 'ticket58') ? 1.6 : 2.0;
+  }
+
+  $pdf->SetCreator('Sistema de ventas');
+  $pdf->SetAuthor((string)($data['empresa']['nombre'] ?? 'Sistema'));
+  $pdf->SetTitle(($kind === 'abono' ? 'Comprobante de abono' : 'Comprobante de venta') . ' ' . (string)($data['meta']['ticket'] ?? ''));
+  $pdf->setPrintHeader(false);
+  $pdf->setPrintFooter(false);
+  $pdf->SetMargins($margin, $margin, $margin);
+  $pdf->SetAutoPageBreak(true, $margin);
+  $pdf->AddPage();
+
+  $fontBase = ($size === 'a4') ? 10 : (($size === 'ticket58') ? 7.6 : 8.6);
+  $fontSmall = $fontBase - (($size === 'a4') ? 1.5 : 1.0);
+  $titleSize = $fontBase + (($size === 'a4') ? 2.0 : 1.1);
+  $ticketCodeSize = $fontBase + (($size === 'a4') ? 4.2 : (($size === 'ticket58') ? 2.8 : 3.2));
+  $title = ($kind === 'abono') ? 'COMPROBANTE DE ABONO' : 'COMPROBANTE DE VENTA';
+
+  $empresa = $data['empresa'];
+  $meta = $data['meta'];
+  $cliente = $data['cliente'];
+  $contratante = $data['contratante'] ?? [];
+  $conductor = $data['conductor'];
+  $items = $data['items'] ?? [];
+  $abonos = $data['abonos'] ?? [];
+  $tot = $data['totales'] ?? ['total'=>0,'pagado'=>0,'saldo'=>0,'devuelto'=>0];
+
+  $empresaNombre = trim((string)($empresa['razon_social'] ?: $empresa['nombre']));
+  $empresaRuc = trim((string)($empresa['ruc'] ?? ''));
+  $empresaDir = trim((string)($empresa['direccion'] ?? ''));
+  $logoData = trim((string)($empresa['logo_data_uri'] ?? ''));
+  $clienteTel = trim((string)($cliente['telefono'] ?? ''));
+  $contrDoc = trim((string)($contratante['doc'] ?? ''));
+  $contrNom = trim((string)($contratante['nombre'] ?? ''));
+  $contrTel = trim((string)($contratante['telefono'] ?? ''));
+  $condTel = trim((string)($conductor['telefono'] ?? ''));
+  $ticketValue = trim((string)($meta['ticket'] ?? ''));
+  $hideConductorSection = voucher_same_person_cliente_conductor($cliente, $conductor);
+  $logoW = ($size === 'a4') ? '18mm' : (($size === 'ticket58') ? '12mm' : '14mm');
+  $logoCellW = ($size === 'a4') ? '22mm' : '16mm';
+  $useInlineHeader = ($size !== 'ticket58' && $logoData !== '');
+  $metaJoin = 'RUC: ' . $empresaRuc . ' | ' . $empresaDir;
+  $metaJoinLen = function_exists('mb_strlen') ? mb_strlen($metaJoin, 'UTF-8') : strlen($metaJoin);
+  $showOneLineMeta = (
+    $size !== 'ticket58' &&
+    $empresaRuc !== '' &&
+    $empresaDir !== '' &&
+    $metaJoinLen <= (($size === 'a4') ? 96 : 56)
+  );
+
+  $html = '';
+  $html .= '<style>
+      * { font-family: helvetica, sans-serif; color:#111; }
+      .center { text-align:center; }
+      .left { text-align:left; }
+      .b { font-weight:bold; }
+      .tight { line-height:1.1; }
+      .t-main { font-size:' . $titleSize . 'pt; font-weight:bold; }
+      .small { font-size:' . $fontSmall . 'pt; color:#444; }
+      .base { font-size:' . $fontBase . 'pt; }
+      .rule { border-bottom:1px dashed #666; margin:0.8mm 0; }
+      .sec { margin-top:3px; margin-bottom:2px; font-weight:bold; font-size:' . max(7.0, $fontSmall) . 'pt; }
+      table { width:100%; border-collapse:collapse; }
+      td, th { font-size:' . $fontBase . 'pt; padding:0.6px 0; vertical-align:top; }
+      th { text-align:left; }
+      .right { text-align:right; }
+      .muted { color:#444; }
+      .mono { font-family: courier, monospace; }
+      .head-wrap { margin:0 0 0.8mm 0; }
+      .head-table { width:100%; border-collapse:collapse; margin:0; }
+      .head-table td { border:none; padding:0; vertical-align:top; }
+      .logo-img { width:' . $logoW . '; height:auto; }
+      .head-title { font-size:' . $titleSize . 'pt; font-weight:bold; line-height:1.02; margin:0; }
+      .head-company { font-size:' . ($fontBase + 0.9) . 'pt; font-weight:bold; line-height:1.05; margin:0.2mm 0 0 0; }
+      .head-meta { font-size:' . $fontSmall . 'pt; color:#444; line-height:1.08; margin:0.2mm 0 0 0; }
+      .tk-row { width:100%; border-collapse:collapse; margin:0.6mm 0 0.9mm 0; }
+      .tk-row td { border:none; padding:0; vertical-align:baseline; }
+      .tk-k { width:30%; text-align:left; font-size:' . max(6.8, $fontSmall) . 'pt; font-weight:bold; letter-spacing:0.5px; }
+      .tk-v { text-align:right; font-size:' . $ticketCodeSize . 'pt; font-weight:bold; letter-spacing:0.7px; line-height:1.0; }
+      .tk-center { text-align:center; margin:0.8mm 0 1.0mm 0; }
+      .tk-label-inline { font-size:' . max(6.8, $fontSmall) . 'pt; font-weight:bold; letter-spacing:0.5px; }
+      .tk-value-inline { font-size:' . $ticketCodeSize . 'pt; font-weight:bold; letter-spacing:0.7px; line-height:1.0; }
+    </style>';
+
+  $html .= '<div class="head-wrap">';
+  if ($useInlineHeader) {
+    $html .= '<table class="head-table"><tr>';
+    $html .= '<td style="width:' . $logoCellW . '; text-align:center; padding-right:1.2mm;"><img class="logo-img" src="' . voucher_h($logoData) . '" alt="logo"></td>';
+    $html .= '<td class="left tight">';
+    $html .= '<div class="head-title">' . voucher_h($title) . '</div>';
+    if ($empresaNombre !== '') {
+      $html .= '<div class="head-company">' . voucher_h($empresaNombre) . '</div>';
+    }
+    if ($showOneLineMeta) {
+      $html .= '<div class="head-meta">' . voucher_h($metaJoin) . '</div>';
+    } else {
+      if ($empresaRuc !== '') {
+        $html .= '<div class="head-meta">RUC: ' . voucher_h($empresaRuc) . '</div>';
+      }
+      if ($empresaDir !== '') {
+        $html .= '<div class="head-meta">' . voucher_h($empresaDir) . '</div>';
+      }
+    }
+    $html .= '</td></tr></table>';
+  } else {
+    if ($logoData !== '') {
+      $html .= '<div class="center"><img class="logo-img" src="' . voucher_h($logoData) . '" alt="logo"></div>';
+    }
+    $html .= '<div class="center t-main tight">' . voucher_h($title) . '</div>';
+    if ($empresaNombre !== '') {
+      $html .= '<div class="center b base tight">' . voucher_h($empresaNombre) . '</div>';
+    }
+    if ($showOneLineMeta) {
+      $html .= '<div class="center small tight">' . voucher_h($metaJoin) . '</div>';
+    } else {
+      if ($empresaRuc !== '') {
+        $html .= '<div class="center small tight">RUC: ' . voucher_h($empresaRuc) . '</div>';
+      }
+      if ($empresaDir !== '') {
+        $html .= '<div class="center small tight">' . voucher_h($empresaDir) . '</div>';
+      }
+    }
+  }
+  $html .= '</div>';
+
+  if ($ticketValue !== '') {
+    if ($size === 'ticket58') {
+      $html .= '<div class="tk-center"><span class="tk-label-inline">TICKET:</span> <span class="tk-value-inline mono">' . voucher_h($ticketValue) . '</span></div>';
+    } else {
+      $html .= '<table class="tk-row"><tr>';
+      $html .= '<td class="tk-k">TICKET</td>';
+      $html .= '<td class="tk-v mono">' . voucher_h($ticketValue) . '</td>';
+      $html .= '</tr></table>';
+    }
+  }
+  $html .= '<div class="rule"></div>';
+
+  $html .= '<table>';
+  $html .= '<tr><td class="b">Fecha</td><td class="right">' . voucher_h((string)($meta['fecha'] ?? '')) . '</td></tr>';
+  if ($kind === 'abono' && !empty($meta['fecha_venta'])) {
+    $html .= '<tr><td class="b">Fecha venta</td><td class="right">' . voucher_h((string)$meta['fecha_venta']) . '</td></tr>';
+  }
+  $html .= '<tr><td class="b">Cajero</td><td class="right">' . voucher_h((string)($meta['cajero'] ?? '')) . '</td></tr>';
+  $html .= '</table>';
+
+  $html .= '<div class="rule"></div><div class="sec">CLIENTE</div>';
+  $html .= '<table>';
+  $html .= '<tr><td class="b">Documento</td><td class="right">' . voucher_h((string)($cliente['doc'] ?? '')) . '</td></tr>';
+  $html .= '<tr><td class="b">Nombre</td><td class="right">' . voucher_h((string)($cliente['nombre'] ?? '')) . '</td></tr>';
+  if ($clienteTel !== '') {
+    $html .= '<tr><td class="b">Telefono</td><td class="right">' . voucher_h($clienteTel) . '</td></tr>';
+  }
+  $html .= '</table>';
+
+  if ($contrDoc !== '' || $contrNom !== '' || $contrTel !== '') {
+    $html .= '<div class="sec">CONTRATANTE</div>';
+    $html .= '<table>';
+    $html .= '<tr><td class="b">Documento</td><td class="right">' . voucher_h($contrDoc) . '</td></tr>';
+    $html .= '<tr><td class="b">Nombre</td><td class="right">' . voucher_h($contrNom) . '</td></tr>';
+    if ($contrTel !== '') {
+      $html .= '<tr><td class="b">Telefono</td><td class="right">' . voucher_h($contrTel) . '</td></tr>';
+    }
+    $html .= '</table>';
+  }
+
+  if (!$hideConductorSection) {
+    $html .= '<div class="sec">CONDUCTOR</div>';
+    $html .= '<table>';
+    $html .= '<tr><td class="b">Documento</td><td class="right">' . voucher_h((string)($conductor['doc'] ?? '')) . '</td></tr>';
+    $html .= '<tr><td class="b">Nombre</td><td class="right">' . voucher_h((string)($conductor['nombre'] ?? '')) . '</td></tr>';
+    if ($condTel !== '') {
+      $html .= '<tr><td class="b">Telefono</td><td class="right">' . voucher_h($condTel) . '</td></tr>';
+    }
+    $html .= '</table>';
+  }
+
+  if ($items) {
+    $html .= '<div class="rule"></div><div class="sec">DETALLE</div>';
+    $html .= '<table>';
+    $html .= '<tr><th>Servicio</th><th class="right">Importe</th></tr>';
+    foreach ($items as $it) {
+      $lineaName = (string)($it['nombre'] ?? '');
+      $lineaAux = 'x' . (float)($it['cantidad'] ?? 0) . ' - ' . voucher_fmt_money((float)($it['precio'] ?? 0));
+      $lineaTot = voucher_fmt_money((float)($it['total'] ?? 0));
+      $html .= '<tr><td>' . voucher_h($lineaName) . '<br><span class="small muted">' . voucher_h($lineaAux) . '</span></td><td class="right">' . voucher_h($lineaTot) . '</td></tr>';
+    }
+    $html .= '</table>';
+  }
+
+  if ($abonos) {
+    $html .= '<div class="rule"></div><div class="sec">' . ($kind === 'abono' ? 'ABONOS REGISTRADOS' : 'ABONOS') . '</div>';
+    $html .= '<table>';
+    $html .= '<tr><th>Medio / Ref.</th><th class="right">Monto</th></tr>';
+    foreach ($abonos as $ab) {
+      $medio = (string)($ab['medio'] ?? '—');
+      $ref = trim((string)($ab['referencia'] ?? ''));
+      $monto = voucher_fmt_money((float)($ab['monto'] ?? 0));
+      $fechaAb = trim((string)($ab['fecha'] ?? ''));
+      $abnCode = (int)($ab['abono_id'] ?? 0);
+      $metaRef = 'ABN-' . str_pad((string)$abnCode, 6, '0', STR_PAD_LEFT);
+      if ($ref !== '') $metaRef .= ' - ' . $ref;
+      if ($fechaAb !== '') $metaRef .= ' - ' . voucher_fmt_dt($fechaAb);
+      $html .= '<tr><td>' . voucher_h($medio) . '<br><span class="small muted">' . voucher_h($metaRef) . '</span></td><td class="right">' . voucher_h($monto) . '</td></tr>';
+    }
+    $html .= '</table>';
+  }
+
+  $html .= '<div class="rule"></div><div class="sec">TOTALES</div>';
+  $html .= '<table>';
+  $html .= '<tr><td>Total</td><td class="right b">' . voucher_h(voucher_fmt_money((float)($tot['total'] ?? 0))) . '</td></tr>';
+  $html .= '<tr><td>Pagado</td><td class="right b">' . voucher_h(voucher_fmt_money((float)($tot['pagado'] ?? 0))) . '</td></tr>';
+  $html .= '<tr><td>Saldo</td><td class="right b">' . voucher_h(voucher_fmt_money((float)($tot['saldo'] ?? 0))) . '</td></tr>';
+  if ((float)($tot['devuelto'] ?? 0) > 0) {
+    $html .= '<tr><td>Devuelto</td><td class="right b">' . voucher_h(voucher_fmt_money((float)$tot['devuelto'])) . '</td></tr>';
+  }
+  $html .= '</table>';
+
+  $html .= '<div class="center small" style="margin-top:6px;">Gracias por su preferencia.</div>';
+
+  header('Content-Type: application/pdf');
+  header('Content-Disposition: inline; filename="voucher_' . ($kind === 'abono' ? 'abono' : 'venta') . '_' . preg_replace('/[^A-Za-z0-9\\-]/', '_', (string)($meta['ticket'] ?? 'doc')) . '.pdf"');
+  $pdf->writeHTML($html, true, false, true, false, '');
+  $pdf->Output('', 'I');
+  exit;
+}
+
 /* =========================
  * Ruteo
  * ========================= */
@@ -166,6 +644,129 @@ $method = $_SERVER['REQUEST_METHOD'];
 $accion = $_GET['action'] ?? $_POST['accion'] ?? '';
 
 try {
+
+  /* =======================
+   * GET voucher_pdf
+   * ======================= */
+  if ($accion === 'voucher_pdf') {
+    $ventaId = (int)($_GET['id'] ?? $_GET['venta_id'] ?? 0);
+    if ($ventaId <= 0) json_err('Venta inválida.');
+
+    $kind = strtolower(trim((string)($_GET['kind'] ?? 'venta')));
+    $kind = ($kind === 'abono') ? 'abono' : 'venta';
+    $size = voucher_norm_size($_GET['size'] ?? 'ticket80');
+    $abonoIds = voucher_parse_ids_csv($_GET['abono_ids'] ?? '');
+
+    $venta = fetch_venta_head($db, $empId, $ventaId);
+    if (!$venta) json_err_code(404, 'Venta no encontrada.');
+
+    $condRaw = fetch_principal_conductor($db, $ventaId) ?: [];
+    $cond = resolve_conductor_payload(array_merge($venta, $condRaw));
+
+    $empresa = voucher_fetch_empresa($db, $empId) ?: [
+      'nombre' => '',
+      'razon_social' => '',
+      'ruc' => '',
+      'direccion' => '',
+      'logo_path' => ''
+    ];
+
+    $items = [];
+    foreach (voucher_fetch_items($db, $ventaId) as $it) {
+      $items[] = [
+        'nombre' => (string)($it['servicio_nombre'] ?? ''),
+        'cantidad' => (float)($it['cantidad'] ?? 0),
+        'precio' => (float)($it['precio_unitario'] ?? 0),
+        'total' => (float)($it['total_linea'] ?? 0)
+      ];
+    }
+
+    $abonos = [];
+    $abonosRaw = voucher_fetch_abonos($db, $ventaId, ($kind === 'abono') ? $abonoIds : []);
+    if ($kind === 'abono' && !count($abonosRaw)) {
+      json_err('No se encontraron abonos para imprimir.');
+    }
+    foreach ($abonosRaw as $ab) {
+      $abonos[] = [
+        'abono_id' => (int)($ab['abono_id'] ?? 0),
+        'medio' => (string)($ab['medio'] ?? '—'),
+        'referencia' => (string)($ab['referencia'] ?? ''),
+        'monto' => (float)($ab['monto_aplicado'] ?? $ab['monto'] ?? 0),
+        'fecha' => (string)($ab['fecha'] ?? '')
+      ];
+    }
+
+    $clienteDocTipo = (string)($venta['c_doc_tipo'] ?? '');
+    $clienteDocNum = (string)($venta['c_doc_numero'] ?? '');
+    $clienteNombre = trim((string)($venta['c_nombre'] ?? ''));
+    $clienteTelefono = trim((string)($venta['c_telefono'] ?? ''));
+    $clienteDoc = trim($clienteDocTipo . ' ' . $clienteDocNum);
+
+    $contrDoc = trim(((string)($venta['contratante_doc_tipo'] ?? '')) . ' ' . ((string)($venta['contratante_doc_numero'] ?? '')));
+    $contrNombre = trim(((string)($venta['contratante_nombres'] ?? '')) . ' ' . ((string)($venta['contratante_apellidos'] ?? '')));
+    $contrTelefono = trim((string)($venta['contratante_telefono'] ?? ''));
+
+    $conductorDoc = trim(((string)($cond['doc_tipo'] ?? '')) . ' ' . ((string)($cond['doc_numero'] ?? '')));
+    $conductorNombre = trim(((string)($cond['nombres'] ?? '')) . ' ' . ((string)($cond['apellidos'] ?? '')));
+    $conductorTelefono = trim((string)($cond['telefono'] ?? ''));
+    if ($conductorNombre === '') {
+      $conductorNombre = 'No especificado';
+    }
+
+    $cajero = trim((string)(($u['nombres'] ?? '') . ' ' . ($u['apellidos'] ?? '')));
+    if ($cajero === '') {
+      $cajero = (string)($u['usuario'] ?? 'Usuario');
+    }
+    $fechaVenta = (string)($venta['fecha_emision'] ?? '');
+    $fechaDoc = $fechaVenta;
+    if ($kind === 'abono' && count($abonosRaw)) {
+      $lastAb = end($abonosRaw);
+      if (is_array($lastAb) && !empty($lastAb['fecha'])) {
+        $fechaDoc = (string)$lastAb['fecha'];
+      }
+    }
+
+    $data = [
+      'empresa' => [
+        'nombre' => (string)($empresa['nombre'] ?? ''),
+        'razon_social' => (string)($empresa['razon_social'] ?? ''),
+        'ruc' => (string)($empresa['ruc'] ?? ''),
+        'direccion' => (string)($empresa['direccion'] ?? ''),
+        'logo_data_uri' => voucher_logo_data_uri((string)($empresa['logo_path'] ?? ''))
+      ],
+      'meta' => [
+        'ticket' => (string)$venta['serie'] . '-' . pad4((int)$venta['numero']),
+        'fecha' => voucher_fmt_dt($fechaDoc),
+        'fecha_venta' => voucher_fmt_dt($fechaVenta),
+        'cajero' => $cajero
+      ],
+      'cliente' => [
+        'doc' => $clienteDoc,
+        'nombre' => $clienteNombre,
+        'telefono' => $clienteTelefono
+      ],
+      'contratante' => [
+        'doc' => $contrDoc,
+        'nombre' => $contrNombre,
+        'telefono' => $contrTelefono
+      ],
+      'conductor' => [
+        'doc' => $conductorDoc,
+        'nombre' => $conductorNombre,
+        'telefono' => $conductorTelefono
+      ],
+      'items' => $items,
+      'abonos' => $abonos,
+      'totales' => [
+        'total' => (float)($venta['total'] ?? 0),
+        'pagado' => (float)($venta['total_pagado'] ?? 0),
+        'saldo' => (float)($venta['saldo'] ?? 0),
+        'devuelto' => (float)($venta['total_devuelto'] ?? 0)
+      ]
+    ];
+
+    voucher_render_pdf($data, $size, $kind);
+  }
 
   /* =======================
    * GET ventas_buscar
@@ -448,7 +1049,8 @@ try {
       'cliente'=> [
         'doc_tipo' => $V['c_doc_tipo'],
         'doc'      => $V['c_doc_numero'],
-        'nombre'   => $V['c_nombre']
+        'nombre'   => $V['c_nombre'],
+        'telefono' => $V['c_telefono']
       ],
       'contratante'=>[
         'doc_tipo' => $V['contratante_doc_tipo'],
