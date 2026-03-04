@@ -63,6 +63,67 @@ function human_date($value){
   $dt = DateTime::createFromFormat('Y-m-d', (string)$value);
   return $dt ? $dt->format('d/m/Y') : (string)$value;
 }
+function row_pick(array $row, array $keys, $default = ''){
+  foreach ($keys as $key) {
+    if (array_key_exists($key, $row) && $row[$key] !== null && $row[$key] !== '') {
+      return $row[$key];
+    }
+  }
+  return $default;
+}
+function row_has_any(array $row, array $keys): bool {
+  foreach ($keys as $key) {
+    if (array_key_exists($key, $row) && $row[$key] !== null && $row[$key] !== '') {
+      return true;
+    }
+  }
+  return false;
+}
+function resolve_conductor_payload(array $row): array {
+  $tipoRelacion = strtoupper((string)row_pick($row, ['vc_conductor_tipo', 'conductor_tipo'], ''));
+  $hasConductorRegistrado = row_has_any($row, ['d_doc_tipo', 'd_doc_numero', 'd_nombres', 'd_apellidos', 'd_telefono']);
+  if (($tipoRelacion === 'REGISTRADO' || $tipoRelacion === '') && $hasConductorRegistrado) {
+    return [
+      'doc_tipo'   => (string)row_pick($row, ['d_doc_tipo']),
+      'doc_numero' => (string)row_pick($row, ['d_doc_numero', 'd_doc_num']),
+      'nombres'    => (string)row_pick($row, ['d_nombres']),
+      'apellidos'  => (string)row_pick($row, ['d_apellidos']),
+      'telefono'   => (string)row_pick($row, ['d_telefono'])
+    ];
+  }
+  if ($tipoRelacion === 'PENDIENTE') {
+    return [
+      'doc_tipo'   => '',
+      'doc_numero' => '',
+      'nombres'    => 'Pendiente de definir',
+      'apellidos'  => '',
+      'telefono'   => ''
+    ];
+  }
+  if (row_has_any($row, ['contratante_doc_tipo', 'ct_doc_tipo', 'contratante_doc_numero', 'ct_doc_num', 'contratante_nombres', 'ct_nombres', 'contratante_apellidos', 'ct_apellidos'])) {
+    return [
+      'doc_tipo'   => (string)row_pick($row, ['contratante_doc_tipo', 'ct_doc_tipo']),
+      'doc_numero' => (string)row_pick($row, ['contratante_doc_numero', 'ct_doc_num']),
+      'nombres'    => (string)row_pick($row, ['contratante_nombres', 'ct_nombres']),
+      'apellidos'  => (string)row_pick($row, ['contratante_apellidos', 'ct_apellidos']),
+      'telefono'   => (string)row_pick($row, ['contratante_telefono', 'ct_telefono'])
+    ];
+  }
+  return [
+    'doc_tipo'   => (string)row_pick($row, ['c_doc_tipo']),
+    'doc_numero' => (string)row_pick($row, ['c_doc_numero', 'c_doc_num']),
+    'nombres'    => (string)row_pick($row, ['c_nombre']),
+    'apellidos'  => '',
+    'telefono'   => (string)row_pick($row, ['c_telefono'])
+  ];
+}
+function conductor_display(array $cond): string {
+  $doc = trim((string)(($cond['doc_tipo'] ?? '') . ' ' . ($cond['doc_numero'] ?? '')));
+  $nom = trim((string)(($cond['nombres'] ?? '') . ' ' . ($cond['apellidos'] ?? '')));
+  if ($doc !== '' && $nom !== '') return $doc . ' • ' . $nom;
+  if ($doc !== '') return $doc;
+  return $nom;
+}
 function map_medios_pago_activos(mysqli $db): array {
   $rs = $db->query("SELECT id, nombre, requiere_ref FROM pos_medios_pago WHERE activo=1");
   $out = [];
@@ -78,7 +139,7 @@ function fetch_venta_head(mysqli $db, int $empId, int $ventaId){
       v.id, v.id_empresa, v.cliente_id, v.serie, v.numero, v.fecha_emision, v.moneda,
       v.total, v.total_pagado, v.total_devuelto, v.saldo, v.estado,
       v.contratante_doc_tipo, v.contratante_doc_numero, v.contratante_nombres, v.contratante_apellidos, v.contratante_telefono,
-      c.doc_tipo AS c_doc_tipo, c.doc_numero AS c_doc_numero, c.nombre AS c_nombre
+      c.doc_tipo AS c_doc_tipo, c.doc_numero AS c_doc_numero, c.nombre AS c_nombre, c.telefono AS c_telefono
     FROM pos_ventas v
     LEFT JOIN pos_clientes c ON c.id=v.cliente_id
     WHERE v.id_empresa=? AND v.id=? LIMIT 1");
@@ -87,9 +148,11 @@ function fetch_venta_head(mysqli $db, int $empId, int $ventaId){
 }
 
 function fetch_principal_conductor(mysqli $db, int $ventaId){
-  $q = $db->prepare("SELECT d.doc_tipo, d.doc_numero, d.nombres, d.apellidos, d.telefono
+  $q = $db->prepare("SELECT vc.conductor_tipo AS vc_conductor_tipo,
+                            d.doc_tipo AS d_doc_tipo, d.doc_numero AS d_doc_numero,
+                            d.nombres AS d_nombres, d.apellidos AS d_apellidos, d.telefono AS d_telefono
                      FROM pos_venta_conductores vc
-                     JOIN pos_conductores d ON d.id=vc.conductor_id
+                     LEFT JOIN pos_conductores d ON d.id=vc.conductor_id
                      WHERE vc.venta_id=? AND vc.es_principal=1
                      LIMIT 1");
   $q->bind_param('i',$ventaId); $q->execute();
@@ -246,14 +309,18 @@ try {
               c.doc_tipo  AS c_doc_tipo,
               c.doc_numero AS c_doc_num,
               c.nombre     AS c_nombre,
+              c.telefono   AS c_telefono,
               v.contratante_doc_tipo   AS ct_doc_tipo,
               v.contratante_doc_numero AS ct_doc_num,
               v.contratante_nombres    AS ct_nombres,
               v.contratante_apellidos  AS ct_apellidos,
+              v.contratante_telefono   AS ct_telefono,
+              vc.conductor_tipo        AS vc_conductor_tipo,
               d.doc_tipo   AS d_doc_tipo,
               d.doc_numero AS d_doc_num,
               d.nombres    AS d_nombres,
-              d.apellidos  AS d_apellidos
+              d.apellidos  AS d_apellidos,
+              d.telefono   AS d_telefono
             FROM pos_ventas v
             LEFT JOIN mod_caja_diaria cd ON cd.id=v.caja_diaria_id
             LEFT JOIN pos_clientes c ON c.id=v.cliente_id
@@ -292,12 +359,7 @@ try {
         $ctrDisp = $r['ct_doc_tipo'].' '.$r['ct_doc_num'].' • '.$r['ct_nombres'].' '.$r['ct_apellidos'];
       }
 
-      $condDisp = '';
-      if ($r['d_doc_tipo'] && $r['d_doc_num']) {
-        $condDisp = $r['d_doc_tipo'].' '.$r['d_doc_num'].' • '.$r['d_nombres'].' '.$r['d_apellidos'];
-      } elseif ($r['d_nombres'] || $r['d_apellidos']) {
-        $condDisp = trim(($r['d_nombres'] ?? '').' '.($r['d_apellidos'] ?? ''));
-      }
+      $condDisp = conductor_display(resolve_conductor_payload($r));
 
       $saldo        = (float)$r['saldo'];
       $estadoVenta  = (string)$r['estado'];
@@ -360,7 +422,8 @@ try {
     $items = $qi->get_result()->fetch_all(MYSQLI_ASSOC) ?: [];
 
     // Conductor principal
-    $cond = fetch_principal_conductor($db,$ventaId) ?: [];
+    $condRaw = fetch_principal_conductor($db,$ventaId) ?: [];
+    $cond = resolve_conductor_payload(array_merge($V, $condRaw));
 
     // Abonos aplicados (con id de aplicación para posibles devoluciones)
     $qa = $db->prepare("SELECT apl.id AS aplicacion_id, mp.nombre AS medio, a.monto,

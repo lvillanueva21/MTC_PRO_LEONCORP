@@ -996,50 +996,66 @@ $ct_doc_num   = trim($_POST['contratante_doc_numero'] ?? '');
         'direccion'    => null
       ]);
 
-      // 7) Upsert conductor
+      // 7) Resolver conductor principal
+      $conductor_rel_tipo = 'CLIENTE';
+      $conductor_rel_id   = null;
+      $conductor_origen   = '';
+      $conductor_snapshot = [
+        'doc_tipo'   => null,
+        'doc_numero' => null,
+        'nombres'    => null,
+        'apellidos'  => null,
+        'telefono'   => null
+      ];
+
       if ($conductor_otro) {
-        // Conductor indicado explícitamente
-        $conductor_id = upsert_pos_conductor($db, [
+        // Conductor indicado explícitamente: se registra en el maestro.
+        $conductor_rel_tipo = 'REGISTRADO';
+        $conductor_rel_id = upsert_pos_conductor($db, [
           'id_empresa' => $empId,
           'doc_tipo'   => $co_doc_tipo,
           'doc_numero' => $co_doc_num,
           'nombres'    => $co_nombres,
           'apellidos'  => $co_apellidos,
-          'telefono'   => $co_telefono?:null,
+          'telefono'   => $co_telefono ?: null,
           'email'      => null
         ]);
+        $conductor_origen = 'conductor_otra_persona';
+        $conductor_snapshot = [
+          'doc_tipo'   => $co_doc_tipo,
+          'doc_numero' => $co_doc_num,
+          'nombres'    => $co_nombres,
+          'apellidos'  => $co_apellidos,
+          'telefono'   => $co_telefono ?: null
+        ];
+      } elseif ($cliente_tipo === 'NATURAL') {
+        // Cliente natural: el conductor es el mismo cliente, sin duplicarlo en pos_conductores.
+        $conductor_origen = 'cliente_natural';
+        $conductor_snapshot = [
+          'doc_tipo'   => $cli_doc_tipo,
+          'doc_numero' => $cli_doc_num,
+          'nombres'    => $cli_nombres,
+          'apellidos'  => $cli_apellidos,
+          'telefono'   => $cli_telefono ?: null
+        ];
       } else {
-        // Conductor = cliente (si NATURAL) | contratante (si JURIDICA)
-        if ($cliente_tipo === 'NATURAL') {
-          $conductor_id = upsert_pos_conductor($db, [
-            'id_empresa' => $empId,
-            'doc_tipo'   => $cli_doc_tipo,
-            'doc_numero' => $cli_doc_num,
-            'nombres'    => $cli_nombres,
-            'apellidos'  => $cli_apellidos,
-            'telefono'   => $cli_telefono?:null,
-            'email'      => null
-          ]);
-        } else {
-          // Persona jurídica: usamos los datos del CONTRATANTE (doc_tipo/doc_num del contratante).
-          $conductor_id = upsert_pos_conductor($db, [
-            'id_empresa' => $empId,
-            'doc_tipo'   => $ct_doc_tipo,
-            'doc_numero' => $ct_doc_num,
-            'nombres'    => $cli_nombres,     // contratante
-            'apellidos'  => $cli_apellidos,   // contratante
-            'telefono'   => $cli_telefono?:null,
-            'email'      => null
-          ]);
-        }
+        // Persona jurídica: el conductor por defecto es el contratante snapshotado en la venta.
+        $conductor_origen = 'contratante_juridica';
+        $conductor_snapshot = [
+          'doc_tipo'   => $ct_doc_tipo,
+          'doc_numero' => $ct_doc_num,
+          'nombres'    => $cli_nombres,
+          'apellidos'  => $cli_apellidos,
+          'telefono'   => $cli_telefono ?: null
+        ];
       }
 
-// NUEVO: preparar snapshot del contratante solo si el cliente es JURIDICA
-$contr_doc_tipo   = ($cliente_tipo==='JURIDICA') ? $ct_doc_tipo   : null;
-$contr_doc_num    = ($cliente_tipo==='JURIDICA') ? $ct_doc_num    : null;
-$contr_nombres    = ($cliente_tipo==='JURIDICA') ? $cli_nombres   : null;
-$contr_apellidos  = ($cliente_tipo==='JURIDICA') ? $cli_apellidos : null;
-$contr_telefono   = ($cliente_tipo==='JURIDICA') ? ($cli_telefono ?: null) : null;
+      // Snapshot del contratante solo si el cliente es JURIDICA
+      $contr_doc_tipo  = ($cliente_tipo === 'JURIDICA') ? $ct_doc_tipo : null;
+      $contr_doc_num   = ($cliente_tipo === 'JURIDICA') ? $ct_doc_num : null;
+      $contr_nombres   = ($cliente_tipo === 'JURIDICA') ? $cli_nombres : null;
+      $contr_apellidos = ($cliente_tipo === 'JURIDICA') ? $cli_apellidos : null;
+      $contr_telefono  = ($cliente_tipo === 'JURIDICA') ? ($cli_telefono ?: null) : null;
 
       // 8) Serie y cabecera
       $ticket   = pos_next_ticket($db, $empId); // bloquea/incrementa
@@ -1092,9 +1108,15 @@ $contr_telefono   = ($cliente_tipo==='JURIDICA') ? ($cli_telefono ?: null) : nul
       }
 
       // 10) Conductor principal
-      $insC = $db->prepare("INSERT INTO pos_venta_conductores(venta_id, conductor_tipo, conductor_id, estado, es_principal)
-                            VALUES (?, 'REGISTRADO', ?, 'ASIGNADO', 1)");
-      $insC->bind_param('ii', $venta_id, $conductor_id);
+      if ($conductor_rel_id === null) {
+        $insC = $db->prepare("INSERT INTO pos_venta_conductores(venta_id, conductor_tipo, conductor_id, estado, es_principal)
+                              VALUES (?, ?, NULL, 'ASIGNADO', 1)");
+        $insC->bind_param('is', $venta_id, $conductor_rel_tipo);
+      } else {
+        $insC = $db->prepare("INSERT INTO pos_venta_conductores(venta_id, conductor_tipo, conductor_id, estado, es_principal)
+                              VALUES (?, ?, ?, 'ASIGNADO', 1)");
+        $insC->bind_param('isi', $venta_id, $conductor_rel_tipo, $conductor_rel_id);
+      }
       $insC->execute();
 
       // 11) Abonos (+ sobrepago -> devuelto)
@@ -1144,12 +1166,45 @@ $contr_telefono   = ($cliente_tipo==='JURIDICA') ? ($cli_telefono ?: null) : nul
       $upV->execute();
 
       // 12) Auditoría
+      $audData = json_encode([
+        'cliente' => [
+          'id'           => $cliente_id,
+          'tipo_persona' => $cliente_tipo,
+          'doc_tipo'     => $cli_doc_tipo,
+          'doc_numero'   => $cli_doc_num,
+          'nombre'       => $cliente_nombre,
+          'telefono'     => $cli_telefono ?: null
+        ],
+        'contratante' => ($cliente_tipo === 'JURIDICA') ? [
+          'doc_tipo'   => $contr_doc_tipo,
+          'doc_numero' => $contr_doc_num,
+          'nombres'    => $contr_nombres,
+          'apellidos'  => $contr_apellidos,
+          'telefono'   => $contr_telefono
+        ] : null,
+        'conductor' => [
+          'tipo_relacion' => $conductor_rel_tipo,
+          'origen'        => $conductor_origen,
+          'conductor_id'  => $conductor_rel_id,
+          'doc_tipo'      => $conductor_snapshot['doc_tipo'],
+          'doc_numero'    => $conductor_snapshot['doc_numero'],
+          'nombres'       => $conductor_snapshot['nombres'],
+          'apellidos'     => $conductor_snapshot['apellidos'],
+          'telefono'      => $conductor_snapshot['telefono']
+        ],
+        'venta' => [
+          'caja_diaria_id' => $caja_diaria_id,
+          'total'          => (float)$total,
+          'pagado'         => (float)$total_pagado,
+          'saldo'          => (float)$saldo
+        ]
+      ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
       $aud = $db->prepare("INSERT INTO pos_auditoria(id_empresa, tabla, registro_id, evento, datos, actor_id, actor_usuario, actor_nombre, ip, creado_en)
-                           VALUES (?, 'pos_ventas', ?, 'VENTA_CREADA', NULL, ?, ?, ?, ?, NOW())");
+                           VALUES (?, 'pos_ventas', ?, 'VENTA_CREADA', ?, ?, ?, ?, ?, NOW())");
       $actorUsuario = (string)($u['usuario'] ?? '');
       $actorNombre  = trim(($u['nombres'] ?? '').' '.($u['apellidos'] ?? '')) ?: null;
       $ip = $_SERVER['REMOTE_ADDR'] ?? null;
-      $aud->bind_param('iiisss', $empId, $venta_id, $uid, $actorUsuario, $actorNombre, $ip);
+      $aud->bind_param('iisisss', $empId, $venta_id, $audData, $uid, $actorUsuario, $actorNombre, $ip);
       $aud->execute();
 
       $db->commit();
