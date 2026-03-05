@@ -1,0 +1,243 @@
+/* dashboard/administracion/estilo.css */
+/* Estilos del widget de caja diaria/mensual (scopeado a .dash-admin). */
+
+/* ===== Estilos base del dashboard (antes inline en comunicados.php) ===== */
+.dash-admin .card { border-radius: 12px; }
+.dash-admin .card-title { font-weight: 700; margin-bottom: .5rem; }
+.dash-admin .muted { color:#6b7280; }
+
+/* Comunicados */
+.dash-admin .cm-wrap { gap: 12px; }
+.dash-admin .cm-body { max-height: 220px; overflow:auto; }
+.dash-admin .cm-thumb {
+  width:100%;
+  height:auto;
+  border-radius:10px;
+  border:1px solid #e5e7eb;
+  object-fit:cover;
+}
+.dash-admin .cm-figure { max-width: 280px; }
+
+/* Dots carrusel */
+.dash-admin .cm-dots { display:flex; gap:6px; }
+.dash-admin .cm-dot {
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#cbd5e1;
+  cursor:pointer;
+}
+.dash-admin .cm-dot.active { background:#4f46e5; }
+
+/* Modal de comunicado */
+.dash-admin .cm-modal-title { font-weight: 800; }
+.dash-admin .cm-modal-body { display:grid; gap:12px; }
+.dash-admin .cm-modal-imgwrap {
+  border:1px solid #e5e7eb;
+  border-radius:10px;
+  padding:6px;
+  overflow:auto; /* permite desplazar cuando esta con zoom */
+  max-height:60vh;
+}
+.dash-admin .cm-modal-img {
+  max-width:100%;
+  height:auto;
+  cursor:zoom-in;
+  transition:transform .2s ease;
+}
+.dash-admin .cm-modal-img.zoomed {
+  cursor:zoom-out;
+  transform: scale(1.6);
+  transform-origin: center center;
+}
+
+/* Tarjetas pequenas */
+.dash-admin .kpi-card { min-height: 140px; }
+
+/* Grilla 2x2 de clientes */
+.dash-admin .mini-grid { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+.dash-admin .mini-box {
+  padding:12px;
+  border:1px dashed #e5e7eb;
+  border-radius:10px;
+  text-align:center;
+  min-height: 86px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+}
+.dash-admin .cm-empty-figure { min-height:160px; }
+.dash-admin .cm-chart-placeholder {
+  height:280px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:1px dashed #e5e7eb;
+  border-radius:8px;
+  margin-top:.5rem;
+}
+.dash-admin .cm-modal-text { white-space:pre-wrap; }
+
+@media (min-width: 768px) {
+  .dash-admin .cm-modal-body { grid-template-columns: 1fr 1.2fr; }
+}
+
+@media (max-width: 575.98px) {
+  .dash-admin .mini-grid { grid-template-columns: 1fr; }
+}
+
+/* ===== Estilos del widget de caja diaria/mensual ===== */
+.dash-admin .cdm-widget-card {
+  border: 0;
+  border-radius: 16px;
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(255, 215, 120, .34) 0%, rgba(255, 215, 120, 0) 52%),
+    radial-gradient(120% 90% at 100% 0%, rgba(90, 194, 255, .30) 0%, rgba(90, 194, 255, 0) 48%),
+    linear-gradient(135deg, #fff8dd 0%, #f7fcff 100%);
+  box-shadow: 0 10px 24px rgba(12, 65, 109, .12);
+}
+
+.dash-admin .cdm-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.dash-admin .cdm-kicker {
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-weight: 800;
+  color: #0f6f6f;
+}
+
+.dash-admin .cdm-title {
+  margin: 2px 0 0 0;
+  font-weight: 800;
+  color: #0f2640;
+}
+
+.dash-admin .cdm-coin {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  color: #0e5e8b;
+  background: linear-gradient(145deg, #fff5be 0%, #ffe18f 100%);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .55), 0 6px 14px rgba(240, 178, 43, .28);
+}
+
+.dash-admin .cdm-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+@media (min-width: 768px) {
+  .dash-admin .cdm-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.dash-admin .cdm-box {
+  border-radius: 14px;
+  padding: 10px 11px;
+  border: 1px solid rgba(10, 56, 95, .11);
+  min-height: 150px;
+}
+
+.dash-admin .cdm-box-day {
+  background: linear-gradient(140deg, #ffffff 0%, #eff9ff 100%);
+}
+
+.dash-admin .cdm-box-month {
+  background: linear-gradient(140deg, #ffffff 0%, #effff4 100%);
+}
+
+.dash-admin .cdm-box-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.dash-admin .cdm-box-label {
+  font-size: .82rem;
+  font-weight: 700;
+  color: #295167;
+}
+
+.dash-admin .cdm-source {
+  font-size: .67rem;
+  line-height: 1;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.dash-admin .cdm-badge-today {
+  color: #0a5f88;
+  background: #daf1ff;
+}
+
+.dash-admin .cdm-badge-current {
+  color: #0f7a4a;
+  background: #daf8e8;
+}
+
+.dash-admin .cdm-badge-latest {
+  color: #5f4e07;
+  background: #fff2c8;
+}
+
+.dash-admin .cdm-badge-none {
+  color: #5b6f7f;
+  background: #edf2f6;
+}
+
+.dash-admin .cdm-code {
+  font-size: .98rem;
+  font-weight: 800;
+  color: #11314f;
+  margin-bottom: 3px;
+  word-break: break-word;
+}
+
+.dash-admin .cdm-meta {
+  font-size: .76rem;
+  color: #4e6579;
+  margin-bottom: 8px;
+}
+
+.dash-admin .cdm-total {
+  font-size: 1.28rem;
+  font-weight: 900;
+  letter-spacing: .02em;
+  color: #0f3357;
+  margin-bottom: 3px;
+}
+
+.dash-admin .cdm-note {
+  font-size: .73rem;
+  color: #5a6f80;
+  line-height: 1.32;
+}
+
+.dash-admin .cdm-friendly {
+  margin-top: 10px;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: .77rem;
+  color: #0b5670;
+  background: linear-gradient(90deg, rgba(221, 248, 255, .85) 0%, rgba(240, 255, 234, .88) 100%);
+  border: 1px dashed rgba(12, 90, 110, .25);
+}
