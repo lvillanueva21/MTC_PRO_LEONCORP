@@ -27,6 +27,28 @@ function h($s){
     return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 }
 
+function edad_desde_fecha_iso($isoDate) {
+    $isoDate = trim((string)$isoDate);
+    if ($isoDate === '') {
+        return '';
+    }
+    $tsNac = strtotime($isoDate . ' 00:00:00');
+    if ($tsNac === false) {
+        return '';
+    }
+    $nac = date('Y-m-d', $tsNac);
+    $hoy = date('Y-m-d');
+    if ($nac > $hoy) {
+        return '';
+    }
+    $nacDT = DateTime::createFromFormat('Y-m-d', $nac);
+    $hoyDT = DateTime::createFromFormat('Y-m-d', $hoy);
+    if (!$nacDT || !$hoyDT) {
+        return '';
+    }
+    return (string)$nacDT->diff($hoyDT)->y;
+}
+
 /**
  * Cálculo de prefijo relativo a la raíz de la app y helper de enlaces.
  * - No depende de dominios ni de '/ventas/' hardcodeado.
@@ -316,7 +338,7 @@ include __DIR__ . '/../../includes/header.php';
                      name="q"
                      class="form-control form-control-sm"
                      value="<?= h($q) ?>"
-                     placeholder="Nombre, documento, email o teléfono">
+                     placeholder="Nombre, documento, teléfono, correo o canal">
             </div>
 
             <div class="col-6 col-md-3 col-lg-2">
@@ -468,9 +490,16 @@ include __DIR__ . '/../../includes/header.php';
                     $tipoP   = (string)$cli['tipo_persona'];
                     $docT    = (string)$cli['doc_tipo'];
                     $docN    = (string)$cli['doc_numero'];
-                    $email   = trim((string)($cli['email'] ?? ''));
                     $tel     = trim((string)($cli['telefono'] ?? ''));
-                    $dir     = trim((string)($cli['direccion'] ?? ''));
+                    $perfilCanal = trim((string)($cli['perfil_canal'] ?? ''));
+                    $perfilEmail = trim((string)($cli['perfil_email'] ?? ''));
+                    $perfilNacIso = trim((string)($cli['perfil_nacimiento'] ?? ''));
+                    $perfilNacFmt = fmt_date($perfilNacIso);
+                    $perfilEdad = edad_desde_fecha_iso($perfilNacIso);
+                    $perfilCatAuto = trim((string)($cli['perfil_categoria_auto'] ?? ''));
+                    $perfilCatMoto = trim((string)($cli['perfil_categoria_moto'] ?? ''));
+                    $perfilNota = trim((string)($cli['perfil_nota'] ?? ''));
+                    $perfilActualizado = fmt_dt($cli['perfil_actualizado'] ?? null);
                     $activo  = (int)($cli['activo'] ?? 0);
 
                     $ventasTotal    = (float)($cli['ventas_total'] ?? 0);
@@ -510,10 +539,13 @@ include __DIR__ . '/../../includes/header.php';
                     </td>
                     <td>
                       <div class="small mb-0">
-                        <i class="fas fa-envelope mr-1"></i><?= h($email !== '' ? $email : '—') ?>
+                        <i class="fas fa-envelope mr-1"></i><?= h($perfilEmail !== '' ? $perfilEmail : '—') ?>
                       </div>
-                      <div class="small">
+                      <div class="small mb-0">
                         <i class="fas fa-phone mr-1"></i><?= h($tel !== '' ? $tel : '—') ?>
+                      </div>
+                      <div class="small text-muted">
+                        Canal: <?= h($perfilCanal !== '' ? $perfilCanal : '—') ?>
                       </div>
                     </td>
                     <td class="text-end">
@@ -569,16 +601,41 @@ include __DIR__ . '/../../includes/header.php';
                               <strong>Documento:</strong> <?= h($docT) ?> <?= h($docN) ?>
                             </div>
                             <div class="small mb-1">
-                              <strong>Dirección:</strong> <?= h($dir !== '' ? $dir : '—') ?>
-                            </div>
-                            <div class="small mb-1">
-                              <strong>Email:</strong> <?= h($email !== '' ? $email : '—') ?>
+                              <strong>Email:</strong> <?= h($perfilEmail !== '' ? $perfilEmail : '—') ?>
                             </div>
                             <div class="small mb-1">
                               <strong>Teléfono:</strong> <?= h($tel !== '' ? $tel : '—') ?>
                             </div>
                             <div class="small mb-1">
+                              <strong>Canal:</strong> <?= h($perfilCanal !== '' ? $perfilCanal : '—') ?>
+                            </div>
+                            <div class="small mb-1">
                               <strong>Estado:</strong> <?= $badgeEstado ?>
+                            </div>
+                            <hr class="my-2">
+                            <div class="small mb-1">
+                              <strong>Perfil adicional (conductor):</strong>
+                            </div>
+                            <div class="small mb-1">
+                              <strong>Nacimiento:</strong>
+                              <?php if ($perfilNacFmt !== ''): ?>
+                                <?= h($perfilNacFmt) ?><?= $perfilEdad !== '' ? ' (' . h($perfilEdad) . ' años)' : '' ?>
+                              <?php else: ?>
+                                —
+                              <?php endif; ?>
+                            </div>
+                            <div class="small mb-1">
+                              <strong>Categoría auto:</strong> <?= h($perfilCatAuto !== '' ? $perfilCatAuto : '—') ?>
+                            </div>
+                            <div class="small mb-1">
+                              <strong>Categoría moto:</strong> <?= h($perfilCatMoto !== '' ? $perfilCatMoto : '—') ?>
+                            </div>
+                            <div class="small mb-1">
+                              <strong>Nota:</strong> <?= h($perfilNota !== '' ? $perfilNota : '—') ?>
+                            </div>
+                            <div class="small mb-1 text-muted">
+                              <strong>Perfil actualizado:</strong>
+                              <?= $perfilActualizado !== '' ? h($perfilActualizado) : '—' ?>
                             </div>
                           </div>
                         </div>

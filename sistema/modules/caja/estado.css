@@ -340,6 +340,16 @@
   gap:8px;
   margin-bottom:6px;
 }
+.conductor-extra-box{
+  background:#fffbeb;
+  border-color:#f59e0b;
+}
+.conductor-extra-box textarea{
+  resize:vertical;
+}
+#pmExtraEdad{
+  background:#f3f4f6;
+}
 /* Alertas embebidas en modales */
 .modal-inline-alert { margin-bottom: 8px; }
 

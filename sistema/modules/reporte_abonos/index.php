@@ -589,9 +589,6 @@ include __DIR__ . '/../../includes/header.php';
                                 <?php if (!empty($r['cliente_telefono'])): ?>
                                   <div class="text-xs"><i class="fas fa-phone-alt"></i> <?= h($r['cliente_telefono']) ?></div>
                                 <?php endif; ?>
-                                <?php if (!empty($r['cliente_email'])): ?>
-                                  <div class="text-xs"><i class="fas fa-envelope"></i> <?= h($r['cliente_email']) ?></div>
-                                <?php endif; ?>
                               <?php else: ?>
                                 <div class="text-muted small">— Sin datos de cliente —</div>
                               <?php endif; ?>

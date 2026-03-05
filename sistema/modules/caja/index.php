@@ -417,8 +417,8 @@ include __DIR__ . '/../../includes/header.php';
                   <i class="fas fa-user-friends"></i><span>El conductor es otra persona</span>
                 </button>
 
-                <button id="pmClientMore" class="pm-chip pm-chip-yellow pm-stub" type="button">
-                  <i class="fas fa-id-card"></i><span>Guardar más información del cliente</span>
+                <button id="pmClientMore" class="pm-chip pm-chip-yellow" type="button">
+                  <i class="fas fa-id-card"></i><span>Guardar más información del conductor</span>
                 </button>
 
                 <button class="pm-chip pm-chip-dark pm-stub" type="button">
@@ -462,6 +462,44 @@ include __DIR__ . '/../../includes/header.php';
                   <button type="button" id="pmDriverCancel" class="btn btn-danger btn-sm">
                     Cancelar
                   </button>
+                </div>
+              </div>
+
+              <div id="pmConductorExtraBox" class="driver-box conductor-extra-box d-none mt-3">
+                <div class="title"><i class="fas fa-id-card"></i> Más información del conductor</div>
+                <div id="pmExtraDocInfo" class="small text-muted mb-2">Documento del conductor: —</div>
+                <div class="row g-2">
+                  <div class="col-12 col-md-6">
+                    <label class="form-label small mb-1">Canal <span class="text-muted">(opcional)</span></label>
+                    <select id="pmExtraCanal" class="form-control form-control-sm"></select>
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <label class="form-label small mb-1">Correo <span class="text-muted">(opcional)</span></label>
+                    <input id="pmExtraCorreo" type="email" class="form-control form-control-sm" maxlength="150">
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <label class="form-label small mb-1">Nacimiento <span class="text-muted">(opcional)</span></label>
+                    <input id="pmExtraNacimiento" type="date" class="form-control form-control-sm">
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <label class="form-label small mb-1">Edad <span class="text-muted">(calculada)</span></label>
+                    <input id="pmExtraEdad" class="form-control form-control-sm" readonly>
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <label class="form-label small mb-1">Categoría Auto <span class="text-muted">(opcional)</span></label>
+                    <select id="pmExtraCatAuto" class="form-control form-control-sm"></select>
+                  </div>
+                  <div class="col-12 col-md-6">
+                    <label class="form-label small mb-1">Categoría Moto <span class="text-muted">(opcional)</span></label>
+                    <select id="pmExtraCatMoto" class="form-control form-control-sm"></select>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label small mb-1">Nota <span class="text-muted">(opcional)</span></label>
+                    <textarea id="pmExtraNota" class="form-control form-control-sm" rows="3" maxlength="255"></textarea>
+                  </div>
+                </div>
+                <div class="d-flex justify-content-end align-items-center mt-2">
+                  <button type="button" id="pmExtraCancel" class="btn btn-danger btn-sm">Cancelar</button>
                 </div>
               </div>
             </div>
@@ -1005,6 +1043,12 @@ const PM = {
   saldo: 0,                   // total - sum(abonos)
   ventaItems: []              // snapshot de carrito [{servicio_id, nombre, qty, precio}]
 };
+const CONDUCTOR_CANALES = ['WHATSAPP', 'LLAMADA', 'SMS', 'PRESENCIAL', 'OTRO'];
+const PM_EXTRA = {
+  metaLoaded: false,
+  categorias: { auto: [], moto: [] },
+  docKey: ''
+};
 
 function pm_money(n){ return 'S/ ' + Number(n||0).toFixed(2); }
 
@@ -1016,6 +1060,177 @@ async function loadMediosPago(){
     const req = (m.requiere_ref === 1 || m.requiere_ref === '1' || m.requiere_ref === true) ? '1' : '0';
     return `<option value="${m.id}" data-req="${req}">${esc(m.nombre)}</option>`;
   }).join('');
+}
+
+function buildDocKey(tipo, numero){
+  return `${String(tipo||'').trim()}|${String(numero||'').trim()}`;
+}
+function calcEdadFromNacimiento(iso){
+  const raw = String(iso||'').trim();
+  if (!raw) return '';
+  const dt = new Date(raw + 'T00:00:00');
+  if (Number.isNaN(dt.getTime())) return '';
+  const hoy = new Date();
+  let edad = hoy.getFullYear() - dt.getFullYear();
+  const mm = hoy.getMonth() - dt.getMonth();
+  if (mm < 0 || (mm === 0 && hoy.getDate() < dt.getDate())) edad--;
+  return edad >= 0 ? String(edad) : '';
+}
+function refreshExtraEdad(){
+  const nac = (qs('#pmExtraNacimiento')?.value || '').trim();
+  const edad = calcEdadFromNacimiento(nac);
+  if (qs('#pmExtraEdad')) qs('#pmExtraEdad').value = edad;
+}
+function getConductorTargetDoc(){
+  const otro = !qs('#pmDriverBox').classList.contains('d-none');
+  if (otro){
+    return {
+      origen: 'conductor',
+      doc_tipo: qs('#pmCoDocTipo')?.value || '',
+      doc_numero: (qs('#pmCoDocNum')?.value || '').trim(),
+      label: 'conductor'
+    };
+  }
+  const cliDocTipo = qs('#pmDocTipo')?.value || '';
+  if (cliDocTipo === 'RUC'){
+    return {
+      origen: 'contratante',
+      doc_tipo: qs('#pmCtDocTipo')?.value || '',
+      doc_numero: (qs('#pmCtDocNum')?.value || '').trim(),
+      label: 'contratante'
+    };
+  }
+  return {
+    origen: 'cliente',
+    doc_tipo: cliDocTipo,
+    doc_numero: (qs('#pmDocNum')?.value || '').trim(),
+    label: 'cliente'
+  };
+}
+function renderConductorExtraSelects(selected = {}){
+  const canal = String(selected.canal || '');
+  const catAuto = String(selected.categoria_auto_id || '');
+  const catMoto = String(selected.categoria_moto_id || '');
+
+  const selCanal = qs('#pmExtraCanal');
+  if (selCanal){
+    const opts = ['<option value="">Sin canal</option>'].concat(
+      CONDUCTOR_CANALES.map(c => `<option value="${esc(c)}">${esc(c)}</option>`)
+    );
+    selCanal.innerHTML = opts.join('');
+    selCanal.value = canal;
+  }
+
+  const autoOpts = ['<option value="">Sin categoría</option>'].concat(
+    (PM_EXTRA.categorias.auto || []).map(r => `<option value="${r.id}">${esc(r.codigo)}</option>`)
+  );
+  const motoOpts = ['<option value="">Sin categoría</option>'].concat(
+    (PM_EXTRA.categorias.moto || []).map(r => `<option value="${r.id}">${esc(r.codigo)}</option>`)
+  );
+
+  const selAuto = qs('#pmExtraCatAuto');
+  const selMoto = qs('#pmExtraCatMoto');
+  if (selAuto){
+    selAuto.innerHTML = autoOpts.join('');
+    selAuto.value = catAuto;
+  }
+  if (selMoto){
+    selMoto.innerHTML = motoOpts.join('');
+    selMoto.value = catMoto;
+  }
+}
+function clearConductorExtraForm(){
+  renderConductorExtraSelects();
+  if (qs('#pmExtraCorreo')) qs('#pmExtraCorreo').value = '';
+  if (qs('#pmExtraNacimiento')) qs('#pmExtraNacimiento').value = '';
+  if (qs('#pmExtraNota')) qs('#pmExtraNota').value = '';
+  if (qs('#pmExtraEdad')) qs('#pmExtraEdad').value = '';
+}
+function fillConductorExtraForm(perfil){
+  const p = perfil || {};
+  renderConductorExtraSelects({
+    canal: p.canal || '',
+    categoria_auto_id: p.categoria_auto_id || '',
+    categoria_moto_id: p.categoria_moto_id || ''
+  });
+  if (qs('#pmExtraCorreo')) qs('#pmExtraCorreo').value = p.email || '';
+  if (qs('#pmExtraNacimiento')) qs('#pmExtraNacimiento').value = p.nacimiento || '';
+  if (qs('#pmExtraNota')) qs('#pmExtraNota').value = p.nota || '';
+  refreshExtraEdad();
+}
+function showConductorExtraBox(show){
+  const box = qs('#pmConductorExtraBox');
+  if (!box) return;
+  box.classList.toggle('d-none', !show);
+  if (!show){
+    PM_EXTRA.docKey = '';
+    clearConductorExtraForm();
+    if (qs('#pmExtraDocInfo')) qs('#pmExtraDocInfo').textContent = 'Documento del conductor: —';
+  }
+}
+function readConductorExtraPayload(){
+  return {
+    canal: (qs('#pmExtraCanal')?.value || '').trim(),
+    email: (qs('#pmExtraCorreo')?.value || '').trim(),
+    nacimiento: (qs('#pmExtraNacimiento')?.value || '').trim(),
+    categoria_auto_id: (qs('#pmExtraCatAuto')?.value || '').trim(),
+    categoria_moto_id: (qs('#pmExtraCatMoto')?.value || '').trim(),
+    nota: (qs('#pmExtraNota')?.value || '').trim()
+  };
+}
+function validateConductorExtraPayload(extra){
+  if (extra.email){
+    const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(extra.email);
+    if (!ok) return 'El correo del conductor no es válido.';
+  }
+  if (extra.nacimiento){
+    const dt = new Date(extra.nacimiento + 'T00:00:00');
+    if (Number.isNaN(dt.getTime())) return 'La fecha de nacimiento del conductor no es válida.';
+    const hoy = new Date();
+    hoy.setHours(0,0,0,0);
+    if (dt > hoy) return 'La fecha de nacimiento del conductor no puede ser futura.';
+  }
+  return '';
+}
+async function loadConductorExtraMeta(){
+  if (PM_EXTRA.metaLoaded) return;
+  const j = await apiGET({action:'conductor_perfil_meta'});
+  PM_EXTRA.categorias = j.categorias || { auto: [], moto: [] };
+  PM_EXTRA.metaLoaded = true;
+  renderConductorExtraSelects();
+}
+async function openConductorExtraBox(){
+  try{
+    await loadConductorExtraMeta();
+  }catch(err){
+    showInlineAlert('payModal','danger', mapApiError(err.message || ''));
+    return;
+  }
+  const t = getConductorTargetDoc();
+  if (!['DNI','CE','BREVETE'].includes(t.doc_tipo) || !t.doc_numero){
+    showInlineAlert('payModal','danger','Primero completa el documento del conductor (cliente, contratante o conductor declarado).');
+    return;
+  }
+
+  showConductorExtraBox(true);
+  const info = `Documento del ${t.label}: ${t.doc_tipo} ${t.doc_numero}`;
+  if (qs('#pmExtraDocInfo')) qs('#pmExtraDocInfo').textContent = info;
+
+  const key = buildDocKey(t.doc_tipo, t.doc_numero);
+  if (PM_EXTRA.docKey === key) return;
+
+  PM_EXTRA.docKey = key;
+  clearConductorExtraForm();
+  try{
+    const j = await apiGET({
+      action: 'conductor_perfil_get',
+      doc_tipo: t.doc_tipo,
+      doc_numero: t.doc_numero
+    });
+    if (j.perfil) fillConductorExtraForm(j.perfil);
+  }catch(err){
+    showInlineAlert('payModal','danger', mapApiError(err.message || ''));
+  }
 }
 
 function computePMFromCart(){
@@ -1316,6 +1531,15 @@ function showDriverBox(v){
   const box = qs('#pmDriverBox');
   box.classList.toggle('d-none', !v);
   if (!v) clearDriverBox();
+  if (!qs('#pmConductorExtraBox').classList.contains('d-none')){
+    PM_EXTRA.docKey = '';
+    const t = getConductorTargetDoc();
+    if (['DNI','CE','BREVETE'].includes(t.doc_tipo) && t.doc_numero){
+      openConductorExtraBox();
+    } else {
+      showConductorExtraBox(false);
+    }
+  }
 }
 
 function resetPayModal(){
@@ -1332,7 +1556,9 @@ function resetPayModal(){
   qs('#pmRef').value     = '';
   qs('#pmObs').value     = '';
   clearDriverBox();
+  showConductorExtraBox(false);
   showDriverBox(false);
+  clearConductorExtraForm();
   toggleDocUI(); // ajustar UI inicial
 }
 
@@ -1349,6 +1575,11 @@ async function openPayModal(){
     showMsg('Aviso','Tu carrito está vacío.','danger'); return;
   }
   await loadMediosPago();
+  try{
+    await loadConductorExtraMeta();
+  }catch(err){
+    showMsg('Aviso', mapApiError(err.message || ''), 'danger');
+  }
   resetPayModal();
   computePMFromCart();
   renderPayLeft();
@@ -1364,6 +1595,15 @@ document.addEventListener('change', (e)=>{
     const req = opt ? (opt.dataset.req === '1') : false;
     const ref = qs('#pmRef');
     ref.placeholder = req ? 'Obligatoria para este medio' : 'Opcional';
+  }
+  if (e.target && e.target.id === 'pmExtraNacimiento') {
+    refreshExtraEdad();
+  }
+  if (e.target && ['pmDocTipo','pmDocNum','pmCtDocTipo','pmCtDocNum','pmCoDocTipo','pmCoDocNum'].includes(e.target.id)) {
+    if (!qs('#pmConductorExtraBox').classList.contains('d-none')){
+      PM_EXTRA.docKey = '';
+      openConductorExtraBox();
+    }
   }
 });
 
@@ -1389,6 +1629,15 @@ document.addEventListener('input', (e)=>{
 });
 
 document.addEventListener('click',(e)=>{
+  if (e.target.closest('#pmClientMore') || e.target.closest('#pmDriverMore')){
+    openConductorExtraBox();
+    return;
+  }
+  if (e.target.closest('#pmExtraCancel')){
+    showConductorExtraBox(false);
+    return;
+  }
+
   // Chips informativos sin implementación
   if (e.target.closest('.pm-stub')){
     showMsg('En desarrollo','Esta opción se habilitará más adelante.'); return;
@@ -1510,6 +1759,16 @@ document.addEventListener('click',(e)=>{
           }
         }
 
+        const extraVisible = !qs('#pmConductorExtraBox').classList.contains('d-none');
+        const extra = readConductorExtraPayload();
+        if (extraVisible){
+          const extraErr = validateConductorExtraPayload(extra);
+          if (extraErr){
+            showInlineAlert('payModal','danger', extraErr);
+            return;
+          }
+        }
+
         const payload = {
           accion: 'venta_crear',
           cliente_doc_tipo: docTipo,
@@ -1526,6 +1785,13 @@ document.addEventListener('click',(e)=>{
           conductor_nombres: coNom,
           conductor_apellidos: coApe,
           conductor_telefono: coTel,
+          conductor_extra_enabled: extraVisible ? '1' : '0',
+          conductor_extra_canal: extraVisible ? extra.canal : '',
+          conductor_extra_email: extraVisible ? extra.email : '',
+          conductor_extra_nacimiento: extraVisible ? extra.nacimiento : '',
+          conductor_extra_categoria_auto_id: extraVisible ? extra.categoria_auto_id : '',
+          conductor_extra_categoria_moto_id: extraVisible ? extra.categoria_moto_id : '',
+          conductor_extra_nota: extraVisible ? extra.nota : '',
           items_json: JSON.stringify(PM.ventaItems.map(x=>({ servicio_id:x.servicio_id, cantidad:x.qty, precio_unitario:x.precio })) ),
           abonos_json: JSON.stringify(PM.abonos.map(a=>({ medio_id:a.medio_id, monto:a.monto, referencia:a.ref, observacion:a.obs })) )
         };

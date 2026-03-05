@@ -11,6 +11,7 @@ header('X-Content-Type-Options: nosniff');
 require_once __DIR__ . '/../../includes/acl.php';
 require_once __DIR__ . '/../../includes/permisos.php';
 require_once __DIR__ . '/../../includes/conexion.php';
+require_once __DIR__ . '/perfil_conductor.php';
 
 acl_require_ids([3,4]); // Recepción (3) o Administración (4)
 verificarPermiso(['Recepción','Administración']);
@@ -259,7 +260,7 @@ function pos_next_ticket(mysqli $db, int $empresa_id){
 }
 
 function upsert_pos_cliente(mysqli $db, array $cli){
-  // $cli: id_empresa, tipo_persona, doc_tipo, doc_numero, nombre, email, telefono, direccion
+  // $cli: id_empresa, tipo_persona, doc_tipo, doc_numero, nombre, telefono
   $st = $db->prepare("SELECT id FROM pos_clientes WHERE id_empresa=? AND doc_tipo=? AND doc_numero=? LIMIT 1");
   $st->bind_param('iss', $cli['id_empresa'], $cli['doc_tipo'], $cli['doc_numero']);
   $st->execute();
@@ -267,15 +268,15 @@ function upsert_pos_cliente(mysqli $db, array $cli){
   if ($r){
     $id = (int)$r['id'];
     $up = $db->prepare("UPDATE pos_clientes
-                        SET nombre=?, email=?, telefono=?, direccion=?, tipo_persona=?
+                        SET nombre=?, telefono=?, tipo_persona=?
                         WHERE id=?");
-    $up->bind_param('sssssi', $cli['nombre'], $cli['email'], $cli['telefono'], $cli['direccion'], $cli['tipo_persona'], $id);
+    $up->bind_param('sssi', $cli['nombre'], $cli['telefono'], $cli['tipo_persona'], $id);
     $up->execute();
     return $id;
   }else{
-    $ins = $db->prepare("INSERT INTO pos_clientes(id_empresa,tipo_persona,doc_tipo,doc_numero,nombre,email,telefono,direccion)
-                         VALUES (?,?,?,?,?,?,?,?)");
-    $ins->bind_param('isssssss', $cli['id_empresa'],$cli['tipo_persona'],$cli['doc_tipo'],$cli['doc_numero'],$cli['nombre'],$cli['email'],$cli['telefono'],$cli['direccion']);
+    $ins = $db->prepare("INSERT INTO pos_clientes(id_empresa,tipo_persona,doc_tipo,doc_numero,nombre,telefono)
+                         VALUES (?,?,?,?,?,?)");
+    $ins->bind_param('isssss', $cli['id_empresa'],$cli['tipo_persona'],$cli['doc_tipo'],$cli['doc_numero'],$cli['nombre'],$cli['telefono']);
     $ins->execute();
     return (int)$db->insert_id;
   }
@@ -442,8 +443,28 @@ try {
     json_ok(['data'=>$rows]);
   }
 
+  /* ==== POS: metadata del perfil opcional de conductor ==== */
+  if ($accion === 'conductor_perfil_meta') {
+    $categorias = pos_perfil_list_categorias($db);
+    json_ok(['categorias'=>$categorias]);
+  }
 
-  /* ==== POS: paneles de prueba (últimos registros) ==== */
+  /* ==== POS: obtener perfil opcional de conductor por documento ==== */
+  if ($accion === 'conductor_perfil_get') {
+    $docTipo = strtoupper(trim((string)($_GET['doc_tipo'] ?? '')));
+    $docNum  = trim((string)($_GET['doc_numero'] ?? ''));
+
+    if (!in_array($docTipo, pos_perfil_doc_tipos_permitidos(), true)) {
+      json_err('Tipo de documento de conductor invalido.');
+    }
+    if ($docNum === '') {
+      json_err('Numero de documento de conductor requerido.');
+    }
+
+    $perfil = pos_perfil_get($db, $empId, $docTipo, $docNum);
+    json_ok(['perfil'=>$perfil]);
+  }
+
   if ($accion === 'pos_debug_last') {
     // Ventas
     $qv = $db->prepare("SELECT v.id,
@@ -900,6 +921,17 @@ $ct_doc_num   = trim($_POST['contratante_doc_numero'] ?? '');
     $co_apellidos          = trim($_POST['conductor_apellidos'] ?? '');
     $co_telefono           = trim($_POST['conductor_telefono'] ?? '');
 
+    // Perfil opcional de conductor (bloque "MÃ¡s informaciÃ³n del conductor")
+    $conductor_extra_enabled = (int)($_POST['conductor_extra_enabled'] ?? 0) === 1;
+    $conductor_extra_data = null;
+    if ($conductor_extra_enabled) {
+      try {
+        $conductor_extra_data = pos_perfil_normalize_payload($_POST);
+      } catch (InvalidArgumentException $e) {
+        json_err($e->getMessage());
+      }
+    }
+
     // 3) Validaciones de cliente
     $valid_docs_all = ['DNI','CE','BREVETE','RUC'];
     if (!in_array($cli_doc_tipo, $valid_docs_all, true)) json_err('Tipo de documento de cliente inválido.');
@@ -981,6 +1013,32 @@ $ct_doc_num   = trim($_POST['contratante_doc_numero'] ?? '');
       if ($co_doc_num==='' || $co_nombres==='' || $co_apellidos==='') json_err('Datos de conductor incompletos.');
     }
 
+    // Documento del conductor real (segÃºn la lÃ³gica vigente de caja)
+    $perfil_doc_tipo = '';
+    $perfil_doc_num  = '';
+    if ($conductor_otro) {
+      $perfil_doc_tipo = $co_doc_tipo;
+      $perfil_doc_num  = $co_doc_num;
+    } elseif ($cliente_tipo === 'JURIDICA') {
+      $perfil_doc_tipo = $ct_doc_tipo;
+      $perfil_doc_num  = $ct_doc_num;
+    } else {
+      $perfil_doc_tipo = $cli_doc_tipo;
+      $perfil_doc_num  = $cli_doc_num;
+    }
+
+    if ($conductor_extra_enabled) {
+      if (!in_array($perfil_doc_tipo, pos_perfil_doc_tipos_permitidos(), true) || $perfil_doc_num === '') {
+        json_err('No se pudo identificar el documento del conductor para guardar su perfil adicional.');
+      }
+      if (!pos_perfil_categoria_valida_tipo($db, $conductor_extra_data['categoria_auto_id'], 'A')) {
+        json_err('La categoria Auto seleccionada no corresponde a una licencia tipo A.');
+      }
+      if (!pos_perfil_categoria_valida_tipo($db, $conductor_extra_data['categoria_moto_id'], 'B')) {
+        json_err('La categoria Moto seleccionada no corresponde a una licencia tipo B.');
+      }
+    }
+
     $db->begin_transaction();
     try{
       // 6) Upsert cliente
@@ -991,9 +1049,7 @@ $ct_doc_num   = trim($_POST['contratante_doc_numero'] ?? '');
         'doc_tipo'     => $cli_doc_tipo,
         'doc_numero'   => $cli_doc_num,
         'nombre'       => $cliente_nombre,
-        'email'        => null,
-        'telefono'     => $cli_telefono?:null,
-        'direccion'    => null
+        'telefono'     => $cli_telefono?:null
       ]);
 
       // 7) Resolver conductor principal
@@ -1048,6 +1104,13 @@ $ct_doc_num   = trim($_POST['contratante_doc_numero'] ?? '');
           'apellidos'  => $cli_apellidos,
           'telefono'   => $cli_telefono ?: null
         ];
+      }
+
+      // Perfil opcional del conductor (maestro por documento)
+      $conductor_extra_guardado = false;
+      if ($conductor_extra_enabled && pos_perfil_data_has_content($conductor_extra_data)) {
+        pos_perfil_upsert($db, $empId, $perfil_doc_tipo, $perfil_doc_num, $conductor_extra_data);
+        $conductor_extra_guardado = true;
       }
 
       // Snapshot del contratante solo si el cliente es JURIDICA
@@ -1192,6 +1255,16 @@ $ct_doc_num   = trim($_POST['contratante_doc_numero'] ?? '');
           'apellidos'     => $conductor_snapshot['apellidos'],
           'telefono'      => $conductor_snapshot['telefono']
         ],
+        'conductor_perfil_extra' => $conductor_extra_guardado ? [
+          'doc_tipo'         => $perfil_doc_tipo,
+          'doc_numero'       => $perfil_doc_num,
+          'canal'            => $conductor_extra_data['canal'],
+          'email'            => $conductor_extra_data['email'],
+          'nacimiento'       => $conductor_extra_data['nacimiento'],
+          'categoria_auto_id'=> $conductor_extra_data['categoria_auto_id'],
+          'categoria_moto_id'=> $conductor_extra_data['categoria_moto_id'],
+          'nota'             => $conductor_extra_data['nota']
+        ] : null,
         'venta' => [
           'caja_diaria_id' => $caja_diaria_id,
           'total'          => (float)$total,
@@ -1223,7 +1296,7 @@ $ct_doc_num   = trim($_POST['contratante_doc_numero'] ?? '');
   }
 
   // Si ninguna acción coincidió:
-  if (!in_array($accion, ['estado','svc_tags','pos_medios_pago','pos_debug_last','servicios','svc_precios','abrir_mensual','cerrar_mensual','abrir_diaria','cerrar_diaria','venta_crear'], true)){
+  if (!in_array($accion, ['estado','svc_tags','pos_medios_pago','conductor_perfil_meta','conductor_perfil_get','pos_debug_last','servicios','svc_precios','abrir_mensual','cerrar_mensual','abrir_diaria','cerrar_diaria','venta_crear'], true)){
     json_err('Acción no reconocida.');
   }
 

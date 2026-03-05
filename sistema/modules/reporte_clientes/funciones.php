@@ -67,6 +67,22 @@ if (!function_exists('obtener_empresa_info')) {
 }
 
 /**
+ * Detecta si el esquema de perfil opcional de conductor ya existe.
+ * Si no existe, la central sigue funcionando sin esos campos.
+ */
+if (!function_exists('reporte_clientes_soporta_perfil_conductor')) {
+    function reporte_clientes_soporta_perfil_conductor(mysqli $db) {
+        static $cache = null;
+        if ($cache !== null) {
+            return $cache;
+        }
+        $rs = $db->query("SHOW TABLES LIKE 'pos_perfil_conductor'");
+        $cache = ($rs && $rs->num_rows > 0);
+        return $cache;
+    }
+}
+
+/**
  * Construye el WHERE y los parámetros de filtros para clientes.
  * Deja en $whereSql la cadena WHERE (sin la palabra WHERE),
  * en $types la cadena de tipos para bind_param
@@ -86,6 +102,7 @@ if (!function_exists('armar_filtros_clientes')) {
 
         $fcreadoDesde = isset($opts['fcreado_desde']) ? (string)$opts['fcreado_desde'] : '';
         $fcreadoHasta = isset($opts['fcreado_hasta']) ? (string)$opts['fcreado_hasta'] : '';
+        $usarPerfil   = !empty($opts['usar_perfil_conductor']);
 
         $tieneVentas = !empty($opts['tiene_ventas']);
         $tieneAbonos = !empty($opts['tiene_abonos']);
@@ -102,12 +119,27 @@ if (!function_exists('armar_filtros_clientes')) {
         // Búsqueda textual
         if ($q !== '') {
             $like = '%' . $q . '%';
-            $where[] = '(c.nombre LIKE ? OR c.doc_numero LIKE ? OR c.email LIKE ? OR c.telefono LIKE ?)';
-            $types  .= 'ssss';
-            $vals[]  = $like;
-            $vals[]  = $like;
-            $vals[]  = $like;
-            $vals[]  = $like;
+            $parts = ['c.nombre LIKE ?', 'c.doc_numero LIKE ?', 'c.telefono LIKE ?'];
+            $types .= 'sss';
+            $vals[] = $like;
+            $vals[] = $like;
+            $vals[] = $like;
+
+            if ($usarPerfil) {
+                $parts[] = 'pc.email LIKE ?';
+                $parts[] = 'pc.canal LIKE ?';
+                $parts[] = 'ca.codigo LIKE ?';
+                $parts[] = 'cm.codigo LIKE ?';
+                $parts[] = 'pc.nota LIKE ?';
+                $types  .= 'sssss';
+                $vals[]  = $like;
+                $vals[]  = $like;
+                $vals[]  = $like;
+                $vals[]  = $like;
+                $vals[]  = $like;
+            }
+
+            $where[] = '(' . implode(' OR ', $parts) . ')';
         }
 
         // Tipo de persona
@@ -164,6 +196,9 @@ if (!function_exists('armar_filtros_clientes')) {
 if (!function_exists('obtener_resumen_clientes')) {
     function obtener_resumen_clientes(mysqli $db, $empresaId, array $opts = []) {
         $empresaId = (int)$empresaId;
+        $usarPerfil = reporte_clientes_soporta_perfil_conductor($db);
+        $optsConPerfil = $opts;
+        $optsConPerfil['usar_perfil_conductor'] = $usarPerfil ? 1 : 0;
 
         $whereSql    = '';
         $typesFilter = '';
@@ -171,7 +206,17 @@ if (!function_exists('obtener_resumen_clientes')) {
         $tieneVentas = false;
         $tieneAbonos = false;
 
-        armar_filtros_clientes($empresaId, $opts, $whereSql, $typesFilter, $valsFilter, $tieneVentas, $tieneAbonos);
+        armar_filtros_clientes($empresaId, $optsConPerfil, $whereSql, $typesFilter, $valsFilter, $tieneVentas, $tieneAbonos);
+
+        $joinPerfil = '';
+        if ($usarPerfil) {
+            $joinPerfil = "LEFT JOIN pos_perfil_conductor pc
+                               ON pc.id_empresa = c.id_empresa
+                              AND pc.doc_tipo   = c.doc_tipo
+                              AND pc.doc_numero = c.doc_numero
+                           LEFT JOIN cq_categorias_licencia ca ON ca.id = pc.categoria_auto_id
+                           LEFT JOIN cq_categorias_licencia cm ON cm.id = pc.categoria_moto_id";
+        }
 
         $sql = "SELECT
                     COUNT(*) AS total_clientes,
@@ -183,6 +228,7 @@ if (!function_exists('obtener_resumen_clientes')) {
                     SUM(COALESCE(v.ventas_saldo,0))        AS total_saldo,
                     SUM(COALESCE(a.abonos_total,0))        AS total_abonos
                 FROM pos_clientes c
+                " . $joinPerfil . "
                 LEFT JOIN (
                     SELECT v.cliente_id,
                            COUNT(*)           AS ventas_count,
@@ -250,6 +296,9 @@ if (!function_exists('obtener_resumen_clientes')) {
 if (!function_exists('buscar_clientes_con_metricas')) {
     function buscar_clientes_con_metricas(mysqli $db, $empresaId, array $opts = []) {
         $empresaId = (int)$empresaId;
+        $usarPerfil = reporte_clientes_soporta_perfil_conductor($db);
+        $optsConPerfil = $opts;
+        $optsConPerfil['usar_perfil_conductor'] = $usarPerfil ? 1 : 0;
 
         // Paginación
         $page = isset($opts['pagina']) ? (int)$opts['pagina'] : 1;
@@ -270,11 +319,22 @@ if (!function_exists('buscar_clientes_con_metricas')) {
         $tieneVentas = false;
         $tieneAbonos = false;
 
-        armar_filtros_clientes($empresaId, $opts, $whereSql, $typesFilter, $valsFilter, $tieneVentas, $tieneAbonos);
+        armar_filtros_clientes($empresaId, $optsConPerfil, $whereSql, $typesFilter, $valsFilter, $tieneVentas, $tieneAbonos);
+
+        $joinPerfil = '';
+        if ($usarPerfil) {
+            $joinPerfil = "LEFT JOIN pos_perfil_conductor pc
+                               ON pc.id_empresa = c.id_empresa
+                              AND pc.doc_tipo   = c.doc_tipo
+                              AND pc.doc_numero = c.doc_numero
+                           LEFT JOIN cq_categorias_licencia ca ON ca.id = pc.categoria_auto_id
+                           LEFT JOIN cq_categorias_licencia cm ON cm.id = pc.categoria_moto_id";
+        }
 
         // Total de filas
         $sqlCount = "SELECT COUNT(*) AS total
                      FROM pos_clientes c
+                     " . $joinPerfil . "
                      LEFT JOIN (
                          SELECT v.cliente_id,
                                 COUNT(*) AS ventas_count
@@ -325,15 +385,30 @@ if (!function_exists('buscar_clientes_con_metricas')) {
         $offset = ($page - 1) * $perPage;
 
         // Consulta principal
+        $selectPerfil = $usarPerfil
+            ? "pc.canal AS perfil_canal,
+               pc.email AS perfil_email,
+               pc.nacimiento AS perfil_nacimiento,
+               ca.codigo AS perfil_categoria_auto,
+               cm.codigo AS perfil_categoria_moto,
+               pc.nota AS perfil_nota,
+               pc.actualizado AS perfil_actualizado,"
+            : "NULL AS perfil_canal,
+               NULL AS perfil_email,
+               NULL AS perfil_nacimiento,
+               NULL AS perfil_categoria_auto,
+               NULL AS perfil_categoria_moto,
+               NULL AS perfil_nota,
+               NULL AS perfil_actualizado,";
+
         $sql = "SELECT
                     c.id,
                     c.tipo_persona,
                     c.doc_tipo,
                     c.doc_numero,
                     c.nombre,
-                    c.email,
                     c.telefono,
-                    c.direccion,
+                    " . $selectPerfil . "
                     c.activo,
                     c.creado,
                     c.actualizado,
@@ -347,6 +422,7 @@ if (!function_exists('buscar_clientes_con_metricas')) {
                     COALESCE(a.abonos_total,0.0)    AS abonos_total,
                     a.ultimo_abono
                 FROM pos_clientes c
+                " . $joinPerfil . "
                 LEFT JOIN (
                     SELECT v.cliente_id,
                            COUNT(*)           AS ventas_count,
@@ -369,7 +445,14 @@ if (!function_exists('buscar_clientes_con_metricas')) {
                     GROUP BY a.cliente_id
                 ) a ON a.cliente_id = c.id
                 WHERE " . $whereSql . "
-                ORDER BY c.nombre ASC
+                ORDER BY
+                    GREATEST(
+                        IFNULL(v.ultima_venta, '1000-01-01 00:00:00'),
+                        IFNULL(a.ultimo_abono, '1000-01-01 00:00:00'),
+                        IFNULL(c.actualizado, '1000-01-01 00:00:00'),
+                        IFNULL(c.creado, '1000-01-01 00:00:00')
+                    ) DESC,
+                    c.id DESC
                 LIMIT ? OFFSET ?";
 
         $stMain   = $db->prepare($sql);

@@ -247,7 +247,6 @@ if (!function_exists('buscar_abonos_con_detalles')) {
                     c.doc_tipo AS cliente_doc_tipo,
                     c.doc_numero AS cliente_doc_numero,
                     c.telefono AS cliente_telefono,
-                    c.email   AS cliente_email,
                     mp.nombre AS medio_nombre,
                     u.usuario AS usuario_username,
                     u.nombres AS usuario_nombres,

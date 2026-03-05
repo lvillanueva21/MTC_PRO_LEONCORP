@@ -22,6 +22,9 @@ function imgUrl(?string $p) {
   if (preg_match('~^https?://~i', $p)) return $p;
   return (defined('BASE_URL') ? BASE_URL : '').'/'.ltrim($p, '/');
 }
+function adm_money($value): string {
+  return 'S/ ' . number_format((float)$value, 2, '.', ',');
+}
 
 $comunicados = [];
 if (
@@ -53,6 +56,55 @@ if (
   if ($st = $mysqli->prepare($sql)) {
     $st->bind_param('ssiiiii', $now, $now, $uid, $empresaId, $uid, $empresaId, $uid);
     if ($st->execute()) $comunicados = $st->get_result()->fetch_all(MYSQLI_ASSOC);
+    $st->close();
+  }
+}
+
+$admIngresosMes = 0.0;
+if ($empresaId > 0 && table_exists($mysqli, 'pos_abonos') && table_exists($mysqli, 'pos_abono_aplicaciones')) {
+  $sqlIng = "SELECT COALESCE(SUM(apl.monto_aplicado),0) AS total
+             FROM pos_abonos a
+             LEFT JOIN pos_abono_aplicaciones apl ON apl.abono_id = a.id
+             WHERE a.id_empresa=?
+               AND YEAR(a.fecha)=YEAR(CURDATE())
+               AND MONTH(a.fecha)=MONTH(CURDATE())";
+  if ($st = $mysqli->prepare($sqlIng)) {
+    $st->bind_param('i', $empresaId);
+    if ($st->execute()) {
+      $admIngresosMes = (float)($st->get_result()->fetch_assoc()['total'] ?? 0);
+    }
+    $st->close();
+  }
+}
+
+$admEgresos = [
+  'schema' => false,
+  'hoy' => 0.0,
+  'mes' => 0.0,
+  'cnt_hoy' => 0,
+  'cnt_mes' => 0,
+  'anulados_mes' => 0,
+];
+if ($empresaId > 0 && table_exists($mysqli, 'egr_egresos')) {
+  $admEgresos['schema'] = true;
+  $sqlEgr = "SELECT
+               COALESCE(SUM(CASE WHEN estado='ACTIVO' AND DATE(fecha_emision)=CURDATE() THEN monto ELSE 0 END),0) AS hoy,
+               COALESCE(SUM(CASE WHEN estado='ACTIVO' AND YEAR(fecha_emision)=YEAR(CURDATE()) AND MONTH(fecha_emision)=MONTH(CURDATE()) THEN monto ELSE 0 END),0) AS mes,
+               COALESCE(SUM(CASE WHEN estado='ACTIVO' AND DATE(fecha_emision)=CURDATE() THEN 1 ELSE 0 END),0) AS cnt_hoy,
+               COALESCE(SUM(CASE WHEN estado='ACTIVO' AND YEAR(fecha_emision)=YEAR(CURDATE()) AND MONTH(fecha_emision)=MONTH(CURDATE()) THEN 1 ELSE 0 END),0) AS cnt_mes,
+               COALESCE(SUM(CASE WHEN estado='ANULADO' AND YEAR(fecha_emision)=YEAR(CURDATE()) AND MONTH(fecha_emision)=MONTH(CURDATE()) THEN 1 ELSE 0 END),0) AS anulados_mes
+             FROM egr_egresos
+             WHERE id_empresa=?";
+  if ($st = $mysqli->prepare($sqlEgr)) {
+    $st->bind_param('i', $empresaId);
+    if ($st->execute()) {
+      $row = $st->get_result()->fetch_assoc() ?: [];
+      $admEgresos['hoy'] = (float)($row['hoy'] ?? 0);
+      $admEgresos['mes'] = (float)($row['mes'] ?? 0);
+      $admEgresos['cnt_hoy'] = (int)($row['cnt_hoy'] ?? 0);
+      $admEgresos['cnt_mes'] = (int)($row['cnt_mes'] ?? 0);
+      $admEgresos['anulados_mes'] = (int)($row['anulados_mes'] ?? 0);
+    }
     $st->close();
   }
 }
@@ -115,21 +167,7 @@ if (
         </div>
       </div>
 
-      <!-- Ingresos vs Egresos -->
-      <div class="card mt-3">
-        <div class="card-body">
-          <div class="d-flex align-items-center justify-content-between">
-            <strong>Ingresos VS Egresos</strong>
-            <button class="btn btn-sm btn-outline-primary">Selecciona una fecha</button>
-          </div>
-          <div class="text-muted cm-chart-placeholder">
-            (Aquí irá el gráfico principal)
-          </div>
-          <div class="d-flex justify-content-between mt-2">
-            <small>Total ingresos: —</small><small>Total egresos: —</small>
-          </div>
-        </div>
-      </div>
+      <?php include __DIR__ . '/funcion_ingreso_egreso_mensual.php'; ?>
 
     </div>
 
@@ -137,31 +175,16 @@ if (
     <div class="col-12 col-lg-4">
       <?php include __DIR__ . '/funcion_caja_diaria_mensual.php'; ?>
 
-      <div class="card kpi-card">
-        <div class="card-body">
-          <h6 class="card-title">Ganancia</h6>
-          <div class="muted">—</div>
-        </div>
-      </div>
+      <?php include __DIR__ . '/funcion_card_ganancia_neta_ultima_caja.php'; ?>
 
-      <div class="card kpi-card mt-3">
-        <div class="card-body">
-          <h6 class="card-title">Ventas (Ingresos)</h6>
-          <div class="muted">—</div>
-        </div>
-      </div>
-
-      <div class="card kpi-card mt-3">
-        <div class="card-body">
-          <h6 class="card-title">Gastos (Egresos)</h6>
-          <div class="muted">—</div>
-        </div>
-      </div>
+      <?php include __DIR__ . '/funcion_card_ventas_ultima_caja.php'; ?>
+      <?php include __DIR__ . '/funcion_card_gastos_ultima_caja.php'; ?>
 
       <div class="card kpi-card mt-3">
         <div class="card-body">
           <h6 class="card-title">Efectivo actual</h6>
-          <div class="muted">—</div>
+          <div class="h5 mb-1"><?= htmlspecialchars(adm_money($admIngresosMes - $admEgresos['mes'])) ?></div>
+          <div class="muted small">Resultado aproximado: ingresos - egresos del mes.</div>
         </div>
       </div>
 

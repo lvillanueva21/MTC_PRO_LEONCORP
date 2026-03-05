@@ -1,1060 +1,325 @@
 <?php
-// /modules/egresos/index.php
-
 require_once __DIR__ . '/../../includes/acl.php';
 require_once __DIR__ . '/../../includes/permisos.php';
 require_once __DIR__ . '/../../includes/conexion.php';
 
 acl_require_ids([3, 4]);
-verificarPermiso(['Recepción', 'Administración']);
+verificarPermiso([3, 4]);
 
-function h($s)
+function h($value): string
 {
-    return htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
+    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 }
 
-$u      = currentUser();
-$usrNom = trim(($u['nombres'] ?? '') . ' ' . ($u['apellidos'] ?? '')) ?: ($u['usuario'] ?? 'Usuario');
-$empNom = (string) ($u['empresa']['nombre'] ?? '—');
+$appFolder = basename(dirname(dirname(__DIR__)));
+$scriptDir = trim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/');
+$parts = $scriptDir === '' ? [] : explode('/', $scriptDir);
+$idx = array_search($appFolder, $parts, true);
+$depth = ($idx === false) ? count($parts) : (count($parts) - ($idx + 1));
+$APP_ROOT_REL = str_repeat('../', max(0, $depth));
 
-// Logo empresa (ruta relativa a este archivo) – si falla, usa logo genérico
-$empresaId   = (int) ($u['empresa']['id'] ?? 0);
-$empLogoRel  = '';
-
-try {
-    $logoFromSession = isset($u['empresa']['logo_path']) ? trim((string) $u['empresa']['logo_path']) : '';
-
-    if ($logoFromSession === '' && $empresaId > 0) {
-        $st = db()->prepare('SELECT logo_path FROM mtp_empresas WHERE id=? LIMIT 1');
-        $st->bind_param('i', $empresaId);
-        $st->execute();
-
-        if ($r = $st->get_result()->fetch_assoc()) {
-            $logoFromSession = trim((string) ($r['logo_path'] ?? ''));
-        }
-
-        $st->close();
-    }
-
-    if ($logoFromSession !== '') {
-        $rel = '../../' . ltrim($logoFromSession, '/');
-
-        if (is_file(__DIR__ . '/../../' . ltrim($logoFromSession, '/'))) {
-            $empLogoRel = $rel;
-        }
-    }
-
-    if ($empLogoRel === '') {
-        $fallback = '../../dist/img/AdminLTELogo.png';
-
-        if (is_file(__DIR__ . '/../../dist/img/AdminLTELogo.png')) {
-            $empLogoRel = $fallback;
-        }
-    }
-} catch (Throwable $e) {
-    // silencioso
+function rel(string $path): string
+{
+    global $APP_ROOT_REL;
+    return $APP_ROOT_REL . ltrim($path, '/');
 }
+
+$u = currentUser();
+$usrNom = trim(($u['nombres'] ?? '') . ' ' . ($u['apellidos'] ?? ''));
+if ($usrNom === '') $usrNom = (string)($u['usuario'] ?? 'Usuario');
+$empNom = (string)($u['empresa']['nombre'] ?? '—');
 
 include __DIR__ . '/../../includes/header.php';
 ?>
 
-<link rel="stylesheet" href="<?= BASE_URL ?>/modules/egresos/style.css?v=2">
+<link rel="stylesheet" href="<?= h(rel('modules/egresos/estilo.css?v=1')) ?>">
 
 <div class="content-wrapper">
-    <div class="content-header">
-        <div class="container-fluid">
-            <div class="eg-bar shadow-sm">
-                <div class="eg-bar-left">
-                    <div class="eg-icon">
-                        <i class="fas fa-file-invoice-dollar"></i>
-                    </div>
-
-                    <div class="eg-titles">
-                        <div class="eg-title">Módulo de egresos</div>
-
-                        <div class="eg-subtitle">
-                            Empresa: <strong>"<?= h($empNom) ?>"</strong> &nbsp;•&nbsp;
-                            Usuario: <strong><?= h($usrNom) ?></strong>
-                        </div>
-
-                        <div class="eg-subtitle small">
-                            Registra facturas, boletas y recibos vinculados a la caja diaria.
-                        </div>
-                    </div>
-                </div>
-
-                <div class="eg-bar-right">
-                    <div class="eg-caja-pill">
-                        <span class="label">Caja diaria</span>
-                        <span class="badge badge-pill badge-success" id="egCajaBadge">Simulada: abierta</span>
-                    </div>
-
-                    <div class="eg-bar-meta small text-right">
-                        <div>
-                            <i class="far fa-calendar-alt mr-1"></i><span id="egFechaHoy"></span>
-                        </div>
-                        <div class="text-muted">Modo demo: no valida la caja real.</div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="egCajaMsg" class="alert eg-caja-alert mt-3 mb-0" role="alert"></div>
+  <div class="content-header">
+    <div class="container-fluid">
+      <div class="eg-bar shadow-sm">
+        <div class="eg-bar-left">
+          <div class="eg-icon"><i class="fas fa-file-invoice-dollar"></i></div>
+          <div class="eg-titles">
+            <div class="eg-title">Módulo de egresos</div>
+            <div class="eg-subtitle">Empresa: <strong>"<?= h($empNom) ?>"</strong> · Usuario: <strong><?= h($usrNom) ?></strong></div>
+            <div class="eg-subtitle small">Registra salidas de dinero vinculadas a la caja diaria abierta.</div>
+          </div>
         </div>
+        <div class="eg-bar-right">
+          <div class="eg-caja-pill"><span class="label">Caja diaria</span><span class="badge badge-pill badge-secondary" id="egCajaBadge">Cargando...</span></div>
+          <div class="eg-caja-pill"><span class="label">Caja mensual</span><span class="badge badge-pill badge-secondary" id="egCajaMensualBadge">Cargando...</span></div>
+          <div class="eg-bar-meta small text-right">
+            <div><strong id="egCajaDiariaCodigo">CD: —</strong></div>
+            <div><strong id="egCajaMensualCodigo">CM: —</strong></div>
+          </div>
+        </div>
+      </div>
+      <div id="egCajaMsg" class="alert eg-caja-alert mt-3 mb-0" role="alert"></div>
     </div>
+  </div>
 
-    <section class="content pb-3">
-        <div class="container-fluid">
-            <div class="row g-3">
-                <!-- Columna izquierda: formulario -->
-                <div class="col-12 col-lg-5">
-                    <div class="card eg-card shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <div>
-                                    <h5 class="card-title mb-0">Nuevo egreso</h5>
-                                    <div class="text-muted small">Maqueta demo, sin guardar en base de datos.</div>
-                                </div>
-                                <span class="badge badge-light" id="egModoDemo">Modo demo</span>
-                            </div>
-
-                            <div id="egFormAlert"></div>
-
-                            <form id="egForm" autocomplete="off">
-                                <!-- Tipo de comprobante -->
-                                <div class="form-group mb-3">
-                                    <label class="mb-1">Tipo de comprobante</label>
-
-                                    <div class="eg-chip-group" id="egTipoChipGroup">
-                                        <button type="button" class="eg-chip active" data-tipo="RECIBO">Recibo interno</button>
-                                        <button type="button" class="eg-chip" data-tipo="BOLETA">Boleta</button>
-                                        <button type="button" class="eg-chip" data-tipo="FACTURA">Factura</button>
-                                    </div>
-
-                                    <input type="hidden" name="tipo" id="egTipo" value="RECIBO">
-
-                                    <small class="form-text text-muted">
-                                        El tipo define si se requiere serie/número o solo una referencia.
-                                    </small>
-                                </div>
-
-                                <!-- Serie / número / referencia -->
-                                <div class="form-row" id="egSerieNumeroGroup">
-                                    <div class="form-group col-4">
-                                        <label for="egSerie" class="mb-1">Serie<span class="text-danger">*</span></label>
-                                        <input
-                                            type="text"
-                                            class="form-control form-control-sm"
-                                            id="egSerie"
-                                            name="serie"
-                                            maxlength="10"
-                                            placeholder="F001"
-                                        >
-                                    </div>
-
-                                    <div class="form-group col-8">
-                                        <label for="egNumero" class="mb-1">Número<span class="text-danger">*</span></label>
-                                        <input
-                                            type="text"
-                                            class="form-control form-control-sm"
-                                            id="egNumero"
-                                            name="numero"
-                                            maxlength="20"
-                                            placeholder="00012345"
-                                        >
-                                    </div>
-                                </div>
-
-                                <div class="form-group mb-3 d-none" id="egReciboRefGroup">
-                                    <label for="egReferencia" class="mb-1">Referencia (opcional)</label>
-                                    <input
-                                        type="text"
-                                        class="form-control form-control-sm"
-                                        id="egReferencia"
-                                        name="referencia"
-                                        maxlength="120"
-                                        placeholder="Ej: Recibo manual 001316"
-                                    >
-                                </div>
-
-                                <!-- Monto y fecha -->
-                                <div class="form-row">
-                                    <div class="form-group col-6">
-                                        <label for="egMonto" class="mb-1">Monto (S/)<span class="text-danger">*</span></label>
-
-                                        <div class="input-group input-group-sm">
-                                            <div class="input-group-prepend">
-                                                <span class="input-group-text">S/</span>
-                                            </div>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                class="form-control"
-                                                id="egMonto"
-                                                name="monto"
-                                                required
-                                            >
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group col-6">
-                                        <label for="egFecha" class="mb-1">Fecha y hora<span class="text-danger">*</span></label>
-                                        <input
-                                            type="datetime-local"
-                                            class="form-control form-control-sm"
-                                            id="egFecha"
-                                            name="fecha"
-                                            required
-                                        >
-                                    </div>
-                                </div>
-
-                                <!-- Beneficiario -->
-                                <div class="form-row">
-                                    <div class="form-group col-6">
-                                        <label for="egBeneficiario" class="mb-1">Beneficiario / Proveedor</label>
-                                        <input
-                                            type="text"
-                                            class="form-control form-control-sm"
-                                            id="egBeneficiario"
-                                            name="beneficiario"
-                                            maxlength="160"
-                                            placeholder="Nombre completo o razón social"
-                                        >
-                                    </div>
-
-                                    <div class="form-group col-6">
-                                        <label for="egDocumento" class="mb-1">Documento</label>
-                                        <input
-                                            type="text"
-                                            class="form-control form-control-sm"
-                                            id="egDocumento"
-                                            name="documento"
-                                            maxlength="20"
-                                            placeholder="DNI / RUC"
-                                        >
-                                    </div>
-                                </div>
-
-                                <!-- Concepto -->
-                                <div class="form-group mb-3">
-                                    <label for="egConcepto" class="mb-1">Concepto detallado<span class="text-danger">*</span></label>
-                                    <textarea
-                                        id="egConcepto"
-                                        name="concepto"
-                                        rows="5"
-                                        class="form-control form-control-sm"
-                                        placeholder="Describe el motivo del egreso. Puedes detallar varias compras o servicios."
-                                        required
-                                    ></textarea>
-
-                                    <div class="d-flex justify-content-between mt-1 small text-muted">
-                                        <span>Este texto se imprimirá en el recibo.</span>
-                                        <span id="egConceptoCount">0 / 1000</span>
-                                    </div>
-                                </div>
-
-                                <!-- Observaciones -->
-                                <div class="form-group mb-3">
-                                    <label for="egObs" class="mb-1">
-                                        Observaciones internas <span class="text-muted small">(opcional)</span>
-                                    </label>
-                                    <textarea
-                                        id="egObs"
-                                        name="observaciones"
-                                        rows="2"
-                                        class="form-control form-control-sm"
-                                        placeholder="Notas solo para el sistema (no aparecen en el recibo)."
-                                    ></textarea>
-                                </div>
-
-                                <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mt-3">
-                                    <div class="small text-muted">
-                                        <i class="fas fa-info-circle mr-1"></i>
-                                        En la versión real, el egreso se vinculará a la caja diaria abierta.
-                                    </div>
-
-                                    <div class="eg-form-actions">
-                                        <button type="button" class="btn btn-outline-secondary btn-sm mr-1" id="egBtnLimpiar">
-                                            <i class="fas fa-eraser mr-1"></i>Limpiar
-                                        </button>
-
-                                        <button type="submit" class="btn btn-primary btn-sm">
-                                            <i class="fas fa-save mr-1"></i>Guardar egreso
-                                        </button>
-
-                                        <button type="button" class="btn btn-outline-primary btn-sm ml-1" id="egBtnVistaPrevia">
-                                            <i class="fas fa-print mr-1"></i>Vista previa recibo
-                                        </button>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
+  <section class="content pb-3">
+    <div class="container-fluid">
+      <div class="row g-3">
+        <div class="col-12 col-lg-5">
+          <div class="card eg-card shadow-sm">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                  <h5 class="card-title mb-0">Nuevo egreso</h5>
+                  <div class="text-muted small">Operación real y vinculada a caja diaria.</div>
                 </div>
+                <span class="badge badge-light" id="egFormStateBadge">Verificando caja...</span>
+              </div>
+              <div id="egSaldoResumen" class="eg-saldo-box mb-2 d-none"></div>
+              <div id="egFormAlert"></div>
 
-                <!-- Columna derecha: listado -->
-                <div class="col-12 col-lg-7">
-                    <div class="card eg-card shadow-sm h-100">
-                        <div class="card-body d-flex flex-column">
-                            <div class="d-flex justify-content-between flex-wrap gap-2 mb-2">
-                                <div>
-                                    <h5 class="card-title mb-0">Egresos registrados (demo)</h5>
-                                    <div class="text-muted small">Solo datos simulados para ver el diseño.</div>
-                                </div>
-
-                                <div class="eg-filters d-flex flex-wrap gap-2">
-                                    <div class="input-group input-group-sm">
-                                        <div class="input-group-prepend">
-                                            <span class="input-group-text bg-white border-right-0"><i class="fas fa-search"></i></span>
-                                        </div>
-                                        <input id="egQ" class="form-control border-left-0" placeholder="Buscar por concepto o beneficiario…">
-                                    </div>
-
-                                    <select id="egFiltroTipo" class="form-control form-control-sm">
-                                        <option value="todos">Todos</option>
-                                        <option value="FACTURA">Facturas</option>
-                                        <option value="BOLETA">Boletas</option>
-                                        <option value="RECIBO">Recibos</option>
-                                    </select>
-
-                                    <select id="egFiltroEstado" class="form-control form-control-sm">
-                                        <option value="todos">Activos y anulados</option>
-                                        <option value="ACTIVO">Solo activos</option>
-                                        <option value="ANULADO">Solo anulados</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="small text-muted mb-2" id="egResumenListado"></div>
-
-                            <div class="table-responsive flex-grow-1">
-                                <table class="table table-sm table-hover mb-2" id="egTable">
-                                    <thead class="thead-light">
-                                        <tr>
-                                            <th class="text-nowrap">Fecha</th>
-                                            <th class="text-nowrap">Tipo</th>
-                                            <th class="text-nowrap">Comp.</th>
-                                            <th>Beneficiario</th>
-                                            <th>Concepto</th>
-                                            <th class="text-right text-nowrap">Monto</th>
-                                            <th class="text-nowrap">Estado</th>
-                                            <th class="text-center">Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="egTableBody">
-                                        <tr>
-                                            <td colspan="8" class="text-muted small">Cargando datos de ejemplo…</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <div class="d-flex justify-content-between align-items-center mt-2">
-                                <div class="small text-muted" id="egTotalesDia"></div>
-                                <nav>
-                                    <ul class="pagination pagination-sm mb-0" id="egPager"></ul>
-                                </nav>
-                            </div>
-                        </div>
-                    </div>
+              <form id="egForm" autocomplete="off">
+                <div class="form-group mb-3">
+                  <label class="mb-1">Tipo de comprobante</label>
+                  <div class="eg-chip-group" id="egTipoChipGroup">
+                    <button type="button" class="eg-chip active" data-tipo="RECIBO">Recibo interno</button>
+                    <button type="button" class="eg-chip" data-tipo="BOLETA">Boleta</button>
+                    <button type="button" class="eg-chip" data-tipo="FACTURA">Factura</button>
+                  </div>
+                  <input type="hidden" id="egTipo" value="RECIBO">
+                  <small class="form-text text-muted">Factura y boleta requieren serie y número.</small>
                 </div>
+                <div class="form-row" id="egSerieNumeroGroup">
+                  <div class="form-group col-4">
+                    <label class="mb-1">Serie<span class="text-danger">*</span></label>
+                    <input type="text" class="form-control form-control-sm" id="egSerie" maxlength="10" placeholder="F001">
+                  </div>
+                  <div class="form-group col-8">
+                    <label class="mb-1">Número<span class="text-danger">*</span></label>
+                    <input type="text" class="form-control form-control-sm" id="egNumero" maxlength="20" placeholder="00012345">
+                  </div>
+                </div>
+                <div class="form-group mb-3 d-none" id="egReciboRefGroup">
+                  <label class="mb-1">Referencia (opcional)</label>
+                  <input type="text" class="form-control form-control-sm" id="egReferencia" maxlength="120" placeholder="Ej: Recibo manual 001316">
+                </div>
+                <div class="form-row">
+                  <div class="form-group col-6">
+                    <label class="mb-1">Monto (S/)<span class="text-danger">*</span></label>
+                    <div class="input-group input-group-sm">
+                      <div class="input-group-prepend"><span class="input-group-text">S/</span></div>
+                      <input type="number" step="0.01" min="0" class="form-control" id="egMonto" required>
+                    </div>
+                  </div>
+                  <div class="form-group col-6">
+                    <label class="mb-1">Fecha y hora<span class="text-danger">*</span></label>
+                    <input type="datetime-local" class="form-control form-control-sm" id="egFecha" required>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group col-6">
+                    <label class="mb-1">Beneficiario / Proveedor</label>
+                    <input type="text" class="form-control form-control-sm" id="egBeneficiario" maxlength="160" placeholder="Nombre completo o razón social">
+                  </div>
+                  <div class="form-group col-6">
+                    <label class="mb-1">Documento</label>
+                    <input type="text" class="form-control form-control-sm" id="egDocumento" maxlength="20" placeholder="DNI / RUC">
+                  </div>
+                </div>
+                <div class="form-group mb-3">
+                  <label class="mb-1">Concepto detallado<span class="text-danger">*</span></label>
+                  <textarea id="egConcepto" rows="5" class="form-control form-control-sm" required></textarea>
+                  <div class="d-flex justify-content-between mt-1 small text-muted">
+                    <span>Este texto se imprimirá en el recibo.</span><span id="egConceptoCount">0 / 1000</span>
+                  </div>
+                </div>
+                <div class="form-group mb-3">
+                  <label class="mb-1">Observaciones internas <span class="text-muted small">(opcional)</span></label>
+                  <textarea id="egObs" rows="2" class="form-control form-control-sm"></textarea>
+                </div>
+                <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mt-3">
+                  <div class="small text-muted"><i class="fas fa-info-circle mr-1"></i>El egreso queda asociado a la caja diaria abierta.</div>
+                  <div class="eg-form-actions">
+                    <button type="button" class="btn btn-outline-secondary btn-sm mr-1" id="egBtnLimpiar"><i class="fas fa-eraser mr-1"></i>Limpiar</button>
+                    <button type="submit" class="btn btn-primary btn-sm" id="egBtnGuardar"><i class="fas fa-save mr-1"></i>Guardar egreso</button>
+                    <button type="button" class="btn btn-outline-primary btn-sm ml-1" id="egBtnVistaPrevia"><i class="fas fa-print mr-1"></i>Vista previa</button>
+                  </div>
+                </div>
+              </form>
             </div>
-
-            <!-- Modal: vista previa de egreso / recibo -->
-            <div
-                class="modal fade"
-                id="egresoPrintModal"
-                tabindex="-1"
-                role="dialog"
-                aria-labelledby="egresoPrintModalTitle"
-                aria-hidden="true"
-            >
-                <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header py-2 bg-dark text-white">
-                            <h5 class="modal-title" id="egresoPrintModalTitle">
-                                <i class="fas fa-receipt mr-1"></i>Vista previa de recibo de egreso
-                            </h5>
-                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-
-                        <div class="modal-body">
-                            <div id="egVoucher" class="eg-voucher-wrapper">
-                                <!-- contenido generado por JS -->
-                            </div>
-                        </div>
-
-                        <div class="modal-footer py-2">
-                            <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cerrar</button>
-                            <button type="button" class="btn btn-primary btn-sm" id="egBtnPrintFake">
-                                <i class="fas fa-print mr-1"></i>Imprimir (demo)
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+          </div>
         </div>
-    </section>
+
+        <div class="col-12 col-lg-7">
+          <div class="card eg-card shadow-sm h-100">
+            <div class="card-body d-flex flex-column">
+              <div class="d-flex justify-content-between flex-wrap gap-2 mb-2">
+                <div>
+                  <h5 class="card-title mb-0">Egresos registrados</h5>
+                  <div class="text-muted small">Control de salidas por caja diaria.</div>
+                </div>
+                <div class="eg-filters d-flex flex-wrap gap-2">
+                  <div class="input-group input-group-sm">
+                    <div class="input-group-prepend"><span class="input-group-text bg-white border-right-0"><i class="fas fa-search"></i></span></div>
+                    <input id="egQ" class="form-control border-left-0" placeholder="Buscar por código, concepto o beneficiario...">
+                  </div>
+                  <select id="egFiltroTipo" class="form-control form-control-sm"><option value="TODOS">Todos</option><option value="FACTURA">Facturas</option><option value="BOLETA">Boletas</option><option value="RECIBO">Recibos</option></select>
+                  <select id="egFiltroEstado" class="form-control form-control-sm"><option value="TODOS">Activos y anulados</option><option value="ACTIVO">Solo activos</option><option value="ANULADO">Solo anulados</option></select>
+                </div>
+              </div>
+              <div class="small text-muted mb-2" id="egResumenListado"></div>
+              <div class="table-responsive flex-grow-1">
+                <table class="table table-sm table-hover mb-2" id="egTable">
+                  <thead class="thead-light"><tr><th>Código</th><th>Fecha</th><th>Tipo</th><th>Comp.</th><th>Beneficiario</th><th>Concepto</th><th class="text-right">Monto</th><th>Estado</th><th class="text-center">Acciones</th></tr></thead>
+                  <tbody id="egTableBody"><tr><td colspan="9" class="text-muted small">Cargando egresos...</td></tr></tbody>
+                </table>
+              </div>
+              <div class="d-flex justify-content-between align-items-center mt-2">
+                <div class="small text-muted" id="egTotalesDia"></div>
+                <nav><ul class="pagination pagination-sm mb-0" id="egPager"></ul></nav>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal fade" id="egresoPrintModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <div class="modal-header py-2 bg-dark text-white">
+              <h5 class="modal-title"><i class="fas fa-receipt mr-1"></i>Vista previa de recibo de egreso</h5>
+              <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body"><div id="egVoucher" class="eg-voucher-wrapper"></div></div>
+            <div class="modal-footer py-2">
+              <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cerrar</button>
+              <button type="button" class="btn btn-primary btn-sm" id="egBtnPrintReal" disabled><i class="fas fa-print mr-1"></i>Imprimir PDF</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 </div>
 
 <script>
-(function () {
-    const BASE_URL = '<?= BASE_URL ?>';
-    const EMPRESA_NOMBRE = '<?= h($empNom) ?>';
-    const USUARIO_NOMBRE = '<?= h($usrNom) ?>';
-    const EMPRESA_LOGO = '<?= h($empLogoRel ?? "") ?>';
-
-    const qs = (s, ctx = document) => ctx.querySelector(s);
-    const qsa = (s, ctx = document) => Array.from(ctx.querySelectorAll(s));
-
-    const money = (v) => 'S/ ' + Number(v || 0).toFixed(2);
-
-    const state = {
-        page: 1,
-        perPage: 7,
-        filtroTexto: '',
-        filtroTipo: 'todos',
-        filtroEstado: 'todos',
-        cajaAbierta: true, // SIEMPRE true en modo demo
-    };
-
-    // ===== Datos DEMO =====
-    const DEMO_EGRESOS = [
-        {
-            id: 1,
-            fecha: '2025-05-12T15:00:00',
-            tipo: 'RECIBO',
-            serie: '',
-            numero: '',
-            referencia: 'Recibo manual 001316',
-            beneficiario: 'Luigi Abad',
-            documento: '70379752',
-            concepto: 'Comisión de alumno Abad Lopez Luis Angel',
-            monto: 30.00,
-            estado: 'ACTIVO',
-        },
-        {
-            id: 2,
-            fecha: '2025-05-12T09:30:00',
-            tipo: 'FACTURA',
-            serie: 'F001',
-            numero: '000234',
-            referencia: '',
-            beneficiario: 'Ferretería Central SAC',
-            documento: '20123456789',
-            concepto: 'Compra de materiales varios para mantenimiento de vehículos.',
-            monto: 450.70,
-            estado: 'ACTIVO',
-        },
-        {
-            id: 3,
-            fecha: '2025-05-11T18:10:00',
-            tipo: 'BOLETA',
-            serie: 'B003',
-            numero: '005678',
-            referencia: '',
-            beneficiario: 'Taller El Amigo',
-            documento: '10456789123',
-            concepto: 'Servicio de alineamiento y balanceo de unidades.',
-            monto: 180.00,
-            estado: 'ANULADO',
-        },
-        {
-            id: 4,
-            fecha: '2025-05-10T11:05:00',
-            tipo: 'RECIBO',
-            serie: '',
-            numero: '',
-            referencia: 'Recibo caja chica 0005',
-            beneficiario: 'Caja chica',
-            documento: '',
-            concepto: 'Pago de movilidad local y pequeños consumos del personal.',
-            monto: 95.50,
-            estado: 'ACTIVO',
-        },
-        {
-            id: 5,
-            fecha: '2025-05-09T16:20:00',
-            tipo: 'FACTURA',
-            serie: 'F002',
-            numero: '000045',
-            referencia: '',
-            beneficiario: 'GLOBAL CAR PIURA S.A.C.',
-            documento: '20609446863',
-            concepto: 'Servicios administrativos internos entre sedes.',
-            monto: 320.00,
-            estado: 'ACTIVO',
-        },
-    ];
-
-    // ===== Utilidades =====
-    function fmtFechaHora(iso) {
-        if (!iso) return '—';
-
-        const d = new Date(iso);
-        if (isNaN(d.getTime())) return '—';
-
-        const dd = String(d.getDate()).padStart(2, '0');
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const yy = d.getFullYear();
-        const hh = String(d.getHours()).padStart(2, '0');
-        const mi = String(d.getMinutes()).padStart(2, '0');
-
-        return `${dd}/${mm}/${yy} ${hh}:${mi}`;
-    }
-
-    function showFormAlert(type, html) {
-        const cont = qs('#egFormAlert');
-        if (!cont) return;
-
-        if (!html) {
-            cont.innerHTML = '';
-            return;
-        }
-
-        const icon =
-            type === 'danger'
-                ? 'fa-exclamation-triangle'
-                : type === 'warning'
-                    ? 'fa-exclamation-circle'
-                    : 'fa-check-circle';
-
-        cont.innerHTML = `
-            <div class="alert alert-${type} alert-dismissible fade show mb-2" role="alert">
-                <i class="fas ${icon} mr-1"></i>${html}
-                <button type="button" class="close" data-dismiss="alert" aria-label="Cerrar">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-        `;
-    }
-
-    // ===== Tipo de comprobante =====
-    function setTipo(tipo) {
-        const hidden = qs('#egTipo');
-        if (hidden) hidden.value = tipo;
-
-        qsa('#egTipoChipGroup .eg-chip').forEach((btn) => {
-            btn.classList.toggle('active', btn.dataset.tipo === tipo);
-        });
-
-        const serieGroup = qs('#egSerieNumeroGroup');
-        const refGroup = qs('#egReciboRefGroup');
-        const serieInput = qs('#egSerie');
-        const numInput = qs('#egNumero');
-        const refInput = qs('#egReferencia');
-
-        const esComp = tipo === 'FACTURA' || tipo === 'BOLETA';
-        const esRec = tipo === 'RECIBO';
-
-        if (serieGroup) serieGroup.classList.toggle('d-none', !esComp);
-        if (refGroup) refGroup.classList.toggle('d-none', !esRec);
-
-        if (serieInput) serieInput.required = esComp;
-        if (numInput) numInput.required = esComp;
-        if (refInput) refInput.required = false;
-    }
-
-    function actualizarContadorConcepto() {
-        const txt = qs('#egConcepto');
-        const out = qs('#egConceptoCount');
-        if (!txt || !out) return;
-
-        const len = txt.value.length;
-        out.textContent = len + ' / 1000';
-    }
-
-    // ===== Listado / filtros =====
-    function filtrarEgresos() {
-        const q = state.filtroTexto.toLowerCase().trim();
-        const tipo = state.filtroTipo;
-        const est = state.filtroEstado;
-
-        return DEMO_EGRESOS
-            .filter((e) => {
-                if (tipo !== 'todos' && e.tipo !== tipo) return false;
-                if (est !== 'todos' && e.estado !== est) return false;
-
-                if (q) {
-                    const blob = (e.concepto + ' ' + (e.beneficiario || '')).toLowerCase();
-                    if (!blob.includes(q)) return false;
-                }
-
-                return true;
-            })
-            .sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
-    }
-
-    function renderTabla() {
-        const tbody = qs('#egTableBody');
-        if (!tbody) return;
-
-        const lista = filtrarEgresos();
-        const total = lista.length;
-
-        const pages = Math.max(1, Math.ceil(total / state.perPage));
-        if (state.page > pages) state.page = pages;
-
-        const start = (state.page - 1) * state.perPage;
-        const pageRows = lista.slice(start, start + state.perPage);
-
-        if (!pageRows.length) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="8" class="text-muted small">No hay egresos que coincidan con el filtro.</td>
-                </tr>
-            `;
-        } else {
-            tbody.innerHTML = pageRows
-                .map((e) => {
-                    const comp =
-                        e.tipo === 'RECIBO'
-                            ? (e.referencia || '—')
-                            : `${e.serie || ''}-${e.numero || ''}`;
-
-                    const claseEstado = e.estado === 'ANULADO' ? 'badge-danger' : 'badge-success';
-                    const labelEstado = e.estado === 'ANULADO' ? 'Anulado' : 'Activo';
-                    const claseRow = e.estado === 'ANULADO' ? 'eg-row-anulado' : '';
-
-                    const tipoBadge =
-                        e.tipo === 'FACTURA'
-                            ? 'badge-info'
-                            : e.tipo === 'BOLETA'
-                                ? 'badge-primary'
-                                : 'badge-secondary';
-
-                    const tipoLabel =
-                        e.tipo === 'FACTURA'
-                            ? 'Factura'
-                            : e.tipo === 'BOLETA'
-                                ? 'Boleta'
-                                : 'Recibo';
-
-                    const conceptoCorto =
-                        (e.concepto || '').length > 80 ? (e.concepto.slice(0, 77) + '…') : (e.concepto || '');
-
-                    return `
-                        <tr class="${claseRow}">
-                            <td class="text-nowrap align-middle">${fmtFechaHora(e.fecha)}</td>
-                            <td class="align-middle"><span class="badge ${tipoBadge}">${tipoLabel}</span></td>
-                            <td class="align-middle text-nowrap">${comp || '—'}</td>
-                            <td class="align-middle">${e.beneficiario || '—'}</td>
-                            <td class="align-middle small">${conceptoCorto}</td>
-                            <td class="align-middle text-right font-weight-bold">${money(e.monto)}</td>
-                            <td class="align-middle"><span class="badge ${claseEstado}">${labelEstado}</span></td>
-                            <td class="align-middle text-center text-nowrap">
-                                <button class="btn btn-xs btn-outline-primary mr-1" data-action="preview" data-id="${e.id}" title="Ver / imprimir">
-                                    <i class="fas fa-print"></i>
-                                </button>
-                                <button class="btn btn-xs btn-outline-danger" data-action="anular" data-id="${e.id}" ${e.estado === 'ANULADO' ? 'disabled' : ''} title="Anular egreso (demo)">
-                                    <i class="fas fa-ban"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                })
-                .join('');
-        }
-
-        renderPager(pages, total);
-        renderResumen(lista, total);
-    }
-
-    function renderPager(pages, total) {
-        const ul = qs('#egPager');
-        if (!ul) return;
-
-        if (total === 0) {
-            ul.innerHTML = '';
-            return;
-        }
-
-        const cur = state.page;
-        const items = [];
-
-        const add = (p, label, disabled = false, active = false) => {
-            items.push(`
-                <li class="page-item ${disabled ? 'disabled' : ''} ${active ? 'active' : ''}">
-                    <a href="#" class="page-link" data-page="${p}">${label}</a>
-                </li>
-            `);
-        };
-
-        add(cur - 1, '«', cur <= 1);
-        let start = Math.max(1, cur - 2);
-        let end = Math.min(pages, start + 4);
-        start = Math.max(1, end - 4);
-
-        for (let p = start; p <= end; p++) add(p, p, false, p === cur);
-
-        add(cur + 1, '»', cur >= pages);
-
-        ul.innerHTML = items.join('');
-    }
-
-    function renderResumen(lista, total) {
-        const resumen = qs('#egResumenListado');
-        const totales = qs('#egTotalesDia');
-
-        if (resumen) {
-            resumen.textContent = total
-                ? `${total} egreso(s) coinciden con el filtro seleccionado.`
-                : 'Sin egresos para los filtros actuales.';
-        }
-
-        if (totales) {
-            const suma = lista.reduce((acc, e) => acc + (e.monto || 0), 0);
-            totales.textContent = total ? `Total filtrado: ${money(suma)}` : '';
-        }
-    }
-
-    // ===== "Estado" de caja – 100% simulado =====
-    function cargarEstadoCajaDemo() {
-        const lbl = qs('#egCajaMsg');
-        const fechaHoy = qs('#egFechaHoy');
-
-        if (fechaHoy) {
-            const d = new Date();
-            const dd = String(d.getDate()).padStart(2, '0');
-            const mm = String(d.getMonth() + 1).padStart(2, '0');
-            const yy = d.getFullYear();
-            fechaHoy.textContent = `${dd}/${mm}/${yy}`;
-        }
-
-        if (lbl) {
-            lbl.classList.remove('alert-secondary', 'alert-danger', 'alert-warning');
-            lbl.classList.add('alert-success');
-            lbl.innerHTML = `
-                <i class="fas fa-check-circle mr-1"></i>
-                Modo demo: se asume que la caja diaria está abierta. El formulario está completamente habilitado.
-            `;
-        }
-
-        const badge = qs('#egCajaBadge');
-        if (badge) {
-            badge.textContent = 'Simulada: abierta';
-            badge.classList.remove('badge-danger', 'badge-secondary');
-            badge.classList.add('badge-success');
-        }
-
-        state.cajaAbierta = true;
-    }
-
-    // ===== Formulario =====
-    function limpiarFormulario() {
-        const form = qs('#egForm');
-        if (!form) return;
-
-        form.reset();
-        setTipo(qs('#egTipo').value || 'RECIBO');
-
-        const now = new Date();
-        const iso = new Date(now.getTime() - now.getTimezoneOffset() * 60000)
-            .toISOString()
-            .slice(0, 16);
-
-        const fechaInput = qs('#egFecha');
-        if (fechaInput) fechaInput.value = iso;
-
-        actualizarContadorConcepto();
-        showFormAlert('info', 'Formulario limpio. Puedes registrar un nuevo egreso de prueba.');
-    }
-
-    function tomarDatosFormulario() {
-        const tipo = (qs('#egTipo')?.value || 'RECIBO').toUpperCase();
-        const serie = (qs('#egSerie')?.value || '').trim();
-        const numero = (qs('#egNumero')?.value || '').trim();
-        const referencia = (qs('#egReferencia')?.value || '').trim();
-        const monto = parseFloat(qs('#egMonto')?.value || '0');
-        const fecha = qs('#egFecha')?.value || null;
-        const benef = (qs('#egBeneficiario')?.value || '').trim();
-        const doc = (qs('#egDocumento')?.value || '').trim();
-        const concepto = (qs('#egConcepto')?.value || '').trim();
-        const obs = (qs('#egObs')?.value || '').trim();
-
-        return { tipo, serie, numero, referencia, monto, fecha, benef, doc, concepto, obs };
-    }
-
-    function validarDatos(datos) {
-        if (!datos.concepto) {
-            showFormAlert('danger', 'Escribe un concepto para el egreso.');
-            return false;
-        }
-
-        if (!(datos.monto > 0)) {
-            showFormAlert('danger', 'El monto debe ser mayor a cero.');
-            return false;
-        }
-
-        if (!datos.fecha) {
-            showFormAlert('danger', 'Selecciona fecha y hora del egreso.');
-            return false;
-        }
-
-        if (datos.tipo === 'FACTURA' || datos.tipo === 'BOLETA') {
-            if (!datos.serie || !datos.numero) {
-                showFormAlert('danger', 'Para facturas y boletas la serie y el número son obligatorios.');
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    function agregarEgresoDemo(datos) {
-        const nuevo = {
-            id: Date.now(),
-            fecha: datos.fecha,
-            tipo: datos.tipo,
-            serie: datos.serie,
-            numero: datos.numero,
-            referencia: datos.tipo === 'RECIBO' ? datos.referencia : '',
-            beneficiario: datos.benef || '',
-            documento: datos.doc || '',
-            concepto: datos.concepto,
-            monto: datos.monto,
-            estado: 'ACTIVO',
-        };
-
-        DEMO_EGRESOS.push(nuevo);
-        return nuevo;
-    }
-
-    // ===== Voucher =====
-    function construirVoucherHTML(egreso) {
-        const comp =
-            egreso.tipo === 'RECIBO'
-                ? (egreso.referencia || 'Recibo interno')
-                : `${egreso.serie || ''}-${egreso.numero || ''}`;
-
-        const fecha = fmtFechaHora(egreso.fecha);
-        const firmaResponsable = USUARIO_NOMBRE || 'Responsable';
-
-        const logoHtml = EMPRESA_LOGO
-            ? `<div class="eg-voucher-logo"><img src="${EMPRESA_LOGO}" alt="Logo"></div>`
-            : `<div class="eg-voucher-logo eg-voucher-logo-placeholder"></div>`;
-
-        return `
-            <div class="eg-voucher">
-                <div class="eg-voucher-head">
-                    ${logoHtml}
-
-                    <div class="eg-voucher-head-main">
-                        <div class="eg-voucher-empresa">${EMPRESA_NOMBRE}</div>
-                        <div class="eg-voucher-sub text-muted small">Recibo de egreso (demo)</div>
-                    </div>
-
-                    <div class="eg-voucher-amount-box">
-                        <div class="label">S/.</div>
-                        <div class="value">${money(egreso.monto).replace('S/ ', '')}</div>
-                    </div>
-                </div>
-
-                <div class="eg-voucher-row mt-2">
-                    <div class="eg-voucher-block">
-                        <div class="label">Fecha y hora</div>
-                        <div class="value">${fecha}</div>
-                    </div>
-
-                    <div class="eg-voucher-block">
-                        <div class="label">Comprobante</div>
-                        <div class="value">${egreso.tipo} ${comp}</div>
-                    </div>
-
-                    <div class="eg-voucher-block">
-                        <div class="label">Estado</div>
-                        <div class="value">${egreso.estado === 'ANULADO' ? 'ANULADO' : 'EMITIDO'}</div>
-                    </div>
-                </div>
-
-                <div class="eg-voucher-row mt-2">
-                    <div class="eg-voucher-block eg-voucher-block-wide">
-                        <div class="label">Beneficiario</div>
-                        <div class="value">${egreso.beneficiario || '—'}</div>
-                    </div>
-
-                    <div class="eg-voucher-block">
-                        <div class="label">Documento</div>
-                        <div class="value">${egreso.documento || '—'}</div>
-                    </div>
-                </div>
-
-                <div class="eg-voucher-section mt-3">
-                    <div class="label">Concepto</div>
-                    <div class="eg-voucher-concepto">${egreso.concepto || ''}</div>
-                </div>
-
-                <div class="eg-voucher-footer">
-                    <div class="eg-voucher-firma">
-                        <div class="line"></div>
-                        <div class="caption">Responsable<br><strong>${firmaResponsable}</strong></div>
-                    </div>
-                </div>
-            </div>
-        `;
-    }
-
-    function abrirVoucher(egreso) {
-        const cont = qs('#egVoucher');
-        if (!cont || !egreso) return;
-
-        cont.innerHTML = construirVoucherHTML(egreso);
-
-        if (window.jQuery) {
-            jQuery('#egresoPrintModal').modal('show');
-        }
-    }
-
-    // ===== Eventos globales =====
-    document.addEventListener('click', function (e) {
-        const chip = e.target.closest('#egTipoChipGroup .eg-chip');
-        if (chip) {
-            e.preventDefault();
-            setTipo(chip.dataset.tipo || 'RECIBO');
-            return;
-        }
-
-        const pagerLink = e.target.closest('#egPager a[data-page]');
-        if (pagerLink) {
-            e.preventDefault();
-            const p = parseInt(pagerLink.dataset.page, 10);
-            if (!isNaN(p)) {
-                state.page = p;
-                renderTabla();
-            }
-            return;
-        }
-
-        const actionBtn = e.target.closest('[data-action][data-id]');
-        if (actionBtn) {
-            const id = parseInt(actionBtn.dataset.id, 10);
-            const acc = actionBtn.dataset.action;
-            const eg = DEMO_EGRESOS.find((x) => x.id === id);
-            if (!eg) return;
-
-            if (acc === 'preview') {
-                abrirVoucher(eg);
-            } else if (acc === 'anular') {
-                if (eg.estado === 'ANULADO') return;
-                if (!confirm('¿Seguro que deseas anular este egreso (solo demo)?')) return;
-                eg.estado = 'ANULADO';
-                renderTabla();
-            }
-        }
-    });
-
-    const form = qs('#egForm');
-    if (form) {
-        form.addEventListener('submit', function (e) {
-            e.preventDefault();
-
-            const datos = tomarDatosFormulario();
-            if (!validarDatos(datos)) return;
-
-            const egreso = agregarEgresoDemo(datos);
-
-            showFormAlert(
-                'success',
-                'Egreso guardado en modo demostración. No se ha registrado en la base de datos.'
-            );
-
-            renderTabla();
-            abrirVoucher(egreso);
-        });
-    }
-
-    const btnLimpiar = qs('#egBtnLimpiar');
-    if (btnLimpiar) {
-        btnLimpiar.addEventListener('click', function () {
-            limpiarFormulario();
-        });
-    }
-
-    const btnVistaPrevia = qs('#egBtnVistaPrevia');
-    if (btnVistaPrevia) {
-        btnVistaPrevia.addEventListener('click', function () {
-            const datos = tomarDatosFormulario();
-
-            if (!datos.concepto) {
-                showFormAlert('warning', 'Completa al menos el concepto y el monto para ver una vista previa.');
-                return;
-            }
-
-            const egDemo = {
-                id: 0,
-                fecha: datos.fecha || new Date().toISOString(),
-                tipo: datos.tipo || 'RECIBO',
-                serie: datos.serie,
-                numero: datos.numero,
-                referencia: datos.referencia,
-                beneficiario: datos.benef || '',
-                documento: datos.doc || '',
-                concepto: datos.concepto,
-                monto: datos.monto || 0,
-                estado: 'ACTIVO',
-            };
-
-            abrirVoucher(egDemo);
-        });
-    }
-
-    const btnPrintFake = qs('#egBtnPrintFake');
-    if (btnPrintFake) {
-        btnPrintFake.addEventListener('click', function () {
-            alert('Demo: aquí se generaría el PDF real del recibo de egreso.');
-        });
-    }
-
-    const qInput = qs('#egQ');
-    if (qInput) {
-        let t;
-        qInput.addEventListener('input', function () {
-            clearTimeout(t);
-            t = setTimeout(function () {
-                state.filtroTexto = qInput.value || '';
-                state.page = 1;
-                renderTabla();
-            }, 250);
-        });
-    }
-
-    const filtroTipo = qs('#egFiltroTipo');
-    if (filtroTipo) {
-        filtroTipo.addEventListener('change', function () {
-            state.filtroTipo = filtroTipo.value || 'todos';
-            state.page = 1;
-            renderTabla();
-        });
-    }
-
-    const filtroEstado = qs('#egFiltroEstado');
-    if (filtroEstado) {
-        filtroEstado.addEventListener('change', function () {
-            state.filtroEstado = filtroEstado.value || 'todos';
-            state.page = 1;
-            renderTabla();
-        });
-    }
-
-    const concepto = qs('#egConcepto');
-    if (concepto) {
-        concepto.setAttribute('maxlength', '1000');
-        concepto.addEventListener('input', actualizarContadorConcepto);
-    }
-
-    // ===== Init (modo demo) =====
-    function initEgresosDemo() {
-        setTipo('RECIBO');
-        limpiarFormulario();
-        renderTabla();
-        cargarEstadoCajaDemo();
-    }
-
-    // El script está al final del body, así que el DOM ya está listo
-    initEgresosDemo();
+(function(){
+const API='<?= h(rel('modules/egresos/api.php')) ?>',EMP='<?= h($empNom) ?>',USR='<?= h($usrNom) ?>';
+const qs=(s,c=document)=>c.querySelector(s),qsa=(s,c=document)=>Array.from(c.querySelectorAll(s));
+const st={p:1,pp:8,q:'',t:'TODOS',e:'TODOS',schema:true,schemaMsg:'',caja:null,saldo:null,prev:null};
+const esc=s=>(s||'').toString().replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const money=v=>'S/ '+Number(v||0).toFixed(2);
+const fmt=(x)=>{if(!x)return '—';const d=new Date(x.replace(' ','T'));if(isNaN(d))return '—';return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};
+const fmtDate=(x)=>{if(!x)return '—';const d=new Date(x+'T00:00:00');if(isNaN(d))return '—';return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();};
+async function req(url,opt){const r=await fetch(url,Object.assign({credentials:'same-origin'},opt||{}));const txt=await r.text();let j=null;try{j=JSON.parse(txt);}catch(e){}if(!r.ok||!j||j.ok!==true){let msg=(j&&j.error)?j.error:'';if(!msg){const plain=(txt||'').trim();msg=plain!==''?plain:('Error HTTP '+r.status);}if(j&&j.error_ref)msg+=' Ref: '+j.error_ref;const er=new Error(msg);er.payload=j;throw er;}return j;}
+const get=(a,p)=>{const q=new URLSearchParams(Object.assign({accion:a},p||{}));return req(API+'?'+q.toString());};
+const post=(a,d)=>{const b=new URLSearchParams();b.set('accion',a);Object.keys(d||{}).forEach(k=>b.set(k,d[k]==null?'':String(d[k])));return req(API,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},body:b.toString()});};
+function alertF(type,html){const c=qs('#egFormAlert');if(!c)return;if(!html){c.innerHTML='';return;}const i=type==='danger'?'fa-exclamation-triangle':type==='warning'?'fa-exclamation-circle':type==='success'?'fa-check-circle':'fa-info-circle';c.innerHTML='<div class="alert alert-'+type+' alert-dismissible fade show mb-2"><i class="fas '+i+' mr-1"></i>'+html+'<button type="button" class="close" data-dismiss="alert"><span>&times;</span></button></div>';}
+function setTipo(t){qs('#egTipo').value=t;qsa('#egTipoChipGroup .eg-chip').forEach(b=>b.classList.toggle('active',b.dataset.tipo===t));const comp=(t==='FACTURA'||t==='BOLETA');qs('#egSerieNumeroGroup').classList.toggle('d-none',!comp);qs('#egReciboRefGroup').classList.toggle('d-none',comp);qs('#egSerie').required=comp;qs('#egNumero').required=comp;}
+function setNow(){const i=qs('#egFecha'),n=new Date();i.value=new Date(n.getTime()-n.getTimezoneOffset()*60000).toISOString().slice(0,16);}
+function countC(){const t=qs('#egConcepto'),o=qs('#egConceptoCount');if(t&&o)o.textContent=t.value.length+' / 1000';}
+function lockForm(en){const f=qs('#egForm');if(!f)return;qsa('input,textarea,button',f).forEach(el=>{if(el.id==='egBtnVistaPrevia'||el.id==='egBtnLimpiar'){el.disabled=false;return;}el.disabled=!en;});const b=qs('#egFormStateBadge');if(b){b.className=en?'badge badge-success':'badge badge-secondary';b.textContent=en?'Caja habilitada':'Registro bloqueado';}}
+function renderCaja(d){
+  st.schema=!!d.schema_ok;st.schemaMsg=(d.schema_message||'');st.caja=d.caja||{};st.saldo=d.saldo||null;
+  const cd=st.caja.diaria||{},cm=st.caja.mensual||{};
+  const bd=qs('#egCajaBadge'),bm=qs('#egCajaMensualBadge');
+  if(bd){bd.className='badge badge-pill '+(st.caja.diaria_abierta?'badge-success':'badge-danger');bd.textContent=st.caja.diaria_abierta?'Abierta':'Cerrada';}
+  if(bm){const open=(cm.estado||'').toLowerCase()==='abierta';bm.className='badge badge-pill '+(open?'badge-success':'badge-secondary');bm.textContent=open?'Abierta':(cm.codigo?'Cerrada':'Sin caja');}
+  qs('#egCajaDiariaCodigo').textContent='CD: '+(cd.codigo||'—')+(cd.fecha?' ('+fmtDate(cd.fecha)+')':'');
+  qs('#egCajaMensualCodigo').textContent='CM: '+(cm.codigo||'—');
+  const m=qs('#egCajaMsg');const cl=!st.schema?'alert-danger':(st.caja.puede_registrar?'alert-success':'alert-warning');
+  m.className='alert eg-caja-alert mt-3 mb-0 '+cl;
+  m.innerHTML='<i class="fas fa-info-circle mr-1"></i>'+esc(!st.schema?(st.schemaMsg||'Falta migración egr_.'):(st.caja.mensaje||''));
+  const sb=qs('#egSaldoResumen');
+  if(st.schema&&st.saldo&&cd.id){
+    sb.classList.remove('d-none');
+    sb.innerHTML='<div><strong>Ingresos:</strong> '+esc(money(st.saldo.ingresos))+'</div><div><strong>Devoluciones:</strong> '+esc(money(st.saldo.devoluciones))+'</div><div><strong>Egresos activos:</strong> '+esc(money(st.saldo.egresos))+'</div><div class="eg-saldo-main"><strong>Saldo disponible:</strong> '+esc(money(st.saldo.saldo_disponible))+'</div>';
+  }else{sb.classList.add('d-none');sb.innerHTML='';}
+  lockForm(!!(st.schema&&st.caja.puede_registrar));
+}
+function datos(){return{tipo:(qs('#egTipo').value||'RECIBO').toUpperCase(),serie:qs('#egSerie').value.trim(),numero:qs('#egNumero').value.trim(),referencia:qs('#egReferencia').value.trim(),monto:parseFloat(qs('#egMonto').value||'0'),fecha:qs('#egFecha').value.trim(),benef:qs('#egBeneficiario').value.trim(),doc:qs('#egDocumento').value.trim(),concepto:qs('#egConcepto').value.trim(),obs:qs('#egObs').value.trim()};}
+function validar(d){if(!d.concepto){alertF('danger','Escribe el concepto del egreso.');return false;}if(!(d.monto>0)){alertF('danger','El monto debe ser mayor a cero.');return false;}if(!d.fecha){alertF('danger','Selecciona fecha y hora.');return false;}if((d.tipo==='FACTURA'||d.tipo==='BOLETA')&&(!d.serie||!d.numero)){alertF('danger','Serie y número son obligatorios para factura/boleta.');return false;}return true;}
+async function loadCaja(){try{renderCaja(await get('estado'));}catch(e){renderCaja({schema_ok:false,schema_message:e.message,caja:{puede_registrar:false,diaria:{},mensual:{}},saldo:null});}}
+function rowsHTML(rows){
+  if(!rows.length)return '<tr><td colspan="9" class="text-muted small">No hay egresos que coincidan con el filtro.</td></tr>';
+  return rows.map(r=>{
+    const tipo=(r.tipo_comprobante||'').toUpperCase(),an=((r.estado||'').toUpperCase()==='ANULADO');
+    const tBadge=tipo==='FACTURA'?'badge-info':(tipo==='BOLETA'?'badge-primary':'badge-secondary');
+    const tLbl=tipo==='FACTURA'?'Factura':(tipo==='BOLETA'?'Boleta':'Recibo');
+    const comp=tipo==='RECIBO'?(r.referencia||'INTERNO'):(((r.serie||'')+'-'+(r.numero||'')).replace(/^-|-$|^$/,'—'));
+    const c=(r.concepto||'').length>80?(r.concepto||'').slice(0,77)+'…':(r.concepto||'');
+    return '<tr class="'+(an?'eg-row-anulado':'')+'"><td><strong>'+esc(r.codigo||'')+'</strong></td><td class="text-nowrap">'+esc(fmt(r.fecha_emision))+'</td><td><span class="badge '+tBadge+'">'+tLbl+'</span></td><td class="text-nowrap">'+esc(comp)+'</td><td>'+esc(r.beneficiario||'—')+'</td><td class="small">'+esc(c||'—')+'</td><td class="text-right font-weight-bold">'+esc(money(r.monto))+'</td><td><span class="badge '+(an?'badge-danger':'badge-success')+'">'+(an?'Anulado':'Activo')+'</span></td><td class="text-center text-nowrap"><button class="btn btn-xs btn-outline-primary mr-1" data-action="preview" data-id="'+r.id+'" title="Vista previa"><i class="fas fa-eye"></i></button><a class="btn btn-xs btn-outline-secondary mr-1" target="_blank" rel="noopener" href="'+API+'?accion=egreso_pdf&id='+r.id+'" title="Imprimir PDF"><i class="fas fa-print"></i></a><button class="btn btn-xs btn-outline-danger" data-action="anular" data-id="'+r.id+'" '+(an?'disabled':'')+' title="Anular"><i class="fas fa-ban"></i></button></td></tr>';
+  }).join('');
+}
+function pager(tp,p){
+  const ul=qs('#egPager');if(tp<=1){ul.innerHTML='';return;}
+  const it=[],add=(x,l,d,a)=>it.push('<li class="page-item '+(d?'disabled':'')+' '+(a?'active':'')+'"><a href="#" class="page-link" data-page="'+x+'">'+l+'</a></li>');
+  add(p-1,'«',p<=1,false);let s=Math.max(1,p-2),e=Math.min(tp,s+4);s=Math.max(1,e-4);for(let i=s;i<=e;i++)add(i,''+i,false,i===p);add(p+1,'»',p>=tp,false);ul.innerHTML=it.join('');
+}
+async function loadList(){
+  const tb=qs('#egTableBody'),resTxt=qs('#egResumenListado'),tot=qs('#egTotalesDia');
+  if(!st.schema){tb.innerHTML='<tr><td colspan="9" class="text-danger small">'+esc(st.schemaMsg||'No se puede listar por un error de conexión/API.')+'</td></tr>';resTxt.textContent='';tot.textContent='';pager(1,1);return;}
+  tb.innerHTML='<tr><td colspan="9" class="text-muted small">Cargando...</td></tr>';
+  try{
+    const r=await get('listar',{page:st.p,per:st.pp,q:st.q,tipo:st.t,estado:st.e}),rows=Array.isArray(r.rows)?r.rows:[];
+    tb.innerHTML=rowsHTML(rows);pager(r.total_pages||1,r.page||1);
+    if((r.total||0)>0){const from=((r.page-1)*r.per)+1,to=Math.min(r.total,from+rows.length-1);resTxt.textContent='Mostrando '+from+'–'+to+' de '+r.total+' egresos.';}else{resTxt.textContent='Sin egresos para los filtros actuales.';}
+    const s=rows.reduce((a,x)=>((x.estado||'').toUpperCase()==='ANULADO')?a:a+Number(x.monto||0),0);tot.textContent=rows.length?('Total visible activos: '+money(s)):'';
+  }catch(e){tb.innerHTML='<tr><td colspan="9" class="text-danger small">'+esc(e.message||'Error al listar egresos.')+'</td></tr>';resTxt.textContent='';tot.textContent='';}
+}
+function voucherHTML(v,logo){
+  const tipo=(v.tipo_comprobante||v.tipo||'RECIBO').toUpperCase();
+  const comp=tipo==='RECIBO'?(v.referencia||'RECIBO INTERNO'):((v.serie||'')+'-'+(v.numero||'')).replace(/^-|-$|^$/,'—');
+  const est=((v.estado||'ACTIVO').toUpperCase()==='ANULADO')?'ANULADO':'EMITIDO';
+  const resp=esc((v.creado_nombre||'').trim()||USR||'Responsable');
+  const logoHtml=logo?'<div class="eg-voucher-logo"><img src="'+esc(logo)+'" alt="Logo"></div>':'<div class="eg-voucher-logo eg-voucher-logo-placeholder"></div>';
+  return '<div class="eg-voucher"><div class="eg-voucher-head">'+logoHtml+'<div class="eg-voucher-head-main"><div class="eg-voucher-empresa">'+esc(v.empresa_nombre||EMP)+'</div><div class="eg-voucher-sub text-muted small">Recibo de egreso</div></div><div class="eg-voucher-amount-box"><div class="label">S/.</div><div class="value">'+esc(Number(v.monto||0).toFixed(2))+'</div></div></div><div class="eg-voucher-row mt-2"><div class="eg-voucher-block"><div class="label">Fecha y hora</div><div class="value">'+esc(fmt(v.fecha_emision||v.fecha||''))+'</div></div><div class="eg-voucher-block"><div class="label">Comprobante</div><div class="value">'+esc(tipo+' '+comp)+'</div></div><div class="eg-voucher-block"><div class="label">Estado</div><div class="value">'+esc(est)+'</div></div></div><div class="eg-voucher-row mt-2"><div class="eg-voucher-block eg-voucher-block-wide"><div class="label">Beneficiario</div><div class="value">'+esc(v.beneficiario||'—')+'</div></div><div class="eg-voucher-block"><div class="label">Documento</div><div class="value">'+esc(v.documento||'—')+'</div></div></div><div class="eg-voucher-section mt-3"><div class="label">Concepto</div><div class="eg-voucher-concepto">'+esc(v.concepto||'')+'</div></div><div class="eg-voucher-footer"><div class="eg-voucher-firma"><div class="line"></div><div class="caption">Responsable<br><strong>'+resp+'</strong><br><span class="small">Código: '+esc(v.codigo||'Sin guardar')+'</span></div></div></div></div>';
+}
+function showVoucher(v,logo){
+  st.prev=v||null;const c=qs('#egVoucher');if(!c||!v)return;c.innerHTML=voucherHTML(v,logo||'../../dist/img/AdminLTELogo.png');
+  qs('#egBtnPrintReal').disabled=!(v.id>0);
+  if(window.jQuery)window.jQuery('#egresoPrintModal').modal('show');
+}
+async function previewId(id){const r=await get('detalle',{id:id});showVoucher(r.row,r.row.empresa_logo_web||'../../dist/img/AdminLTELogo.png');}
+function clearForm(){const f=qs('#egForm');if(!f)return;f.reset();setTipo('RECIBO');setNow();countC();alertF('info','Formulario limpio. Completa los datos y registra el egreso.');}
+async function save(e){
+  e.preventDefault();
+  if(!st.schema){alertF('danger','No se puede registrar: falta migración SQL de tablas egr_.');return;}
+  if(!st.caja||!st.caja.puede_registrar){alertF('warning','No hay caja diaria abierta. Abre caja desde el módulo Caja.');return;}
+  const d=datos();if(!validar(d))return;
+  const b=qs('#egBtnGuardar');b.disabled=true;
+  try{
+    const r=await post('crear',{tipo_comprobante:d.tipo,serie:d.serie,numero:d.numero,referencia:d.referencia,fecha_emision:d.fecha,monto:d.monto,beneficiario:d.benef,documento:d.doc,concepto:d.concepto,observaciones:d.obs});
+    alertF('success',esc(r.msg||'Egreso registrado.'));await loadCaja();st.p=1;await loadList();if(r.id)await previewId(r.id);clearForm();
+  }catch(err){
+    const sd=err.payload&&err.payload.saldo;
+    if(sd)alertF('warning',esc(err.message)+'<br>Saldo disponible: <strong>'+esc(money(sd.saldo_disponible))+'</strong>');
+    else alertF('danger',esc(err.message||'No se pudo guardar el egreso.'));
+  }finally{b.disabled=false;}
+}
+async function anular(id){
+  if(!window.confirm('¿Seguro que deseas anular este egreso?'))return;
+  const motivo=window.prompt('Motivo de anulación (opcional):','')||'';
+  try{await post('anular',{id:id,motivo:motivo});alertF('success','Egreso anulado correctamente.');await loadCaja();await loadList();}
+  catch(e){alertF('danger',esc(e.message||'No se pudo anular el egreso.'));}
+}
+function bind(){
+  document.addEventListener('click',ev=>{
+    const chip=ev.target.closest('#egTipoChipGroup .eg-chip');if(chip){ev.preventDefault();setTipo(chip.dataset.tipo||'RECIBO');return;}
+    const pg=ev.target.closest('#egPager a[data-page]');if(pg){ev.preventDefault();const p=parseInt(pg.dataset.page,10);if(!isNaN(p)&&p>=1){st.p=p;loadList();}return;}
+    const act=ev.target.closest('[data-action][data-id]');if(act){const id=parseInt(act.dataset.id,10),a=act.dataset.action;if(!(id>0))return;if(a==='preview')previewId(id).catch(e=>alertF('danger',esc(e.message||'No se pudo abrir vista previa.')));if(a==='anular')anular(id);}
+  });
+  qs('#egForm').addEventListener('submit',save);
+  qs('#egBtnLimpiar').addEventListener('click',clearForm);
+  qs('#egBtnVistaPrevia').addEventListener('click',()=>{
+    const d=datos();if(!d.concepto||!(d.monto>0)){alertF('warning','Para la vista previa, completa al menos concepto y monto.');return;}
+    showVoucher({id:0,codigo:'SIN GUARDAR',tipo_comprobante:d.tipo,serie:d.serie,numero:d.numero,referencia:d.referencia,fecha_emision:d.fecha||new Date().toISOString(),monto:d.monto||0,beneficiario:d.benef||'',documento:d.doc||'',concepto:d.concepto||'',estado:'ACTIVO',empresa_nombre:EMP,creado_nombre:USR},'../../dist/img/AdminLTELogo.png');
+  });
+  qs('#egBtnPrintReal').addEventListener('click',()=>{const v=st.prev;if(!v||!(v.id>0)){alertF('warning','Primero guarda el egreso para poder imprimir el PDF oficial.');return;}window.open(API+'?accion=egreso_pdf&id='+v.id,'_blank','noopener');});
+  let t=null;qs('#egQ').addEventListener('input',()=>{clearTimeout(t);t=setTimeout(()=>{st.q=qs('#egQ').value||'';st.p=1;loadList();},250);});
+  qs('#egFiltroTipo').addEventListener('change',()=>{st.t=(qs('#egFiltroTipo').value||'TODOS').toUpperCase();st.p=1;loadList();});
+  qs('#egFiltroEstado').addEventListener('change',()=>{st.e=(qs('#egFiltroEstado').value||'TODOS').toUpperCase();st.p=1;loadList();});
+  qs('#egConcepto').setAttribute('maxlength','1000');qs('#egConcepto').addEventListener('input',countC);
+}
+async function init(){setTipo('RECIBO');setNow();countC();bind();await loadCaja();await loadList();}
+init();
 })();
 </script>
 

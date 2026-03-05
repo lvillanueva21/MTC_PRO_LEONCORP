@@ -86,6 +86,22 @@
     border: 1px solid var(--eg-border-soft);
 }
 
+.eg-saldo-box {
+    border: 1px dashed #d4cef8;
+    background: #faf9ff;
+    border-radius: 10px;
+    padding: 8px 10px;
+    font-size: .8rem;
+    color: #3e3d6b;
+    line-height: 1.35;
+}
+
+.eg-saldo-box .eg-saldo-main {
+    margin-top: 3px;
+    font-size: .88rem;
+    color: #2a2955;
+}
+
 /* Grupo de chips para tipo de comprobante */
 .eg-chip-group {
     display: flex;
@@ -127,6 +143,11 @@
     border-radius: 8px;
 }
 
+#egForm .form-control:disabled,
+#egForm .input-group-text:disabled {
+    background-color: #f3f4f6;
+}
+
 #egForm textarea.form-control {
     resize: vertical;
 }
@@ -151,10 +172,18 @@
     font-size: .8rem;
     text-transform: uppercase;
     letter-spacing: .05em;
+    white-space: nowrap;
 }
 
 #egTable tbody td {
     font-size: .8rem;
+    vertical-align: middle;
+}
+
+.btn-xs {
+    padding: .15rem .35rem;
+    font-size: .72rem;
+    line-height: 1.2;
 }
 
 .eg-row-anulado td {

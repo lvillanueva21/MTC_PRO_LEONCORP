@@ -1072,6 +1072,50 @@ CREATE TABLE `cr_usuario_curso` (
 -- --------------------------------------------------------
 
 --
+-- Estructura de tabla para la tabla `egr_correlativos`
+--
+
+CREATE TABLE `egr_correlativos` (
+  `id_empresa` int(10) UNSIGNED NOT NULL,
+  `ultimo_numero` int(10) UNSIGNED NOT NULL DEFAULT 0,
+  `actualizado` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_spanish_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `egr_egresos`
+--
+
+CREATE TABLE `egr_egresos` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `id_empresa` int(10) UNSIGNED NOT NULL,
+  `id_caja_mensual` int(10) UNSIGNED NOT NULL,
+  `id_caja_diaria` int(10) UNSIGNED NOT NULL,
+  `codigo` varchar(16) NOT NULL,
+  `correlativo` int(10) UNSIGNED NOT NULL,
+  `tipo_comprobante` enum('RECIBO','BOLETA','FACTURA') NOT NULL DEFAULT 'RECIBO',
+  `serie` varchar(10) DEFAULT NULL,
+  `numero` varchar(20) DEFAULT NULL,
+  `referencia` varchar(120) DEFAULT NULL,
+  `fecha_emision` datetime NOT NULL,
+  `monto` decimal(14,2) NOT NULL,
+  `beneficiario` varchar(160) DEFAULT NULL,
+  `documento` varchar(20) DEFAULT NULL,
+  `concepto` varchar(1000) NOT NULL,
+  `observaciones` varchar(255) DEFAULT NULL,
+  `estado` enum('ACTIVO','ANULADO') NOT NULL DEFAULT 'ACTIVO',
+  `anulado_por` int(10) UNSIGNED DEFAULT NULL,
+  `anulado_en` datetime DEFAULT NULL,
+  `anulado_motivo` varchar(255) DEFAULT NULL,
+  `creado_por` int(10) UNSIGNED NOT NULL,
+  `creado` datetime NOT NULL DEFAULT current_timestamp(),
+  `actualizado` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_spanish_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Estructura de tabla para la tabla `ferreteria_productos`
 --
 
@@ -2472,9 +2516,7 @@ CREATE TABLE `pos_clientes` (
   `doc_tipo` enum('DNI','RUC','CE','PAS','BREVETE') NOT NULL,
   `doc_numero` varchar(20) NOT NULL,
   `nombre` varchar(200) NOT NULL,
-  `email` varchar(150) DEFAULT NULL,
   `telefono` varchar(30) DEFAULT NULL,
-  `direccion` varchar(300) DEFAULT NULL,
   `activo` tinyint(1) NOT NULL DEFAULT 1,
   `creado` datetime NOT NULL DEFAULT current_timestamp(),
   `actualizado` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
@@ -2496,6 +2538,27 @@ CREATE TABLE `pos_conductores` (
   `telefono` varchar(30) DEFAULT NULL,
   `email` varchar(150) DEFAULT NULL,
   `activo` tinyint(1) NOT NULL DEFAULT 1,
+  `creado` datetime NOT NULL DEFAULT current_timestamp(),
+  `actualizado` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_spanish_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `pos_perfil_conductor`
+--
+
+CREATE TABLE `pos_perfil_conductor` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `id_empresa` int(10) UNSIGNED NOT NULL,
+  `doc_tipo` enum('DNI','CE','BREVETE') NOT NULL,
+  `doc_numero` varchar(20) NOT NULL,
+  `canal` varchar(30) DEFAULT NULL,
+  `email` varchar(150) DEFAULT NULL,
+  `nacimiento` date DEFAULT NULL,
+  `categoria_auto_id` smallint(5) UNSIGNED DEFAULT NULL,
+  `categoria_moto_id` smallint(5) UNSIGNED DEFAULT NULL,
+  `nota` varchar(255) DEFAULT NULL,
   `creado` datetime NOT NULL DEFAULT current_timestamp(),
   `actualizado` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_spanish_ci;
@@ -3036,6 +3099,26 @@ ALTER TABLE `cr_usuario_curso`
   ADD KEY `fk_ucr_asignado_por` (`asignado_por`);
 
 --
+-- Indices de la tabla `egr_correlativos`
+--
+ALTER TABLE `egr_correlativos`
+  ADD PRIMARY KEY (`id_empresa`);
+
+--
+-- Indices de la tabla `egr_egresos`
+--
+ALTER TABLE `egr_egresos`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_egr_codigo` (`codigo`),
+  ADD UNIQUE KEY `uk_egr_emp_correlativo` (`id_empresa`,`correlativo`),
+  ADD KEY `idx_egr_empresa_fecha` (`id_empresa`,`fecha_emision`),
+  ADD KEY `idx_egr_estado` (`estado`),
+  ADD KEY `idx_egr_caja_diaria` (`id_caja_diaria`),
+  ADD KEY `idx_egr_caja_mensual` (`id_caja_mensual`),
+  ADD KEY `idx_egr_creado_por` (`creado_por`),
+  ADD KEY `idx_egr_anulado_por` (`anulado_por`);
+
+--
 -- Indices de la tabla `ferreteria_productos`
 --
 ALTER TABLE `ferreteria_productos`
@@ -3403,6 +3486,15 @@ ALTER TABLE `pos_conductores`
   ADD KEY `idx_pos_cond_apenom` (`id_empresa`,`apellidos`,`nombres`);
 
 --
+-- Indices de la tabla `pos_perfil_conductor`
+--
+ALTER TABLE `pos_perfil_conductor`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uk_pos_pc_doc` (`id_empresa`,`doc_tipo`,`doc_numero`),
+  ADD KEY `idx_pos_pc_cat_auto` (`categoria_auto_id`),
+  ADD KEY `idx_pos_pc_cat_moto` (`categoria_moto_id`);
+
+--
 -- Indices de la tabla `pos_devoluciones`
 --
 ALTER TABLE `pos_devoluciones`
@@ -3710,6 +3802,12 @@ ALTER TABLE `cr_usuario_curso`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT de la tabla `egr_egresos`
+--
+ALTER TABLE `egr_egresos`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT de la tabla `ferreteria_productos`
 --
 ALTER TABLE `ferreteria_productos`
@@ -3941,6 +4039,12 @@ ALTER TABLE `pos_clientes`
 -- AUTO_INCREMENT de la tabla `pos_conductores`
 --
 ALTER TABLE `pos_conductores`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de la tabla `pos_perfil_conductor`
+--
+ALTER TABLE `pos_perfil_conductor`
   MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
@@ -4366,6 +4470,22 @@ ALTER TABLE `pb_publicidad_target`
   ADD CONSTRAINT `fk_pb_tgt_user` FOREIGN KEY (`usuario_id`) REFERENCES `mtp_usuarios` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
+-- Filtros para la tabla `egr_correlativos`
+--
+ALTER TABLE `egr_correlativos`
+  ADD CONSTRAINT `fk_egr_correlativo_emp` FOREIGN KEY (`id_empresa`) REFERENCES `mtp_empresas` (`id`) ON UPDATE CASCADE;
+
+--
+-- Filtros para la tabla `egr_egresos`
+--
+ALTER TABLE `egr_egresos`
+  ADD CONSTRAINT `fk_egr_anulado_por` FOREIGN KEY (`anulado_por`) REFERENCES `mtp_usuarios` (`id`) ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_egr_caja_diaria` FOREIGN KEY (`id_caja_diaria`) REFERENCES `mod_caja_diaria` (`id`) ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_egr_caja_mensual` FOREIGN KEY (`id_caja_mensual`) REFERENCES `mod_caja_mensual` (`id`) ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_egr_creado_por` FOREIGN KEY (`creado_por`) REFERENCES `mtp_usuarios` (`id`) ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_egr_empresa` FOREIGN KEY (`id_empresa`) REFERENCES `mtp_empresas` (`id`) ON UPDATE CASCADE;
+
+--
 -- Filtros para la tabla `pos_abonos`
 --
 ALTER TABLE `pos_abonos`
@@ -4400,6 +4520,14 @@ ALTER TABLE `pos_clientes`
 --
 ALTER TABLE `pos_conductores`
   ADD CONSTRAINT `fk_pos_cond_emp` FOREIGN KEY (`id_empresa`) REFERENCES `mtp_empresas` (`id`) ON UPDATE CASCADE;
+
+--
+-- Filtros para la tabla `pos_perfil_conductor`
+--
+ALTER TABLE `pos_perfil_conductor`
+  ADD CONSTRAINT `fk_pos_pc_cat_auto` FOREIGN KEY (`categoria_auto_id`) REFERENCES `cq_categorias_licencia` (`id`) ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_pos_pc_cat_moto` FOREIGN KEY (`categoria_moto_id`) REFERENCES `cq_categorias_licencia` (`id`) ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_pos_pc_emp` FOREIGN KEY (`id_empresa`) REFERENCES `mtp_empresas` (`id`) ON UPDATE CASCADE;
 
 --
 -- Filtros para la tabla `pos_devoluciones`
