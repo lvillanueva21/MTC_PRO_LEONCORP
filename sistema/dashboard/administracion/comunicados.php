@@ -58,46 +58,7 @@ if (
 }
 ?>
 <style>
-/* ===== Estilos scopeados: NO tocan AdminLTE ni el navbar ===== */
-.dash-admin .card { border-radius: 12px; }
-.dash-admin .card-title { font-weight: 700; margin-bottom: .5rem; }
-.dash-admin .muted { color:#6b7280; }
-
-/* Comunicados */
-.dash-admin .cm-wrap { gap: 12px; }
-.dash-admin .cm-body { max-height: 220px; overflow:auto; }
-.dash-admin .cm-thumb { width:100%; height:auto; border-radius:10px; border:1px solid #e5e7eb; object-fit:cover; }
-.dash-admin .cm-figure { max-width: 280px; }
-
-/* Dots carrusel */
-.dash-admin .cm-dots { display:flex; gap:6px; }
-.dash-admin .cm-dot { width:8px; height:8px; border-radius:50%; background:#cbd5e1; cursor:pointer; }
-.dash-admin .cm-dot.active { background:#4f46e5; }
-
-/* Modal de comunicado */
-.dash-admin .cm-modal-title { font-weight: 800; }
-.dash-admin .cm-modal-body { display:grid; gap:12px; }
-@media (min-width: 768px){
-  .dash-admin .cm-modal-body { grid-template-columns: 1fr 1.2fr; }
-}
-.dash-admin .cm-modal-imgwrap {
-  border:1px solid #e5e7eb; border-radius:10px; padding:6px;
-  overflow:auto; /* permite desplazar cuando está con zoom */
-  max-height:60vh;
-}
-.dash-admin .cm-modal-img { max-width:100%; height:auto; cursor:zoom-in; transition:transform .2s ease; }
-.dash-admin .cm-modal-img.zoomed { cursor:zoom-out; transform: scale(1.6); transform-origin: center center; }
-
-/* Tarjetas pequeñas: altura mínima agradable pero flexible */
-.dash-admin .kpi-card { min-height: 140px; }
-
-/* Grilla 2×2 de “Clientes …” dentro de una card */
-.dash-admin .mini-grid { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
-@media (max-width: 575.98px){ .dash-admin .mini-grid { grid-template-columns: 1fr; } }
-.dash-admin .mini-box {
-  padding:12px; border:1px dashed #e5e7eb; border-radius:10px; text-align:center;
-  min-height: 86px; display:flex; align-items:center; justify-content:center; flex-direction:column;
-}
+<?php include __DIR__ . '/estilo.css'; ?>
 </style>
 
 <div class="dash-admin">
@@ -138,7 +99,7 @@ if (
                     <a id="cm-download" class="btn btn-sm btn-outline-secondary" href="<?= $img0 ?>" download>Descargar</a>
                   </div>
                 <?php else: ?>
-                  <div class="mini-box" style="min-height:160px">Sin imagen</div>
+                  <div class="mini-box cm-empty-figure">Sin imagen</div>
                 <?php endif; ?>
               </div>
             </div>
@@ -161,8 +122,7 @@ if (
             <strong>Ingresos VS Egresos</strong>
             <button class="btn btn-sm btn-outline-primary">Selecciona una fecha</button>
           </div>
-          <div class="text-muted"
-               style="height:280px;display:flex;align-items:center;justify-content:center;border:1px dashed #e5e7eb;border-radius:8px;margin-top:.5rem;">
+          <div class="text-muted cm-chart-placeholder">
             (Aquí irá el gráfico principal)
           </div>
           <div class="d-flex justify-content-between mt-2">
@@ -175,6 +135,7 @@ if (
 
     <!-- Columna derecha -->
     <div class="col-12 col-lg-4">
+      <?php include __DIR__ . '/funcion_caja_diaria_mensual.php'; ?>
 
       <div class="card kpi-card">
         <div class="card-body">
@@ -279,7 +240,7 @@ if (
       <div class="modal-body cm-modal-body">
         <div>
           <div class="fw-bold mb-1">Contenido</div>
-          <div id="cmModalBodyText" class="muted" style="white-space:pre-wrap"></div>
+          <div id="cmModalBodyText" class="muted cm-modal-text"></div>
         </div>
         <div class="cm-modal-imgwrap">
           <img id="cmModalImg" class="cm-modal-img" src="" alt="Imagen del comunicado">
