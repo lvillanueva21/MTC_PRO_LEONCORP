@@ -175,6 +175,8 @@ if ($empresaId > 0 && table_exists($mysqli, 'egr_egresos')) {
     <div class="col-12 col-lg-4">
       <?php include __DIR__ . '/funcion_caja_diaria_mensual.php'; ?>
 
+      <?php include __DIR__ . '/funcion_card_alertas_semana.php'; ?>
+
       <?php include __DIR__ . '/funcion_card_ganancia_neta_ultima_caja.php'; ?>
 
       <?php include __DIR__ . '/funcion_card_ventas_ultima_caja.php'; ?>
