@@ -102,84 +102,37 @@ $courseMeta = [
 
 $firstUrl = $temas ? yt_embed($temas[0]['video_url'] ?? '') : '';
 
+$temaMap = [];
+foreach ($temas as $t) {
+  $tid = (string)((int)($t['id'] ?? 0));
+  if ($tid === '0') continue;
+  $temaMap[$tid] = [
+    'titulo' => (string)($t['titulo'] ?? ''),
+    'clase'  => (string)($t['clase'] ?? ''),
+  ];
+}
+
+$cssVersion = (string)(@filemtime(__DIR__ . '/aula_virtual.css') ?: '1');
+$jsVersion  = (string)(@filemtime(__DIR__ . '/aula_virtual.js') ?: '1');
+
+$avConfig = [
+  'totalTemas'      => $totalTemas,
+  'temaMap'         => $temaMap,
+  'themeStorageKey' => 'av_theme_pref',
+];
+$avConfigJson = json_encode(
+  $avConfig,
+  JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+);
+if ($avConfigJson === false) {
+  $avConfigJson = '{"totalTemas":0,"temaMap":{},"themeStorageKey":"av_theme_pref"}';
+}
+
 include __DIR__ . '/../../includes/header.php';
 ?>
-<style>
-  :root{
-    --brand-50:#eef2ff;
-    --brand-100:#e0e7ff;
-    --brand-500:#6366f1;
-    --brand-600:#5458ee;
-    --brand-700:#4f46e5;
-    --ink:#0f172a;
-    --muted:#6b7280;
-    --card:#ffffff;
-    --card-border:#e5e7eb;
-    --success:#16a34a;
-  }
-  @media (prefers-color-scheme: dark){
-    :root{
-      --ink:#e5e7eb;
-      --muted:#94a3b8;
-      --card:#0b1020;
-      --card-border:#1f2937;
-    }
-  }
+<link rel="stylesheet" href="<?= BASE_URL ?>/modules/aula_virtual/aula_virtual.css?v=<?= h($cssVersion) ?>">
 
-  /* Hero con gradiente */
-  .av-hero{
-    background: linear-gradient(135deg, var(--brand-700), var(--brand-500));
-    color:#fff;
-    padding-top: 18px !important;
-    padding-bottom: 18px !important;
-    border-bottom: 1px solid rgba(255,255,255,.12);
-  }
-  .av-hero h1, .av-hero .breadcrumb, .av-hero .breadcrumb a { color:#fff; }
-  .av-hero .breadcrumb .active { color: rgba(255,255,255,.9); }
-  .av-hero .text-muted { color: rgba(255,255,255,.85) !important; }
-
-  /* Tarjetas */
-  .av-card{ border-radius:14px; background:var(--card); border:1px solid var(--card-border); }
-  .av-badge{ font-weight:700; border-radius:10px; }
-
-  /* Player */
-  .ratio-16x9{ position:relative; width:100%; padding-top:56.25%; border-radius:12px; overflow:hidden; background:#000; }
-  .ratio-16x9 iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; }
-
-  /* Tabs */
-  .av-tabs .nav-link{ border:none; color:var(--muted); font-weight:600; }
-  .av-tabs .nav-link.active{ color:var(--ink); border-bottom:3px solid var(--brand-500); border-radius:0; }
-
-  /* Cursos */
-  .av-course-thumb{ width:56px; height:56px; object-fit:cover; border-radius:10px; border:1px solid var(--card-border); }
-  .av-course-item{ cursor:pointer; border-radius:12px; padding:.6rem .7rem; display:flex; align-items:center; gap:.65rem; border:1px solid transparent; }
-  .av-course-item:hover{ background:var(--brand-50); border-color:var(--brand-100); }
-  .av-course-item.active{ background:var(--brand-700); border-color:var(--brand-700); color:#fff; }
-  .av-course-item.active .small, .av-course-item.active .fw-semibold, .av-course-item.active i{ color:#fff !important; }
-  .av-course-item i{ color:var(--muted); }
-
-  /* Playlist */
-  .av-list .item{ cursor:pointer; border-radius:12px; padding:.55rem .6rem; border:1px solid transparent; }
-  .av-list .item:hover{ background:var(--brand-50); border-color:var(--brand-100); }
-  .av-list .item.active{ background:var(--brand-500); color:#fff; }
-  .av-list .item.active .title,.av-list .item.active .meta,.av-list .item.active i{ color:#fff !important; }
-  .av-list .item .title{ font-weight:600; color:var(--ink); }
-  .av-list .item .meta{ font-size:.85rem; color:var(--muted); }
-  .av-section{ border-bottom:1px dashed var(--card-border); padding-bottom:.4rem; margin-bottom:.35rem; color:var(--muted); text-transform:uppercase; font-size:.78rem; font-weight:800; letter-spacing:.03em; }
-
-  .av-mini{ width:44px; height:30px; object-fit:cover; border-radius:6px; border:1px solid var(--card-border); }
-
-  /* Controles */
-  .av-controls .btn{ border-radius:10px; }
-  .btn-brand{ background:var(--brand-600); color:#fff; border:1px solid var(--brand-600); }
-  .btn-brand:hover{ background:var(--brand-700); border-color:var(--brand-700); }
-
-  /* (Quitado el bloque de estilos del <select> porque ya no se usa) */
-
-  .text-success-dot{ display:inline-block; width:10px; height:10px; border-radius:50%; background:var(--success); }
-</style>
-
-<div class="content-wrapper">
+<div class="content-wrapper" id="avRoot" data-theme="light">
   <div class="content-header av-hero">
     <div class="container-fluid">
       <div class="row align-items-center">
@@ -224,14 +177,24 @@ include __DIR__ . '/../../includes/header.php';
               </div>
 
               <ul class="nav nav-tabs av-tabs" role="tablist">
-                <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab_overview" role="tab">Overview</a></li>
-                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab_notes" role="tab">Notas</a></li>
-                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab_ann" role="tab">Anuncios</a></li>
-                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab_reviews" role="tab">Reseñas</a></li>
+                <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" data-toggle="tab" href="#tab_tema" role="tab">Tema</a></li>
+                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" data-toggle="tab" href="#tab_curso" role="tab">Curso</a></li>
+                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" data-toggle="tab" href="#tab_exam" role="tab">Examen</a></li>
+                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" data-toggle="tab" href="#tab_calif" role="tab">Calificación</a></li>
               </ul>
 
               <div class="tab-content pt-3">
-                <div class="tab-pane fade show active" id="tab_overview" role="tabpanel">
+                <div class="tab-pane fade show active" id="tab_tema" role="tabpanel">
+                  <?php if ($temas): ?>
+                    <h6 id="avTemaTitulo" class="mb-2"><?= h($temas[0]['titulo'] ?? 'Tema') ?></h6>
+                    <div id="avTemaDesc" class="text-muted mb-0">
+                      <?= !empty($temas[0]['clase']) ? nl2br(h($temas[0]['clase'])) : 'Sin contenido disponible' ?>
+                    </div>
+                  <?php else: ?>
+                    <p class="text-muted mb-0">Sin contenido disponible</p>
+                  <?php endif; ?>
+                </div>
+                <div class="tab-pane fade" id="tab_curso" role="tabpanel">
                   <div class="row">
                     <div class="col-md-6">
                       <ul class="list-unstyled mb-0">
@@ -251,12 +214,12 @@ include __DIR__ . '/../../includes/header.php';
                     <hr><p class="mb-0"><?= nl2br(h($courseSel['descripcion'])) ?></p>
                   <?php endif; ?>
                 </div>
-                <div class="tab-pane fade" id="tab_notes" role="tabpanel">
-                  <p class="text-muted mb-2">Escribe notas personales (demo):</p>
-                  <textarea class="form-control" rows="4" placeholder="Tus notas…"></textarea>
+                <div class="tab-pane fade" id="tab_exam" role="tabpanel">
+                  <p class="text-muted mb-0">Sin contenido disponible</p>
                 </div>
-                <div class="tab-pane fade" id="tab_ann" role="tabpanel"><p class="text-muted">Sin anuncios.</p></div>
-                <div class="tab-pane fade" id="tab_reviews" role="tabpanel"><p class="text-muted">Reseñas próximamente.</p></div>
+                <div class="tab-pane fade" id="tab_calif" role="tabpanel">
+                  <p class="text-muted mb-0">Sin contenido disponible</p>
+                </div>
               </div>
             </div>
           </div>
@@ -309,7 +272,9 @@ include __DIR__ . '/../../includes/header.php';
                     $url = yt_embed($t['video_url'] ?? '');
                     $thumb = $t['miniatura_path'] ? asset($t['miniatura_path']) : (BASE_URL.'/modules/consola/assets/no-image.png');
                   ?>
-                  <div class="item d-flex justify-content-between align-items-center mb-1" data-url="<?= h($url) ?>" data-id="<?= (int)$t['id'] ?>">
+                  <div class="item d-flex justify-content-between align-items-center mb-1"
+                       data-url="<?= h($url) ?>"
+                       data-id="<?= (int)$t['id'] ?>">
                     <div class="d-flex align-items-center">
                       <img src="<?= h($thumb) ?>" class="av-mini me-2" alt="Miniatura">
                       <div>
@@ -333,61 +298,16 @@ include __DIR__ . '/../../includes/header.php';
       </div><!-- /row -->
     </div>
   </section>
+
+  <button type="button" id="avThemeToggle" class="av-theme-fab" aria-label="Cambiar tema del Aula Virtual">
+    <i class="fas fa-adjust" aria-hidden="true"></i>
+    <span id="avThemeToggleText">Tema: Claro</span>
+  </button>
 </div>
 
 <script>
-(function(){
-  const $player = document.getElementById('avPlayer');
-  const $playlist = document.getElementById('avPlaylist');
-  const $progressText = document.getElementById('avProgressText');
-  const $countBadge = document.getElementById('avCountBadge');
-
-  const total = <?= (int)$totalTemas ?>; let done = 0;
-
-  function updateProgress(){
-    const pct = total ? Math.round((done/total)*100) : 0;
-    if ($progressText) $progressText.textContent = pct + '% completado';
-    if ($countBadge)   $countBadge.textContent   = done + '/' + total + ' completadas';
-  }
-
-  function selectItem(el){
-    Array.from($playlist.querySelectorAll('.item.active')).forEach(i=>i.classList.remove('active'));
-    el.classList.add('active');
-    const url = el.getAttribute('data-url') || '';
-    if (url) $player.src = url;
-
-    const icon = el.querySelector('i');
-    if (icon && icon.classList.contains('far')) {
-      icon.classList.remove('far','fa-play-circle','text-muted');
-      icon.classList.add('fas','fa-check-circle','text-success');
-      done = Math.min(done+1, total);
-      updateProgress();
-    }
-  }
-
-  $playlist?.addEventListener('click', e=>{
-    const item = e.target.closest('.item');
-    if (item) selectItem(item);
-  });
-
-  // Cambiar curso al hacer clic en la tarjeta
-  document.querySelectorAll('.av-course-item').forEach(el=>{
-    el.addEventListener('click', ()=>{
-      const id = el.getAttribute('data-id') || '';
-      if (!id) return;
-      const url = new URL(location.href);
-      url.searchParams.set('curso', id);
-      location.href = url.toString();
-    });
-  });
-
-  // Auto-activa el primer tema visible
-  const firstItem = $playlist?.querySelector('.item');
-  if (firstItem) firstItem.classList.add('active');
-
-  // Inicializa contadores
-  updateProgress();
-})();
+  window.avAulaConfig = <?= $avConfigJson ?>;
 </script>
+<script src="<?= BASE_URL ?>/modules/aula_virtual/aula_virtual.js?v=<?= h($jsVersion) ?>"></script>
 
 <?php include __DIR__ . '/../../includes/footer.php'; ?>
