@@ -108,6 +108,18 @@
 /* Tarjetas */
 .av-card{ border-radius:14px; background:var(--card); border:1px solid var(--card-border); }
 .av-badge{ font-weight:700; border-radius:10px; }
+.av-btn-tareas{
+  background:#fff3b0;
+  color:#000;
+  border:1px solid #e6d480;
+  font-weight:700;
+}
+.av-btn-tareas:hover,
+.av-btn-tareas:focus{
+  background:#ffec99;
+  color:#000;
+  border-color:#d9c66f;
+}
 
 /* Player */
 .ratio-16x9{ position:relative; width:100%; padding-top:56.25%; border-radius:12px; overflow:hidden; background:#000; }

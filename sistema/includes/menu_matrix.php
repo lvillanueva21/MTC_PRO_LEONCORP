@@ -21,6 +21,7 @@ $R = [
 ];
 
 $RA = [$R['REC'], $R['ADM']];
+$RAV = [$R['REC'], $R['ADM'], $R['CLI'], $R['DES'], $R['GER']];
 
 return [
     // ==========================
@@ -40,7 +41,7 @@ return [
 
         // Módulos de Desarrollo
         ['path' => '/modules/usuarios/', 'icon' => 'fas fa-user-cog', 'label' => 'Usuarios', 'roles' => [$R['DES']]],
-        ['path' => '/modules/certificados/', 'icon' => 'fas fa-file-signature', 'label' => 'Certificados', 'roles' => [$R['DES']]],
+        // ['path' => '/modules/certificados/', 'icon' => 'fas fa-file-signature', 'label' => 'Certificados', 'roles' => [$R['DES']]],
         // Inventario (PRUEBAS) — acceso: Desarrollo, Administración, Gerente
         ['path' => '/modules/inventario/', 'icon' => 'fas fa-boxes', 'label' => 'Inventario', 'roles' => [$R['DES'], $R['ADM'], $R['GER']]],
 
@@ -68,7 +69,6 @@ return [
         //['path'=>'/modules/cursos/','icon'=>'fas fa-book-open','label'=>'Cursos','roles'=>[$R['CLI']]],
 
         // ---------- Multirol (Cliente, Desarrollo, Administración, Gerente) ----------
-        ['path' => '/modules/aula_virtual/', 'icon' => 'fas fa-graduation-cap', 'label' => 'Aula Virtual', 'roles' => [$R['CLI'], $R['DES'], $R['GER']]],
         ['path' => '/modules/examen/', 'icon' => 'fas fa-graduation-cap', 'label' => 'Examen', 'roles' => [$R['DES'], $R['GER']]],
 
         // ---------- Multirol (Recepción y Administración) ----------
@@ -97,10 +97,10 @@ return [
         [
             'label'    => 'AULA VIRTUAL',
             'icon'     => 'fas fa-graduation-cap',
-            'roles'    => $RA,
+            'roles'    => $RAV,
             'children' => [
                 ['path' => 'modules/certificados/', 'icon' => 'fas fa-file-signature', 'label' => 'Certificados'],
-                ['path' => 'modules/cursos/', 'icon' => 'fas fa-book-open', 'label' => 'Cursos'],
+                ['path' => 'modules/aula_virtual/', 'icon' => 'fas fa-book-open', 'label' => 'Cursos'],
             ],
         ],
 

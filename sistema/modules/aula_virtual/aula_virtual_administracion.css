@@ -1,0 +1,263 @@
+#avRoot .ava-admin .card{
+  border-radius:14px;
+  border:1px solid var(--card-border);
+  background:var(--card);
+}
+
+#avRoot .ava-admin .card-header{
+  background:transparent;
+  border-bottom:1px solid var(--card-border);
+}
+
+#avRoot .ava-admin .form-control,
+#avRoot .ava-admin .form-select{
+  min-height:38px;
+}
+
+#avRoot .ava-subtitle{
+  color:rgba(255,255,255,.86);
+}
+
+#avRoot .ava-help{
+  font-size:.82rem;
+  color:var(--muted);
+}
+
+#avRoot .ava-count{
+  font-size:.84rem;
+  font-weight:700;
+  border-radius:999px;
+}
+
+#avRoot .ava-toolbar{
+  display:flex;
+  gap:.65rem;
+  flex-wrap:wrap;
+  align-items:end;
+}
+
+#avRoot .ava-toolbar .field{
+  flex:1 1 200px;
+  min-width:0;
+}
+
+#avRoot .ava-toolbar .field--refresh{
+  flex:0 0 132px;
+  min-width:132px;
+}
+
+#avRoot .ava-toolbar .ava-filter-control{
+  min-height:40px;
+  width:100%;
+  max-width:100%;
+  border:1px solid var(--card-border);
+  border-radius:10px;
+  background:var(--card);
+  color:var(--ink);
+}
+
+#avRoot #avaFilterCourse{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  padding-right:2.2rem;
+}
+
+#avRoot .ava-toolbar .ava-refresh-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:600;
+}
+
+#avRoot .ava-toolbar .ava-refresh-btn:hover,
+#avRoot .ava-toolbar .ava-refresh-btn:focus{
+  background:var(--brand-50);
+  border-color:var(--brand-500);
+  color:var(--ink);
+}
+
+#avRoot .ava-table-wrap{
+  overflow:auto;
+}
+
+#avRoot .ava-table td,
+#avRoot .ava-table th{
+  vertical-align:middle;
+}
+
+#avRoot .ava-client{
+  display:flex;
+  flex-direction:column;
+  gap:.15rem;
+  min-width:0;
+}
+
+#avRoot .ava-client-row{
+  display:flex;
+  align-items:center;
+  gap:.6rem;
+}
+
+#avRoot .ava-client-avatar{
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  object-fit:cover;
+  flex:0 0 34px;
+  border:1px solid var(--card-border);
+  background:#eef2f7;
+}
+
+#avRoot .ava-client .name{
+  font-weight:700;
+  line-height:1.2;
+}
+
+#avRoot .ava-client .doc{
+  font-size:.82rem;
+  color:var(--muted);
+}
+
+#avRoot .ava-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.35rem;
+}
+
+#avRoot .ava-actions .btn{
+  white-space:nowrap;
+}
+
+#avRoot .ava-empty{
+  text-align:center;
+  color:var(--muted);
+  padding:1rem .5rem;
+}
+
+#avRoot .ava-selected{
+  border:1px dashed var(--card-border);
+  border-radius:10px;
+  padding:.7rem .8rem;
+  background:var(--highlight-bg);
+}
+
+#avRoot .ava-course-columns{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:.85rem;
+}
+
+#avRoot .ava-course-box{
+  border:1px solid var(--card-border);
+  border-radius:10px;
+  padding:.7rem;
+  min-height:280px;
+  display:flex;
+  flex-direction:column;
+}
+
+#avRoot .ava-course-title{
+  font-size:.93rem;
+  font-weight:700;
+  margin-bottom:.55rem;
+}
+
+#avRoot .ava-course-list{
+  display:flex;
+  flex-direction:column;
+  gap:.4rem;
+  max-height:300px;
+  overflow:auto;
+}
+
+#avRoot .ava-course-item{
+  border:1px solid var(--card-border);
+  border-radius:10px;
+  padding:.5rem .55rem;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:.5rem;
+  background:var(--card);
+}
+
+#avRoot .ava-course-item .title{
+  font-size:.9rem;
+  line-height:1.2;
+}
+
+#avRoot #avaNotice{
+  margin-bottom:.75rem;
+}
+
+#avRoot .ava-form-actions{
+  display:flex;
+  gap:.5rem;
+  flex-wrap:wrap;
+}
+
+#avRoot .ava-form-actions .btn{
+  min-width:140px;
+}
+
+#avRoot .ava-photo-box{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  border:1px dashed var(--card-border);
+  border-radius:12px;
+  padding:.8rem;
+  background:var(--highlight-bg);
+}
+
+#avRoot .ava-photo-prev{
+  width:96px;
+  height:96px;
+  border-radius:50%;
+  border:2px solid var(--card-border);
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+}
+
+#avRoot .ava-photo-input{
+  max-width:280px;
+  margin-top:.55rem;
+}
+
+#avRoot .ava-photo-caption{
+  font-size:.8rem;
+  color:var(--muted);
+}
+
+#avRoot .ava-photo-size{
+  font-size:.8rem;
+  color:#0a7f47;
+}
+
+@media (max-width: 991.98px){
+  #avRoot .ava-course-columns{
+    grid-template-columns:1fr;
+  }
+
+  #avRoot .ava-actions{
+    justify-content:flex-start;
+  }
+}
+
+@media (max-width: 575.98px){
+  #avRoot .ava-toolbar .field{
+    min-width:100%;
+  }
+
+  #avRoot .ava-toolbar .field--refresh{
+    min-width:100%;
+    flex:1 1 100%;
+  }
+
+  #avRoot .ava-form-actions .btn{
+    width:100%;
+  }
+}
