@@ -1,4 +1,5 @@
-<?php
+﻿<?php
+// Ver 07-03-26
 // modules/aula_virtual/index_cliente.php (interfaz Cliente)
 if (!defined('AULA_VIRTUAL_ROLE_ROUTED') || !defined('AULA_VIRTUAL_VIEW_ROLE_ID') || AULA_VIRTUAL_VIEW_ROLE_ID !== 7) {
   http_response_code(403);
@@ -111,10 +112,10 @@ $courseMeta = [
   'rating'         => 4.8,
   'ratings_count'  => 2400,
   'students'       => 90500,
-  'total_duration' => '—',
+  'total_duration' => 'â€”',
   'updated_ago'    => 'reciente',
   'languages'      => 'ES',
-  'captions'       => 'Sí',
+  'captions'       => 'SÃ­',
   'level'          => 'Todos los niveles',
   'lectures'       => $totalTemas,
 ];
@@ -193,7 +194,7 @@ include __DIR__ . '/../../includes/header.php';
                 <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" data-toggle="tab" href="#tab_tema" role="tab">Tema</a></li>
                 <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" data-toggle="tab" href="#tab_curso" role="tab">Curso</a></li>
                 <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" data-toggle="tab" href="#tab_exam" role="tab">Examen</a></li>
-                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" data-toggle="tab" href="#tab_calif" role="tab">Calificación</a></li>
+                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" data-toggle="tab" href="#tab_calif" role="tab">CalificaciÃ³n</a></li>
               </ul>
 
               <div class="tab-content pt-3">
@@ -213,12 +214,12 @@ include __DIR__ . '/../../includes/header.php';
                       <ul class="list-unstyled mb-0">
                         <li><strong>Nivel:</strong> <?= h($courseMeta['level']) ?></li>
                         <li><strong>Clases:</strong> <?= (int)$courseMeta['lectures'] ?></li>
-                        <li><strong>Duración total:</strong> <?= h($courseMeta['total_duration']) ?></li>
+                        <li><strong>DuraciÃ³n total:</strong> <?= h($courseMeta['total_duration']) ?></li>
                       </ul>
                     </div>
                     <div class="col-md-6">
                       <ul class="list-unstyled mb-0">
-                        <li><strong>Subtítulos:</strong> <?= h($courseMeta['captions']) ?></li>
+                        <li><strong>SubtÃ­tulos:</strong> <?= h($courseMeta['captions']) ?></li>
                         <li><strong>Idiomas:</strong> <?= h($courseMeta['languages']) ?></li>
                       </ul>
                     </div>
@@ -250,7 +251,7 @@ include __DIR__ . '/../../includes/header.php';
 
               <div class="list-group">
                 <?php if (!$courses): ?>
-                  <div class="text-muted small">Aún no tienes cursos asignados.</div>
+                  <div class="text-muted small">AÃºn no tienes cursos asignados.</div>
                 <?php else: ?>
                   <?php foreach ($courses as $c):
                     $thumb = $c['imagen_path'] ? asset($c['imagen_path']) : (BASE_URL.'/modules/consola/assets/no-image.png');
@@ -299,7 +300,7 @@ include __DIR__ . '/../../includes/header.php';
                   </div>
                   <?php endforeach; ?>
                 <?php else: ?>
-                  <div class="text-danger">Aún no hay temas guardados.</div>
+                  <div class="text-danger">AÃºn no hay temas guardados.</div>
                 <?php endif; ?>
               </div>
 
@@ -324,3 +325,5 @@ include __DIR__ . '/../../includes/header.php';
 <script src="<?= BASE_URL ?>/modules/aula_virtual/aula_virtual.js?v=<?= h($jsVersion) ?>"></script>
 
 <?php include __DIR__ . '/../../includes/footer.php'; ?>
+
+

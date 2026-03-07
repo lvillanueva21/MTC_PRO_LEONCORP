@@ -22,6 +22,7 @@ $R = [
 
 $RA = [$R['REC'], $R['ADM']];
 $RAV = [$R['REC'], $R['ADM'], $R['CLI'], $R['DES'], $R['GER']];
+$RAV_NO_ADM = [$R['REC'], $R['CLI'], $R['DES'], $R['GER']];
 
 return [
     // ==========================
@@ -99,8 +100,14 @@ return [
             'icon'     => 'fas fa-graduation-cap',
             'roles'    => $RAV,
             'children' => [
-                ['path' => 'modules/certificados/', 'icon' => 'fas fa-file-signature', 'label' => 'Certificados'],
-                ['path' => 'modules/aula_virtual/', 'icon' => 'fas fa-book-open', 'label' => 'Cursos'],
+                // Solo Administracion: nuevo orden y separacion de submenus
+                ['path' => 'modules/aula_virtual/aula_virtual_administracion_matriculas.php', 'icon' => 'fas fa-user-check', 'label' => 'Matriculas', 'roles' => [$R['ADM']]],
+                ['path' => 'modules/aula_virtual/aula_virtual_administracion_cursos.php', 'icon' => 'fas fa-book-open', 'label' => 'Cursos', 'roles' => [$R['ADM']]],
+                ['path' => 'modules/certificados/', 'icon' => 'fas fa-file-signature', 'label' => 'Certificados', 'roles' => [$R['ADM']]],
+
+                // Resto de roles: mantener estructura actual
+                ['path' => 'modules/certificados/', 'icon' => 'fas fa-file-signature', 'label' => 'Certificados', 'roles' => $RAV_NO_ADM],
+                ['path' => 'modules/aula_virtual/', 'icon' => 'fas fa-book-open', 'label' => 'Cursos', 'roles' => $RAV_NO_ADM],
             ],
         ],
 

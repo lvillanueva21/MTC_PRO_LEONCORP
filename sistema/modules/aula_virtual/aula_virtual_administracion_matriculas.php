@@ -1,17 +1,19 @@
-<?php
-// modules/aula_virtual/index_administracion.php
-if (!defined('AULA_VIRTUAL_ROLE_ROUTED') || !defined('AULA_VIRTUAL_VIEW_ROLE_ID') || AULA_VIRTUAL_VIEW_ROLE_ID !== 4) {
-  http_response_code(403);
-  exit('Acceso denegado.');
-}
-
+﻿<?php
+// Ver 07-03-26
+// modules/aula_virtual/aula_virtual_administracion_matriculas.php
 require_once __DIR__ . '/../../includes/acl.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
 acl_require_ids([1,4]);
-function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
 $u = currentUser();
+$rolActivoId = (int)($u['rol_activo_id'] ?? 0);
+if ($rolActivoId !== 4) {
+  http_response_code(403);
+  exit('Acceso denegado.');
+}
+
+function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 $empresaNombre = trim((string)($u['empresa']['nombre'] ?? ''));
 if ($empresaNombre === '') $empresaNombre = 'Empresa';
 
@@ -203,3 +205,5 @@ include __DIR__ . '/../../includes/header.php';
 <script src="<?= BASE_URL ?>/modules/aula_virtual/aula_virtual_administracion.js?v=<?= h($adminJsVersion) ?>"></script>
 
 <?php include __DIR__ . '/../../includes/footer.php'; ?>
+
+

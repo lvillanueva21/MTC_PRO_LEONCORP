@@ -1,4 +1,5 @@
-﻿#avRoot{
+﻿/* Ver 07-03-26 */
+#avRoot{
   --brand-50:#eef2ff;
   --brand-100:#e0e7ff;
   --brand-500:#6366f1;
@@ -206,3 +207,4 @@
     border-color:CanvasText;
   }
 }
+

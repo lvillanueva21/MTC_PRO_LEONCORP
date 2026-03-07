@@ -1,4 +1,5 @@
-﻿(function(){
+﻿// Ver 07-03-26
+(function(){
   const root = document.getElementById('avRoot');
   if (!root) return;
 
@@ -175,3 +176,5 @@
     else if (typeof mm.addListener === 'function') mm.addListener(onSchemeChange);
   }
 })();
+
+
