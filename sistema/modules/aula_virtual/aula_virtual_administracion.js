@@ -1,3 +1,4 @@
+﻿// Ver 07-03-26
 (function () {
   const root = document.getElementById('avAdminRoot');
   if (!root) return;
@@ -667,3 +668,5 @@
     notify('error', err.message || 'No se pudo iniciar el modulo de administracion.');
   });
 })();
+
+

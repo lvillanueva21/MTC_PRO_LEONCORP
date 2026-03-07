@@ -1,4 +1,5 @@
-<?php
+﻿<?php
+// Ver 07-03-26
 // modules/aula_virtual/index_desarrollo.php
 if (!defined('AULA_VIRTUAL_ROLE_ROUTED') || !defined('AULA_VIRTUAL_VIEW_ROLE_ID') || AULA_VIRTUAL_VIEW_ROLE_ID !== 1) {
   http_response_code(403);
@@ -35,3 +36,5 @@ include __DIR__ . '/../../includes/header.php';
 </div>
 
 <?php include __DIR__ . '/../../includes/footer.php'; ?>
+
+

@@ -1,4 +1,5 @@
-<?php
+﻿<?php
+// Ver 07-03-26
 // modules/aula_virtual/api_administracion.php
 require_once __DIR__ . '/../../includes/acl.php';
 require_once __DIR__ . '/../../includes/auth.php';
@@ -401,3 +402,4 @@ try {
   }
   jerror(500, 'Error interno del servidor.', ['dev' => $e->getMessage()]);
 }
+
