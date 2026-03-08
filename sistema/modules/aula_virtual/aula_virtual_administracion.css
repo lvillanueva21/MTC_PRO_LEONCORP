@@ -172,6 +172,19 @@
   margin-bottom:.55rem;
 }
 
+#avRoot .ava-course-search .form-control{
+  min-height:34px;
+  border:1px solid var(--card-border);
+  border-radius:10px;
+  background:var(--card);
+  color:var(--ink);
+}
+
+#avRoot .ava-course-search .form-control:focus{
+  border-color:var(--brand-500);
+  box-shadow:0 0 0 .2rem rgba(37,99,235,.15);
+}
+
 #avRoot .ava-course-list{
   display:flex;
   flex-direction:column;

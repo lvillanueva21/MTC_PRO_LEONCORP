@@ -88,7 +88,8 @@ if ($uid > 0) {
         g.inicio_at AS grupo_inicio_at,
         g.fin_at AS grupo_fin_at
      FROM cr_matriculas_grupo mg
-     JOIN cr_grupos g ON g.id = mg.grupo_id
+     JOIN mtp_usuarios ux ON ux.id = mg.usuario_id
+     JOIN cr_grupos g ON g.id = mg.grupo_id AND g.empresa_id = ux.id_empresa
      JOIN cr_cursos c ON c.id = mg.curso_id
      WHERE mg.usuario_id = ?
        AND mg.estado = 1

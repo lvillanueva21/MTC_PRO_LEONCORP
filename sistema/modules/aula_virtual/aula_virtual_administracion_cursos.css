@@ -1,0 +1,104 @@
+/* Ver 08-03-26 */
+#avRoot .avc-course-row{
+  display:flex;
+  align-items:center;
+  gap:.7rem;
+}
+
+#avRoot .avc-course-avatar{
+  width:58px;
+  height:42px;
+  border-radius:8px;
+  object-fit:cover;
+  border:1px solid #d7dce1;
+  background:#f8fafc;
+  flex:0 0 auto;
+}
+
+#avRoot .avc-course-meta .name{
+  font-weight:600;
+  line-height:1.2;
+}
+
+#avRoot .avc-course-meta .desc{
+  font-size:.82rem;
+  color:#667085;
+  margin-top:.2rem;
+  line-height:1.25;
+}
+
+#avRoot .avc-course-selected{
+  background:#f2f8ff;
+}
+
+#avRoot .avc-topic-list{
+  display:flex;
+  flex-direction:column;
+  gap:.45rem;
+  max-height:280px;
+  overflow:auto;
+}
+
+#avRoot .avc-topic-item{
+  width:100%;
+  text-align:left;
+  border:1px solid #d7dce1;
+  background:#fff;
+  border-radius:10px;
+  padding:.55rem .65rem;
+  cursor:pointer;
+}
+
+#avRoot .avc-topic-item .title{
+  font-weight:600;
+  color:#0f172a;
+  line-height:1.2;
+}
+
+#avRoot .avc-topic-item .resume{
+  font-size:.82rem;
+  color:#667085;
+  margin-top:.2rem;
+  line-height:1.25;
+}
+
+#avRoot .avc-topic-item:hover,
+#avRoot .avc-topic-item.active{
+  border-color:#5a8dee;
+  background:#f5f9ff;
+}
+
+#avRoot #avcTopicDetailThumb{
+  width:100%;
+  max-height:200px;
+  object-fit:cover;
+  border-radius:10px;
+  border:1px solid #d7dce1;
+  background:#f8fafc;
+}
+
+#avRoot .avc-topic-class{
+  line-height:1.35;
+  max-height:180px;
+  overflow:auto;
+  padding-right:.25rem;
+}
+
+#avRoot .avc-group-main .title{
+  font-weight:600;
+  line-height:1.2;
+}
+
+#avRoot .avc-group-main .meta{
+  font-size:.82rem;
+  color:#667085;
+  margin-top:.22rem;
+  line-height:1.25;
+}
+
+@media (max-width: 991.98px){
+  #avRoot .avc-course-table th:nth-child(4),
+  #avRoot .avc-course-table td:nth-child(4){
+    display:none;
+  }
+}
