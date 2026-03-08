@@ -1,4 +1,4 @@
-﻿/* Ver 07-03-26 */
+/* Ver 07-03-26 */
 #avRoot .ava-admin .card{
   border-radius:14px;
   border:1px solid var(--card-border);
@@ -10,8 +10,7 @@
   border-bottom:1px solid var(--card-border);
 }
 
-#avRoot .ava-admin .form-control,
-#avRoot .ava-admin .form-select{
+#avRoot .ava-admin .form-control{
   min-height:38px;
 }
 
@@ -62,6 +61,15 @@
   text-overflow:ellipsis;
   white-space:nowrap;
   padding-right:2.2rem;
+}
+
+#avRoot #avaEnrollGroupSelect{
+  width:100%;
+  max-width:100%;
+}
+
+#avRoot #avaEnrollModal .modal-body{
+  overflow-x:hidden;
 }
 
 #avRoot .ava-toolbar .ava-refresh-btn{
@@ -178,7 +186,7 @@
   padding:.5rem .55rem;
   display:flex;
   justify-content:space-between;
-  align-items:center;
+  align-items:flex-start;
   gap:.5rem;
   background:var(--card);
 }
@@ -186,6 +194,35 @@
 #avRoot .ava-course-item .title{
   font-size:.9rem;
   line-height:1.2;
+  font-weight:700;
+}
+
+#avRoot .ava-course-actions{
+  display:flex;
+  align-items:center;
+  gap:.35rem;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+#avRoot .ava-course-meta{
+  font-size:.79rem;
+  color:var(--muted);
+  line-height:1.35;
+}
+
+#avRoot .ava-course-item--matricula{
+  flex-direction:column;
+}
+
+#avRoot .ava-course-item--matricula .ava-course-actions{
+  width:100%;
+  justify-content:space-between;
+}
+
+#avRoot .ava-course-item--taken{
+  background:var(--highlight-bg);
+  border-color:var(--highlight-border);
 }
 
 #avRoot #avaNotice{
@@ -262,4 +299,3 @@
     width:100%;
   }
 }
-
