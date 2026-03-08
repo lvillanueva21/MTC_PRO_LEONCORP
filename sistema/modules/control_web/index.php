@@ -71,6 +71,6 @@ window.CONTROL_WEB = {
     menuUrl: <?php echo json_encode($cwBaseUrl . '/menu/index.php'); ?>
 };
 </script>
-<script src="<?php echo h($cwBaseUrl . '/control_web.js?v=1'); ?>"></script>
+<script src="<?php echo h($cwBaseUrl . '/control_web.js?v=2'); ?>"></script>
 
 <?php include __DIR__ . '/../../includes/footer.php'; ?>
