@@ -20,7 +20,7 @@ $cwBaseUrl = BASE_URL . '/modules/control_web';
 include __DIR__ . '/../../includes/header.php';
 ?>
 
-<link rel="stylesheet" href="<?php echo h($cwBaseUrl . '/control_web.css?v=2'); ?>">
+<link rel="stylesheet" href="<?php echo h($cwBaseUrl . '/control_web.css?v=3'); ?>">
 
 <div class="content-wrapper">
   <div class="content-header">
@@ -71,6 +71,6 @@ window.CONTROL_WEB = {
     menuUrl: <?php echo json_encode($cwBaseUrl . '/menu/index.php'); ?>
 };
 </script>
-<script src="<?php echo h($cwBaseUrl . '/control_web.js?v=3'); ?>"></script>
+<script src="<?php echo h($cwBaseUrl . '/control_web.js?v=4'); ?>"></script>
 
 <?php include __DIR__ . '/../../includes/footer.php'; ?>

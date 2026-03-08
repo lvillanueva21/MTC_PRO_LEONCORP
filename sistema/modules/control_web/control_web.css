@@ -47,3 +47,15 @@
 #cw-topbar-form h5 {
     font-weight: 600;
 }
+
+.cw-menu-items .card-header {
+    background: #f8f9fa;
+}
+
+.cw-menu-item .form-group label {
+    font-size: 0.88rem;
+}
+
+.cw-menu-logo-preview img {
+    display: block;
+}
