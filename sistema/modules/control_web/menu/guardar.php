@@ -26,6 +26,9 @@ if (!function_exists('cw_menu_link_valid')) {
         if ($url === '') {
             return false;
         }
+        if ($url === '#') {
+            return true;
+        }
         if (preg_match('#^\s*(javascript:|data:)#i', $url)) {
             return false;
         }
