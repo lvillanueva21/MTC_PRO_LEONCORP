@@ -50,15 +50,7 @@ return [
 ['path' => '/modules/inventario_mtc/', 'icon' => 'fas fa-boxes', 'label' => 'Inventario MTC', 'roles' => [$R['DES'], $R['CON'], $R['GER']]],
 ['path' => '/modules/camaras/', 'icon' => 'fas fa-video', 'label' => 'Cámaras', 'roles' => [$R['DES']]],
 
-        [
-            'label'    => 'Web',
-            'icon'     => 'fas fa-globe',
-            'roles'    => [$R['DES']],
-            'children' => [
-                ['path' => '#', 'icon' => 'fas fa-heading', 'label' => 'Cabecera', 'roles' => [$R['DES']]],
-                ['path' => '#', 'icon' => 'fas fa-bars', 'label' => 'Menú', 'roles' => [$R['DES']]],
-            ],
-        ],
+        ['path' => 'modules/control_web/', 'icon' => 'fas fa-globe', 'label' => 'Web', 'roles' => [$R['DES']]],
 
         // ---------- Control (2) ----------
         ['path' => '/modules/reportes/', 'icon' => 'fas fa-clipboard-check', 'label' => 'Reportes', 'roles' => [$R['CON']]],
