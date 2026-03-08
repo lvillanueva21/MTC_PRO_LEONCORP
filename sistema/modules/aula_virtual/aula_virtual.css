@@ -1,4 +1,4 @@
-﻿/* Ver 07-03-26 */
+/* Ver 07-03-26 */
 #avRoot{
   --brand-50:#eef2ff;
   --brand-100:#e0e7ff;
@@ -17,6 +17,13 @@
   --card:#ffffff;
   --card-border:#d7dde6;
   --success:#16a34a;
+  --blocked-bg:#fff8e6;
+  --blocked-bg-hover:#ffefcf;
+  --blocked-border:#e79f34;
+  --blocked-text:#111827;
+  --blocked-muted:#374151;
+  --blocked-danger:#7a3400;
+  --blocked-selected-ring:rgba(231,159,52,.46);
 }
 
 #avRoot[data-theme="dark"]{
@@ -31,6 +38,13 @@
   --tab-ink:#eef2ff;
   --tab-hover-bg:rgba(99,102,241,.24);
   --tab-active-bg:rgba(99,102,241,.34);
+  --blocked-bg:#4a3510;
+  --blocked-bg-hover:#5b4012;
+  --blocked-border:#e7a645;
+  --blocked-text:#fff3d6;
+  --blocked-muted:#ffe4b5;
+  --blocked-danger:#ffd08a;
+  --blocked-selected-ring:rgba(231,166,69,.62);
 }
 
 @media (prefers-color-scheme: dark){
@@ -46,6 +60,13 @@
     --tab-ink:#eef2ff;
     --tab-hover-bg:rgba(99,102,241,.24);
     --tab-active-bg:rgba(99,102,241,.34);
+    --blocked-bg:#4a3510;
+    --blocked-bg-hover:#5b4012;
+    --blocked-border:#e7a645;
+    --blocked-text:#fff3d6;
+    --blocked-muted:#ffe4b5;
+    --blocked-danger:#ffd08a;
+    --blocked-selected-ring:rgba(231,166,69,.62);
   }
 }
 
@@ -151,7 +172,51 @@
 .av-course-item.active{ background:var(--brand-700); border-color:var(--brand-700); color:#fff; }
 .av-course-item.active .small, .av-course-item.active .fw-semibold, .av-course-item.active i{ color:#fff !important; }
 #avRoot .av-course-item.active .text-muted{ color:#fff !important; }
+
+#avRoot .av-course-item.blocked{
+  background:var(--blocked-bg);
+  border-color:var(--blocked-border);
+  color:var(--blocked-text) !important;
+}
+
+#avRoot .av-course-item.blocked:hover{
+  background:var(--blocked-bg-hover);
+  border-color:var(--blocked-border);
+  color:var(--blocked-text) !important;
+}
+
+#avRoot .av-course-item.blocked.active{
+  background:var(--blocked-bg-hover);
+  border-color:var(--blocked-border);
+  color:var(--blocked-text) !important;
+  box-shadow:0 0 0 2px var(--blocked-selected-ring);
+}
+
+#avRoot .av-course-item.blocked .fw-semibold,
+#avRoot .av-course-item.blocked i,
+#avRoot .av-course-item.blocked .small,
+#avRoot .av-course-item.blocked.active .fw-semibold,
+#avRoot .av-course-item.blocked.active i,
+#avRoot .av-course-item.blocked.active .small{
+  color:var(--blocked-text) !important;
+}
+
+#avRoot .av-course-item.blocked .text-muted,
+#avRoot .av-course-item.blocked.active .text-muted{
+  color:var(--blocked-muted) !important;
+}
+
+#avRoot .av-course-item.blocked .small.text-danger,
+#avRoot .av-course-item.blocked.active .small.text-danger{
+  color:var(--blocked-danger) !important;
+  font-weight:700;
+}
 .av-course-item i{ color:var(--muted); }
+
+#avRoot #avBlockedNotice{
+  border-radius:10px;
+  border:1px solid #e79f34;
+}
 
 /* Playlist */
 .av-list .item{ cursor:pointer; border-radius:12px; padding:.55rem .6rem; border:1px solid transparent; }
@@ -207,4 +272,3 @@
     border-color:CanvasText;
   }
 }
-

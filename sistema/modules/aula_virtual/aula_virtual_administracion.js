@@ -1,4 +1,4 @@
-﻿// Ver 07-03-26
+// Ver 07-03-26
 (function () {
   const root = document.getElementById('avAdminRoot');
   if (!root) return;
@@ -21,14 +21,16 @@
     clients: [],
     total: 0,
     courses: [],
-    assigned: [],
+    matriculas: [],
     selectedClient: null,
     editId: 0,
     formBasePhoto: '',
+    enrollCourse: null,
+    expelTarget: null,
   };
 
   function $(sel) {
-    return root.querySelector(sel);
+    return root.querySelector(sel) || document.querySelector(sel);
   }
 
   function esc(text) {
@@ -66,6 +68,53 @@
     if (/^(https?:)?\/\//i.test(raw) || raw.startsWith('data:')) return raw;
     if (raw.startsWith('/')) return raw;
     return (PROJECT_ROOT ? PROJECT_ROOT : '') + '/' + raw.replace(/^\/+/, '');
+  }
+
+  function showModal(id) {
+    if (window.jQuery && typeof window.jQuery.fn.modal === 'function') {
+      window.jQuery(id).modal('show');
+      return;
+    }
+    const el = document.querySelector(id);
+    if (!el) return;
+    el.style.display = 'block';
+    el.classList.add('show');
+    el.removeAttribute('aria-hidden');
+    document.body.classList.add('modal-open');
+  }
+
+  function hideModal(id) {
+    if (window.jQuery && typeof window.jQuery.fn.modal === 'function') {
+      window.jQuery(id).modal('hide');
+      return;
+    }
+    const el = document.querySelector(id);
+    if (!el) return;
+    el.style.display = 'none';
+    el.classList.remove('show');
+    el.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+  }
+
+  function formatDateTimeHuman(raw) {
+    const src = String(raw || '').trim();
+    if (!src) return '';
+    const norm = src.replace(' ', 'T');
+    const d = new Date(norm);
+    if (Number.isNaN(d.getTime())) return src;
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    return dd + '/' + mm + '/' + yy + ' ' + hh + ':' + mi;
+  }
+
+  function scheduleLabel(inicioAt, finAt) {
+    if (inicioAt && finAt) {
+      return formatDateTimeHuman(inicioAt) + ' - ' + formatDateTimeHuman(finAt);
+    }
+    return 'Indefinido';
   }
 
   function setPhotoPreview(url) {
@@ -230,6 +279,20 @@
     return state.clients.find(function (c) { return Number(c.id) === Number(id); }) || null;
   }
 
+  function getCourseById(id) {
+    return state.courses.find(function (c) { return Number(c.id) === Number(id); }) || null;
+  }
+
+  function activeMatriculaMap() {
+    const map = new Map();
+    (state.matriculas || []).forEach(function (m) {
+      if (Number(m.estado || 0) === 1) {
+        map.set(Number(m.curso_id), m);
+      }
+    });
+    return map;
+  }
+
   function renderSelectedClient() {
     const label = $('#avaSelectedClientLabel');
     const mini = $('#avaSelectedClientMini');
@@ -250,52 +313,83 @@
 
   function renderCourseLists() {
     const availableBox = $('#avaAvailableList');
-    const assignedBox = $('#avaAssignedList');
+    const matriculasBox = $('#avaMatriculasList');
     const availableEmpty = $('#avaAvailableEmpty');
-    const assignedEmpty = $('#avaAssignedEmpty');
+    const matriculasEmpty = $('#avaMatriculasEmpty');
 
-    if (!availableBox || !assignedBox || !availableEmpty || !assignedEmpty) return;
+    if (!availableBox || !matriculasBox || !availableEmpty || !matriculasEmpty) return;
 
     if (!state.selectedClient) {
       availableBox.innerHTML = '';
-      assignedBox.innerHTML = '';
+      matriculasBox.innerHTML = '';
       availableEmpty.classList.remove('d-none');
-      assignedEmpty.classList.remove('d-none');
+      matriculasEmpty.classList.remove('d-none');
       availableEmpty.textContent = 'Selecciona un cliente para ver cursos disponibles.';
-      assignedEmpty.textContent = 'Selecciona un cliente para ver cursos asignados.';
+      matriculasEmpty.textContent = 'Selecciona un cliente para ver sus matriculas.';
       return;
     }
 
-    const assignedIds = new Set((state.assigned || []).map(function (c) { return Number(c.id); }));
-    const available = (state.courses || []).filter(function (c) { return !assignedIds.has(Number(c.id)); });
-
-    if (!available.length) {
-      availableBox.innerHTML = '';
-      availableEmpty.classList.remove('d-none');
-      availableEmpty.textContent = 'No hay cursos disponibles para asignar.';
-    } else {
-      availableEmpty.classList.add('d-none');
-      availableBox.innerHTML = available.map(function (c) {
-        return (
-          '<div class="ava-course-item">' +
+    const activeMap = activeMatriculaMap();
+    const availableRows = [];
+    (state.courses || []).forEach(function (c) {
+      const m = activeMap.get(Number(c.id));
+      if (m) {
+        const gname = m.grupo_nombre || ('Grupo #' + (m.grupo_id || 0));
+        availableRows.push(
+          '<div class="ava-course-item ava-course-item--taken">' +
             '<div class="title">' + esc(c.nombre) + '</div>' +
-            '<button type="button" class="btn btn-sm btn-success" data-action="add-course" data-course-id="' + c.id + '">Agregar</button>' +
+            '<div class="ava-course-actions">' +
+              '<span class="badge badge-success">Ya matriculado en ' + esc(gname) + '</span>' +
+            '</div>' +
           '</div>'
         );
-      }).join('');
-    }
-
-    if (!state.assigned.length) {
-      assignedBox.innerHTML = '';
-      assignedEmpty.classList.remove('d-none');
-      assignedEmpty.textContent = 'Este cliente aun no tiene cursos asignados.';
-    } else {
-      assignedEmpty.classList.add('d-none');
-      assignedBox.innerHTML = state.assigned.map(function (c) {
-        return (
+      } else {
+        availableRows.push(
           '<div class="ava-course-item">' +
             '<div class="title">' + esc(c.nombre) + '</div>' +
-            '<button type="button" class="btn btn-sm btn-outline-danger" data-action="remove-course" data-course-id="' + c.id + '">Quitar</button>' +
+            '<div class="ava-course-actions">' +
+              '<button type="button" class="btn btn-sm btn-primary" data-action="open-enroll" data-course-id="' + c.id + '">Matricular</button>' +
+            '</div>' +
+          '</div>'
+        );
+      }
+    });
+
+    if (!availableRows.length) {
+      availableBox.innerHTML = '';
+      availableEmpty.classList.remove('d-none');
+      availableEmpty.textContent = 'No hay cursos activos disponibles.';
+    } else {
+      availableEmpty.classList.add('d-none');
+      availableBox.innerHTML = availableRows.join('');
+    }
+
+    if (!state.matriculas.length) {
+      matriculasBox.innerHTML = '';
+      matriculasEmpty.classList.remove('d-none');
+      matriculasEmpty.textContent = 'Este cliente aun no tiene matriculas.';
+    } else {
+      matriculasEmpty.classList.add('d-none');
+      matriculasBox.innerHTML = state.matriculas.map(function (m) {
+        const active = Number(m.estado || 0) === 1;
+        const badge = active ? '<span class="badge badge-success">ACTIVO</span>' : '<span class="badge badge-secondary">EXPULSADO</span>';
+        const gname = m.grupo_nombre || ('Grupo #' + (m.grupo_id || 0));
+        const code = m.grupo_codigo ? ' (' + m.grupo_codigo + ')' : '';
+        const range = m.rango_text || scheduleLabel(m.grupo_inicio_at, m.grupo_fin_at);
+        const expelBtn = active
+          ? '<button type="button" class="btn btn-sm btn-outline-danger" data-action="open-expel" data-curso-id="' + m.curso_id + '">Expulsar</button>'
+          : '';
+        return (
+          '<div class="ava-course-item ava-course-item--matricula">' +
+            '<div class="title">' + esc(m.curso_nombre || '') + '</div>' +
+            '<div class="ava-course-meta">' +
+              '<div><strong>Grupo:</strong> ' + esc(gname) + esc(code) + '</div>' +
+              '<div><strong>Rango:</strong> ' + esc(range) + '</div>' +
+            '</div>' +
+            '<div class="ava-course-actions">' +
+              badge +
+              expelBtn +
+            '</div>' +
           '</div>'
         );
       }).join('');
@@ -331,7 +425,7 @@
           '<td class="text-center">' + Number(c.cursos_count || 0) + '</td>' +
           '<td>' +
             '<div class="ava-actions">' +
-              '<button type="button" class="btn btn-sm btn-outline-primary" data-action="select-client" data-id="' + c.id + '">Cursos</button>' +
+              '<button type="button" class="btn btn-sm btn-outline-primary" data-action="select-client" data-id="' + c.id + '">Matriculas</button>' +
               '<button type="button" class="btn btn-sm btn-primary" data-action="edit-client" data-id="' + c.id + '">Editar</button>' +
               '<button type="button" class="btn btn-sm btn-danger" data-action="delete-client" data-id="' + c.id + '">Eliminar</button>' +
             '</div>' +
@@ -395,14 +489,14 @@
     renderCourseLists();
   }
 
-  async function loadAssignedCourses() {
+  async function loadMatriculas() {
     if (!state.selectedClient) {
-      state.assigned = [];
+      state.matriculas = [];
       renderCourseLists();
       return;
     }
-    const data = await request(apiUrl + '?action=cliente_cursos_list&usuario_id=' + encodeURIComponent(String(state.selectedClient.id)));
-    state.assigned = data.data || [];
+    const data = await request(apiUrl + '?action=cliente_matriculas_list&usuario_id=' + encodeURIComponent(String(state.selectedClient.id)));
+    state.matriculas = data.data || [];
     renderCourseLists();
   }
 
@@ -424,7 +518,7 @@
       const updated = getClientById(state.selectedClient.id);
       if (!updated) {
         state.selectedClient = null;
-        state.assigned = [];
+        state.matriculas = [];
       } else {
         state.selectedClient = updated;
       }
@@ -441,7 +535,7 @@
     await loadCourses();
     await loadClients();
     if (state.selectedClient) {
-      await loadAssignedCourses();
+      await loadMatriculas();
     }
   }
 
@@ -494,7 +588,7 @@
       await loadClients();
 
       if (editedId && state.selectedClient && Number(state.selectedClient.id) === Number(editedId)) {
-        await loadAssignedCourses();
+        await loadMatriculas();
       }
     } catch (err) {
       notify('error', err.message || 'No se pudo guardar el cliente.');
@@ -523,7 +617,7 @@
 
       if (state.selectedClient && Number(state.selectedClient.id) === Number(id)) {
         state.selectedClient = null;
-        state.assigned = [];
+        state.matriculas = [];
       }
       if (state.editId && Number(state.editId) === Number(id)) {
         resetForm();
@@ -537,24 +631,225 @@
     }
   }
 
-  async function addOrRemoveCourse(action, courseId) {
+  function setEnrollHeader(course) {
+    const clientLabel = $('#avaEnrollClient');
+    const courseLabel = $('#avaEnrollCourse');
+    if (clientLabel) {
+      const fullName = ((state.selectedClient?.nombres || '') + ' ' + (state.selectedClient?.apellidos || '')).trim();
+      const doc = state.selectedClient?.usuario || '';
+      clientLabel.textContent = fullName + (doc ? ' (' + doc + ')' : '');
+    }
+    if (courseLabel) courseLabel.textContent = course?.nombre || '-';
+  }
+
+  function resetGroupForm(courseId, courseName) {
+    const form = $('#avaGroupForm');
+    if (form) form.reset();
+    const cid = $('#avaGroupCursoId');
+    if (cid) cid.value = String(courseId || 0);
+    const label = $('#avaGroupCourseLabel');
+    if (label) label.textContent = courseName || '-';
+    const active = $('#avaGroupActive');
+    if (active) active.checked = true;
+  }
+
+  function renderEnrollGroups(groups, preselectId) {
+    const sel = $('#avaEnrollGroupSelect');
+    const noGroups = $('#avaEnrollNoGroups');
+    const btnEnroll = $('#avaEnrollConfirmBtn');
+    if (!sel || !noGroups || !btnEnroll) return;
+
+    if (!groups.length) {
+      sel.innerHTML = '<option value="0">Sin grupos activos</option>';
+      sel.value = '0';
+      sel.disabled = true;
+      noGroups.classList.remove('d-none');
+      btnEnroll.disabled = true;
+      return;
+    }
+
+    noGroups.classList.add('d-none');
+    sel.disabled = false;
+    btnEnroll.disabled = false;
+    const opts = ['<option value="0">Selecciona un grupo</option>'];
+    groups.forEach(function (g) {
+      const code = g.codigo ? '[' + g.codigo + '] ' : '';
+      const range = scheduleLabel(g.inicio_at, g.fin_at);
+      opts.push('<option value="' + g.id + '">' + esc(code + g.nombre + ' - ' + range) + '</option>');
+    });
+    sel.innerHTML = opts.join('');
+    if (preselectId) {
+      sel.value = String(preselectId);
+    }
+  }
+
+  async function openEnrollModal(courseId) {
     if (!state.selectedClient) {
       notify('warning', 'Primero selecciona un cliente.');
       return;
     }
+    const course = getCourseById(courseId);
+    if (!course) {
+      notify('warning', 'No se encontro el curso seleccionado.');
+      return;
+    }
+    state.enrollCourse = course;
 
-    const fd = new FormData();
-    fd.append('action', action);
-    fd.append('usuario_id', String(state.selectedClient.id));
-    fd.append('curso_id', String(courseId));
+    const cid = $('#avaEnrollCursoId');
+    if (cid) cid.value = String(course.id);
+    setEnrollHeader(course);
+    renderEnrollGroups([], 0);
 
     try {
+      const data = await request(apiUrl + '?action=grupos_list&curso_id=' + encodeURIComponent(String(course.id)));
+      const groups = data.data || [];
+      if (!groups.length) {
+        resetGroupForm(course.id, course.nombre || '');
+        showModal('#avaGroupCreateModal');
+        return;
+      }
+      renderEnrollGroups(groups, 0);
+      showModal('#avaEnrollModal');
+    } catch (err) {
+      notify('error', err.message || 'No se pudieron cargar los grupos del curso.');
+    }
+  }
+
+  async function createGroup(preferEnrollAfterCreate) {
+    const courseId = Number($('#avaGroupCursoId')?.value || 0);
+    const name = ($('#avaGroupName')?.value || '').trim();
+    const desc = ($('#avaGroupDesc')?.value || '').trim();
+    const start = ($('#avaGroupStart')?.value || '').trim();
+    const end = ($('#avaGroupEnd')?.value || '').trim();
+    const active = $('#avaGroupActive')?.checked ? 1 : 0;
+    const btn = $('#avaGroupCreateSubmit');
+
+    if (courseId <= 0) {
+      notify('warning', 'No se encontro el curso para crear grupo.');
+      return null;
+    }
+    if (!name) {
+      notify('warning', 'El nombre del grupo es obligatorio.');
+      return null;
+    }
+    if ((start && !end) || (!start && end)) {
+      notify('warning', 'Si defines inicio o fin, debes completar ambos.');
+      return null;
+    }
+    if (start && end) {
+      const s = new Date(start);
+      const e = new Date(end);
+      if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime())) {
+        notify('warning', 'Formato de fecha/hora invalido.');
+        return null;
+      }
+      if (e.getTime() < s.getTime()) {
+        notify('warning', 'La fecha/hora fin no puede ser menor a inicio.');
+        return null;
+      }
+    }
+
+    const fd = new FormData();
+    fd.append('action', 'grupo_create');
+    fd.append('curso_id', String(courseId));
+    fd.append('nombre', name);
+    fd.append('descripcion', desc);
+    if (start) fd.append('inicio_at', start);
+    if (end) fd.append('fin_at', end);
+    fd.append('activo', String(active));
+
+    setButtonLoading(btn, true, 'Guardando...');
+    try {
       const data = await request(apiUrl, { method: 'POST', body: fd });
-      notify('success', data.msg || 'Operacion completada.');
-      await loadAssignedCourses();
+      notify('success', data.msg || 'Grupo creado correctamente.');
+      hideModal('#avaGroupCreateModal');
+
+      if (preferEnrollAfterCreate && state.enrollCourse && Number(state.enrollCourse.id) === courseId) {
+        showModal('#avaEnrollModal');
+        const res = await request(apiUrl + '?action=grupos_list&curso_id=' + encodeURIComponent(String(courseId)));
+        const createdId = Number(data?.data?.id || 0);
+        renderEnrollGroups(res.data || [], createdId);
+      }
+      return data.data || null;
+    } catch (err) {
+      notify('error', err.message || 'No se pudo crear el grupo.');
+      return null;
+    } finally {
+      setButtonLoading(btn, false);
+    }
+  }
+
+  async function matricularSeleccionActual() {
+    if (!state.selectedClient || !state.enrollCourse) {
+      notify('warning', 'Selecciona cliente y curso antes de matricular.');
+      return;
+    }
+    const groupId = Number($('#avaEnrollGroupSelect')?.value || 0);
+    if (groupId <= 0) {
+      notify('warning', 'Selecciona un grupo para matricular.');
+      return;
+    }
+
+    const fd = new FormData();
+    fd.append('action', 'cliente_matricular');
+    fd.append('usuario_id', String(state.selectedClient.id));
+    fd.append('curso_id', String(state.enrollCourse.id));
+    fd.append('grupo_id', String(groupId));
+
+    const btn = $('#avaEnrollConfirmBtn');
+    setButtonLoading(btn, true, 'Matriculando...');
+    try {
+      const data = await request(apiUrl, { method: 'POST', body: fd });
+      notify('success', data.msg || 'Cliente matriculado correctamente.');
+      hideModal('#avaEnrollModal');
+      await loadMatriculas();
       await loadClients();
     } catch (err) {
-      notify('error', err.message || 'No se pudo actualizar la asignacion.');
+      notify('error', err.message || 'No se pudo matricular al cliente.');
+    } finally {
+      setButtonLoading(btn, false);
+    }
+  }
+
+  function openExpelModalFromMatricula(m) {
+    if (!state.selectedClient) return;
+    const fullName = ((state.selectedClient.nombres || '') + ' ' + (state.selectedClient.apellidos || '')).trim();
+    const roleName = 'Cliente';
+    const groupName = m.grupo_nombre || 'Grupo';
+    const courseName = m.curso_nombre || 'Curso';
+
+    state.expelTarget = {
+      usuario_id: Number(state.selectedClient.id),
+      curso_id: Number(m.curso_id || 0),
+    };
+
+    const main = document.getElementById('avaExpelTextMain');
+    if (main) {
+      main.textContent = '¿Estás seguro de expulsar al usuario ' + fullName + ' (rol ' + roleName + ') del grupo ' + groupName + ' del curso ' + courseName + '?';
+    }
+    showModal('#avaExpelModal');
+  }
+
+  async function confirmExpel() {
+    if (!state.expelTarget) return;
+    const fd = new FormData();
+    fd.append('action', 'cliente_expulsar');
+    fd.append('usuario_id', String(state.expelTarget.usuario_id));
+    fd.append('curso_id', String(state.expelTarget.curso_id));
+
+    const btn = document.getElementById('avaExpelConfirmBtn');
+    setButtonLoading(btn, true, 'Expulsando...');
+    try {
+      const data = await request(apiUrl, { method: 'POST', body: fd });
+      notify('success', data.msg || 'Cliente expulsado correctamente.');
+      hideModal('#avaExpelModal');
+      state.expelTarget = null;
+      await loadMatriculas();
+      await loadClients();
+    } catch (err) {
+      notify('error', err.message || 'No se pudo expulsar al cliente.');
+    } finally {
+      setButtonLoading(btn, false);
     }
   }
 
@@ -602,7 +897,7 @@
         if (!client) return;
         state.selectedClient = client;
         renderSelectedClient();
-        loadAssignedCourses().catch(function (err) { notify('error', err.message || 'No se pudieron cargar los cursos del cliente.'); });
+        loadMatriculas().catch(function (err) { notify('error', err.message || 'No se pudieron cargar las matriculas del cliente.'); });
       } else if (action === 'edit-client') {
         const client = getClientById(id);
         if (!client) return;
@@ -615,18 +910,23 @@
       return;
     }
 
-    const addBtn = e.target.closest('button[data-action="add-course"][data-course-id]');
-    if (addBtn) {
-      const courseId = Number(addBtn.dataset.courseId || 0);
-      if (courseId > 0) addOrRemoveCourse('cliente_curso_add', courseId);
+    const enrollBtn = e.target.closest('button[data-action="open-enroll"][data-course-id]');
+    if (enrollBtn) {
+      const courseId = Number(enrollBtn.dataset.courseId || 0);
+      if (courseId > 0) openEnrollModal(courseId);
       return;
     }
 
-    const rmBtn = e.target.closest('button[data-action="remove-course"][data-course-id]');
-    if (rmBtn) {
-      const courseId = Number(rmBtn.dataset.courseId || 0);
-      if (courseId > 0) addOrRemoveCourse('cliente_curso_remove', courseId);
+    const expelBtn = e.target.closest('button[data-action="open-expel"][data-curso-id]');
+    if (expelBtn) {
+      const cursoId = Number(expelBtn.dataset.cursoId || 0);
+      const rec = (state.matriculas || []).find(function (m) {
+        return Number(m.curso_id) === cursoId && Number(m.estado || 0) === 1;
+      });
+      if (rec) openExpelModalFromMatricula(rec);
+      return;
     }
+
   });
 
   const onQInput = debounce(function (e) {
@@ -663,10 +963,43 @@
     });
   }
 
+  const groupForm = document.getElementById('avaGroupForm');
+  if (groupForm) {
+    groupForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      createGroup(true);
+    });
+  }
+
+  const createGroupBtn = document.getElementById('avaCreateGroupBtn');
+  if (createGroupBtn) {
+    createGroupBtn.addEventListener('click', function () {
+      if (!state.enrollCourse) {
+        notify('warning', 'Selecciona un curso para crear grupo.');
+        return;
+      }
+      resetGroupForm(state.enrollCourse.id, state.enrollCourse.nombre || '');
+      hideModal('#avaEnrollModal');
+      showModal('#avaGroupCreateModal');
+    });
+  }
+
+  const enrollConfirmBtn = document.getElementById('avaEnrollConfirmBtn');
+  if (enrollConfirmBtn) {
+    enrollConfirmBtn.addEventListener('click', function () {
+      matricularSeleccionActual();
+    });
+  }
+
+  const expelConfirmBtn = document.getElementById('avaExpelConfirmBtn');
+  if (expelConfirmBtn) {
+    expelConfirmBtn.addEventListener('click', function () {
+      confirmExpel();
+    });
+  }
+
   resetForm();
   refreshAll().catch(function (err) {
     notify('error', err.message || 'No se pudo iniciar el modulo de administracion.');
   });
 })();
-
-

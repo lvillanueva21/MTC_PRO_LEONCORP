@@ -1,10 +1,10 @@
-﻿<?php
+<?php
 // Ver 07-03-26
 // modules/aula_virtual/aula_virtual_administracion_matriculas.php
 require_once __DIR__ . '/../../includes/acl.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
-acl_require_ids([1,4]);
+acl_require_ids([1, 4]);
 
 $u = currentUser();
 $rolActivoId = (int)($u['rol_activo_id'] ?? 0);
@@ -47,7 +47,7 @@ include __DIR__ . '/../../includes/header.php';
       <div class="row align-items-center">
         <div class="col-lg-8">
           <h1 class="m-0 mt-1"><?= h($heroTitle) ?></h1>
-          <p class="ava-subtitle m-0 mt-2">Gestiona clientes de tu empresa y administra su asignacion de cursos.</p>
+          <p class="ava-subtitle m-0 mt-2">Gestiona clientes de tu empresa y administra sus matriculas por grupos.</p>
         </div>
         <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
           <span class="badge bg-light text-dark av-badge">Empresa activa: <?= h($empresaNombre) ?></span>
@@ -75,7 +75,7 @@ include __DIR__ . '/../../includes/header.php';
                 </div>
                 <div class="field">
                   <label class="form-label mb-1">Filtrar por curso</label>
-                  <select id="avaFilterCourse" class="form-select ava-filter-control">
+                  <select id="avaFilterCourse" class="form-control ava-filter-control">
                     <option value="0">Todos los cursos</option>
                   </select>
                 </div>
@@ -108,7 +108,7 @@ include __DIR__ . '/../../includes/header.php';
 
           <div class="card av-card mt-3">
             <div class="card-header">
-              <h5 class="m-0">Asignar / quitar cursos</h5>
+              <h5 class="m-0">Matriculas (por grupos)</h5>
             </div>
             <div class="card-body">
               <div class="ava-selected mb-3">
@@ -123,9 +123,9 @@ include __DIR__ . '/../../includes/header.php';
                   <div id="avaAvailableEmpty" class="ava-help">Selecciona un cliente para ver cursos disponibles.</div>
                 </div>
                 <div class="ava-course-box">
-                  <div class="ava-course-title">Cursos del cliente <span class="text-muted small" id="avaSelectedClientMini">Ninguno seleccionado</span></div>
-                  <div id="avaAssignedList" class="ava-course-list"></div>
-                  <div id="avaAssignedEmpty" class="ava-help">Selecciona un cliente para ver cursos asignados.</div>
+                  <div class="ava-course-title">Matriculas del cliente <span class="text-muted small" id="avaSelectedClientMini">Ninguno seleccionado</span></div>
+                  <div id="avaMatriculasList" class="ava-course-list"></div>
+                  <div id="avaMatriculasEmpty" class="ava-help">Selecciona un cliente para ver sus matriculas.</div>
                 </div>
               </div>
             </div>
@@ -199,11 +199,110 @@ include __DIR__ . '/../../includes/header.php';
   </section>
 </div>
 
+<div class="modal fade" id="avaEnrollModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Matricular cliente en grupo</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="ava-help mb-2">Cliente: <strong id="avaEnrollClient">-</strong></div>
+        <div class="ava-help mb-3">Curso: <strong id="avaEnrollCourse">-</strong></div>
+
+        <input type="hidden" id="avaEnrollCursoId" value="0">
+
+        <div class="mb-2">
+          <label for="avaEnrollGroupSelect" class="form-label mb-1">Grupo</label>
+          <select id="avaEnrollGroupSelect" class="form-control">
+            <option value="0">Selecciona un grupo</option>
+          </select>
+        </div>
+        <div class="ava-help mb-3 d-none" id="avaEnrollNoGroups">Este curso aun no tiene grupos activos. Crea uno para poder matricular.</div>
+
+        <button type="button" class="btn btn-outline-primary btn-sm" id="avaCreateGroupBtn">Crear grupo</button>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="avaEnrollConfirmBtn">Matricular</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="avaGroupCreateModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Crear grupo</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <form id="avaGroupForm" novalidate>
+        <div class="modal-body">
+          <input type="hidden" id="avaGroupCursoId" value="0">
+          <div class="ava-help mb-3">Curso: <strong id="avaGroupCourseLabel">-</strong></div>
+
+          <div class="mb-2">
+            <label for="avaGroupName" class="form-label mb-1">Nombre del grupo</label>
+            <input type="text" id="avaGroupName" class="form-control" maxlength="150" required>
+          </div>
+          <div class="mb-2">
+            <label for="avaGroupDesc" class="form-label mb-1">Descripcion (opcional)</label>
+            <input type="text" id="avaGroupDesc" class="form-control" maxlength="255">
+          </div>
+          <div class="row">
+            <div class="col-12 col-md-6 mb-2">
+              <label for="avaGroupStart" class="form-label mb-1">Inicio (fecha y hora)</label>
+              <input type="datetime-local" id="avaGroupStart" class="form-control">
+            </div>
+            <div class="col-12 col-md-6 mb-2">
+              <label for="avaGroupEnd" class="form-label mb-1">Fin (fecha y hora)</label>
+              <input type="datetime-local" id="avaGroupEnd" class="form-control">
+            </div>
+          </div>
+          <div class="ava-help mb-2">Si defines inicio o fin, debes completar ambos. Para grupo indefinido deja ambos vacios.</div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="avaGroupActive" checked>
+            <label class="form-check-label" for="avaGroupActive">Grupo activo</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary" id="avaGroupCreateSubmit">Guardar grupo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="avaExpelModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirmar expulsión</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2" id="avaExpelTextMain">Vas a expulsar a un cliente de su grupo.</p>
+        <p class="mb-0 text-muted">Perderá el acceso al contenido de este curso.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger" id="avaExpelConfirmBtn">Si, expulsar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   window.avAdminConfig = <?= $adminConfigJson ?>;
 </script>
 <script src="<?= BASE_URL ?>/modules/aula_virtual/aula_virtual_administracion.js?v=<?= h($adminJsVersion) ?>"></script>
 
 <?php include __DIR__ . '/../../includes/footer.php'; ?>
-
-

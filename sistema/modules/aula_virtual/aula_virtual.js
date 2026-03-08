@@ -1,4 +1,4 @@
-﻿// Ver 07-03-26
+// Ver 07-03-26
 (function(){
   const root = document.getElementById('avRoot');
   if (!root) return;
@@ -7,6 +7,9 @@
   const temaMap = config.temaMap || {};
 
   const player = root.querySelector('#avPlayer');
+  const playerWrap = root.querySelector('#avPlayerWrap');
+  const contentShell = root.querySelector('#avContentShell');
+  const blockedNotice = root.querySelector('#avBlockedNotice');
   const playlist = root.querySelector('#avPlaylist');
   const progressText = root.querySelector('#avProgressText');
   const countBadge = root.querySelector('#avCountBadge');
@@ -15,6 +18,8 @@
   const tabLinks = Array.from(root.querySelectorAll('.av-tabs .nav-link[href^="#tab_"]'));
 
   const total = Number(config.totalTemas || 0);
+  const blocked = Number(config.blocked || 0) === 1;
+  const blockedMessage = String(config.blockedMessage || 'Acceso bloqueado temporalmente.');
   let done = 0;
 
   function esc(s){
@@ -51,6 +56,7 @@
   }
 
   function activateTabFallback(link){
+    if (blocked) return;
     const sel = link.getAttribute('href');
     if (!sel || !sel.startsWith('#')) return;
     const pane = root.querySelector(sel);
@@ -69,6 +75,10 @@
 
   tabLinks.forEach(function(link){
     link.addEventListener('click', function(e){
+      if (blocked) {
+        e.preventDefault();
+        return;
+      }
       if (hasBootstrapTabs()) return;
       e.preventDefault();
       activateTabFallback(link);
@@ -76,12 +86,34 @@
   });
 
   function updateProgress(){
+    if (blocked) {
+      if (progressText) progressText.textContent = 'Bloqueado por rango';
+      if (countBadge) countBadge.textContent = '0/0 completadas';
+      return;
+    }
     const pct = total ? Math.round((done / total) * 100) : 0;
     if (progressText) progressText.textContent = pct + '% completado';
     if (countBadge) countBadge.textContent = done + '/' + total + ' completadas';
   }
 
+  function applyBlockedState() {
+    if (!blocked) {
+      if (blockedNotice) blockedNotice.classList.add('d-none');
+      return;
+    }
+
+    if (blockedNotice) {
+      blockedNotice.textContent = blockedMessage;
+      blockedNotice.classList.remove('d-none');
+    }
+    if (player) player.src = '';
+    if (playerWrap) playerWrap.classList.add('d-none');
+    if (contentShell) contentShell.classList.add('d-none');
+    if (playlist) playlist.classList.add('d-none');
+  }
+
   function selectItem(el){
+    if (blocked) return;
     if (!playlist) return;
 
     playlist.querySelectorAll('.item.active').forEach(function(i){
@@ -103,6 +135,7 @@
   }
 
   playlist?.addEventListener('click', function(e){
+    if (blocked) return;
     const item = e.target.closest('.item');
     if (item) selectItem(item);
   });
@@ -118,11 +151,12 @@
   });
 
   const firstItem = playlist?.querySelector('.item');
-  if (firstItem) {
+  if (!blocked && firstItem) {
     firstItem.classList.add('active');
     renderTemaFromItem(firstItem);
   }
 
+  applyBlockedState();
   updateProgress();
 })();
 
@@ -176,5 +210,3 @@
     else if (typeof mm.addListener === 'function') mm.addListener(onSchemeChange);
   }
 })();
-
-
