@@ -48,7 +48,7 @@
         <!-- Navbar & Hero End -->
 
         <!-- Carousel Start -->
-        <div class="header-carousel">
+        <div id="inicio" class="header-carousel">
             <div id="carouselId" class="carousel slide" data-bs-ride="carousel" data-bs-interval="false">
                 <ol class="carousel-indicators">
                     <li data-bs-target="#carouselId" data-bs-slide-to="0" class="active" aria-current="true" aria-label="First slide"></li>
@@ -239,76 +239,11 @@
         <!-- Carousel End -->
 
         <!-- Features Start -->
-        <div class="container-fluid feature py-5">
-            <div class="container py-5">
-                <div class="text-center mx-auto pb-5 wow fadeInUp" data-wow-delay="0.1s" style="max-width: 800px;">
-                    <h1 class="display-5 text-capitalize mb-3">Cental <span class="text-primary">Features</span></h1>
-                    <p class="mb-0">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Ut amet nemo expedita asperiores commodi accusantium at cum harum, excepturi, quia tempora cupiditate! Adipisci facilis modi quisquam quia distinctio,
-                    </p>
-                </div>
-                <div class="row g-4 align-items-center">
-                    <div class="col-xl-4">
-                        <div class="row gy-4 gx-0">
-                            <div class="col-12 wow fadeInUp" data-wow-delay="0.1s">
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <span class="fa fa-trophy fa-2x"></span>
-                                    </div>
-                                    <div class="ms-4">
-                                        <h5 class="mb-3">First Class services</h5>
-                                        <p class="mb-0">Lorem ipsum dolor sit amet consectetur adipisicing elit. Consectetur, in illum aperiam ullam magni eligendi?</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-12 wow fadeInUp" data-wow-delay="0.3s">
-                                <div class="feature-item">
-                                    <div class="feature-icon">
-                                        <span class="fa fa-road fa-2x"></span>
-                                    </div>
-                                    <div class="ms-4">
-                                        <h5 class="mb-3">24/7 road assistance</h5>
-                                        <p class="mb-0">Lorem ipsum dolor sit amet consectetur adipisicing elit. Consectetur, in illum aperiam ullam magni eligendi?</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-12 col-xl-4 wow fadeInUp" data-wow-delay="0.2s">
-                        <img src="/web/img/features-img.png" class="img-fluid w-100" style="object-fit: cover;" alt="Img">
-                    </div>
-                    <div class="col-xl-4">
-                        <div class="row gy-4 gx-0">
-                            <div class="col-12 wow fadeInUp" data-wow-delay="0.1s">
-                                <div class="feature-item justify-content-end">
-                                    <div class="text-end me-4">
-                                        <h5 class="mb-3">Quality at Minimum</h5>
-                                        <p class="mb-0">Lorem ipsum dolor sit amet consectetur adipisicing elit. Consectetur, in illum aperiam ullam magni eligendi?</p>
-                                    </div>
-                                    <div class="feature-icon">
-                                        <span class="fa fa-tag fa-2x"></span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-12 wow fadeInUp" data-wow-delay="0.3s">
-                                <div class="feature-item justify-content-end">
-                                    <div class="text-end me-4">
-                                        <h5 class="mb-3">Free Pick-Up & Drop-Off</h5>
-                                        <p class="mb-0">Lorem ipsum dolor sit amet consectetur adipisicing elit. Consectetur, in illum aperiam ullam magni eligendi?</p>
-                                    </div>
-                                    <div class="feature-icon">
-                                        <span class="fa fa-map-pin fa-2x"></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <?php include __DIR__ . '/web/partials/features.php'; ?>
         <!-- Features End -->
 
         <!-- About Start -->
-        <div class="container-fluid overflow-hidden about py-5">
+        <div id="nosotros" class="container-fluid overflow-hidden about py-5">
             <div class="container py-5">
                 <div class="row g-5">
                     <div class="col-xl-6 wow fadeInLeft" data-wow-delay="0.2s">
@@ -443,7 +378,7 @@
         <!-- Fact Counter -->
 
         <!-- Services Start -->
-        <div class="container-fluid service py-5">
+        <div id="servicios" class="container-fluid service py-5">
             <div class="container py-5">
                 <div class="text-center mx-auto pb-5 wow fadeInUp" data-wow-delay="0.1s" style="max-width: 800px;">
                     <h1 class="display-5 text-capitalize mb-3">Cental <span class="text-primary">Services</span></h1>
@@ -511,7 +446,7 @@
         <!-- Services End -->
 
         <!-- Car categories Start -->
-        <div class="container-fluid categories pb-5">
+        <div id="categorias" class="container-fluid categories pb-5">
             <div class="container pb-5">
                 <div class="text-center mx-auto pb-5 wow fadeInUp" data-wow-delay="0.1s" style="max-width: 800px;">
                     <h1 class="display-5 text-capitalize mb-3">Vehicle <span class="text-primary">Categories</span></h1>
@@ -701,7 +636,7 @@
         <!-- Car categories End -->
 
         <!-- Car Steps Start -->
-        <div class="container-fluid steps py-5">
+        <div id="pasos" class="container-fluid steps py-5">
             <div class="container py-5">
                 <div class="text-center mx-auto pb-5 wow fadeInUp" data-wow-delay="0.1s" style="max-width: 800px;">
                     <h1 class="display-5 text-capitalize text-white mb-3">Cental<span class="text-primary"> Process</span></h1>
@@ -736,7 +671,7 @@
         <!-- Car Steps End -->
 
         <!-- Blog Start -->
-        <div class="container-fluid blog py-5">
+        <div id="blog" class="container-fluid blog py-5">
             <div class="container py-5">
                 <div class="text-center mx-auto pb-5 wow fadeInUp" data-wow-delay="0.1s" style="max-width: 800px;">
                     <h1 class="display-5 text-capitalize mb-3">Cental<span class="text-primary"> Blog & News</span></h1>
@@ -801,7 +736,7 @@
         <!-- Blog End -->
 
         <!-- Banner Start -->
-        <div class="container-fluid banner pb-5 wow zoomInDown" data-wow-delay="0.1s">
+        <div id="promocion" class="container-fluid banner pb-5 wow zoomInDown" data-wow-delay="0.1s">
             <div class="container pb-5">
                 <div class="banner-item rounded">
                     <img src="/web/img/banner-1.jpg" class="img-fluid rounded w-100" alt="">
@@ -820,7 +755,7 @@
         <!-- Banner End -->
 
         <!-- Team Start -->
-        <div class="container-fluid team pb-5">
+        <div id="equipo" class="container-fluid team pb-5">
             <div class="container pb-5">
                 <div class="text-center mx-auto pb-5 wow fadeInUp" data-wow-delay="0.1s" style="max-width: 800px;">
                     <h1 class="display-5 text-capitalize mb-3">Customer<span class="text-primary"> Suport</span> Center</h1>
@@ -902,7 +837,7 @@
         <!-- Team End -->
 
         <!-- Testimonial Start -->
-        <div class="container-fluid testimonial pb-5">
+        <div id="testimonios" class="container-fluid testimonial pb-5">
             <div class="container pb-5">
                 <div class="text-center mx-auto pb-5 wow fadeInUp" data-wow-delay="0.1s" style="max-width: 800px;">
                     <h1 class="display-5 text-capitalize mb-3">Our Clients<span class="text-primary"> Riviews</span></h1>
@@ -979,7 +914,7 @@
         <!-- Testimonial End -->
 
         <!-- Footer Start -->
-        <div class="container-fluid footer py-5 wow fadeIn" data-wow-delay="0.2s">
+        <div id="contacto" class="container-fluid footer py-5 wow fadeIn" data-wow-delay="0.2s">
             <div class="container py-5">
                 <div class="row g-5">
                     <div class="col-md-6 col-lg-6 col-xl-3">
@@ -1043,7 +978,7 @@
         <!-- Footer End -->
         
         <!-- Copyright Start -->
-        <div class="container-fluid copyright py-4">
+        <div id="copyright" class="container-fluid copyright py-4">
             <div class="container">
                 <div class="row g-4 align-items-center">
                     <div class="col-md-6 text-center text-md-start mb-md-0">

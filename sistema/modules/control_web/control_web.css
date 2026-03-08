@@ -36,6 +36,10 @@
     background: linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%);
 }
 
+.cw-btn-caracteristicas {
+    background: linear-gradient(135deg, #ffb347 0%, #ff6f61 100%);
+}
+
 .cw-workspace {
     min-height: 360px;
 }
@@ -58,4 +62,37 @@
 
 .cw-menu-logo-preview img {
     display: block;
+    max-height: 55px;
+}
+
+.cw-menu-logo-preview {
+    min-height: 84px;
+}
+
+.cw-menu-logo-fallback {
+    min-height: 55px;
+    display: flex;
+    align-items: center;
+}
+
+.cw-char-counter {
+    font-size: 0.78rem;
+}
+
+.cw-feature-card .card-header {
+    background: #f8f9fa;
+}
+
+#cw-features-form textarea {
+    resize: vertical;
+}
+
+.cw-features-image-preview {
+    min-height: 92px;
+}
+
+.cw-features-image-preview img {
+    display: block;
+    max-height: 190px;
+    width: auto;
 }

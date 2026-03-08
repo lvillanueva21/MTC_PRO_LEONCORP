@@ -141,6 +141,8 @@ if (!empty($errors)) {
     ]);
 }
 
+$logoPath = '';
+
 try {
     $cn = db();
     if (!($cn instanceof mysqli)) {
@@ -212,4 +214,6 @@ try {
 cw_menu_json_exit([
     'ok' => true,
     'message' => 'Menu actualizado correctamente.',
+    'logo_path' => $logoPath,
+    'logo_url' => cw_menu_logo_public_url($logoPath),
 ]);

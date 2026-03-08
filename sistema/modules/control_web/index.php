@@ -20,7 +20,7 @@ $cwBaseUrl = BASE_URL . '/modules/control_web';
 include __DIR__ . '/../../includes/header.php';
 ?>
 
-<link rel="stylesheet" href="<?php echo h($cwBaseUrl . '/control_web.css?v=3'); ?>">
+<link rel="stylesheet" href="<?php echo h($cwBaseUrl . '/control_web.css?v=5'); ?>">
 
 <div class="content-wrapper">
   <div class="content-header">
@@ -50,6 +50,9 @@ include __DIR__ . '/../../includes/header.php';
             <button type="button" class="btn cw-action-btn cw-btn-menu" data-target="menu">
               Menú
             </button>
+            <button type="button" class="btn cw-action-btn cw-btn-caracteristicas" data-target="caracteristicas">
+              Caracteristicas
+            </button>
           </div>
         </div>
       </div>
@@ -68,9 +71,10 @@ include __DIR__ . '/../../includes/header.php';
 <script>
 window.CONTROL_WEB = {
     cabeceraUrl: <?php echo json_encode($cwBaseUrl . '/cabecera/index.php'); ?>,
-    menuUrl: <?php echo json_encode($cwBaseUrl . '/menu/index.php'); ?>
+    menuUrl: <?php echo json_encode($cwBaseUrl . '/menu/index.php'); ?>,
+    caracteristicasUrl: <?php echo json_encode($cwBaseUrl . '/caracteristicas/index.php'); ?>
 };
 </script>
-<script src="<?php echo h($cwBaseUrl . '/control_web.js?v=4'); ?>"></script>
+<script src="<?php echo h($cwBaseUrl . '/control_web.js?v=6'); ?>"></script>
 
 <?php include __DIR__ . '/../../includes/footer.php'; ?>

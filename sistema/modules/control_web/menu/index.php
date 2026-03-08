@@ -34,6 +34,7 @@ if (!empty($items)) {
 
 $guardarUrl = (defined('BASE_URL') ? BASE_URL : '') . '/modules/control_web/menu/guardar.php';
 $logoUrl = cw_menu_logo_public_url((string)($menuData['logo_path'] ?? ''));
+$hasLogo = ($logoUrl !== '');
 ?>
 
 <div class="card-header border-0">
@@ -83,14 +84,21 @@ $logoUrl = cw_menu_logo_public_url((string)($menuData['logo_path'] ?? ''));
 
     <div class="form-row align-items-center">
       <div class="col-md-8 mb-2">
-        <?php if ($logoUrl !== ''): ?>
-          <div class="cw-menu-logo-preview p-2 border rounded bg-light">
-            <div class="small text-muted mb-1">Logo actual:</div>
-            <img src="<?php echo cw_menu_h($logoUrl); ?>" alt="Logo actual" class="img-fluid" style="max-height: 55px;">
+        <div class="cw-menu-logo-preview p-2 border rounded bg-light">
+          <div class="small text-muted mb-1">Vista previa del logo:</div>
+          <img
+            id="cw-logo-preview-img"
+            src="<?php echo $hasLogo ? cw_menu_h($logoUrl) : ''; ?>"
+            data-current-src="<?php echo $hasLogo ? cw_menu_h($logoUrl) : ''; ?>"
+            alt="Vista previa del logo"
+            class="img-fluid<?php echo $hasLogo ? '' : ' d-none'; ?>"
+            style="max-height: 55px;"
+          >
+          <div id="cw-logo-preview-fallback" class="cw-menu-logo-fallback<?php echo $hasLogo ? ' d-none' : ''; ?>">
+            <i class="fas fa-car-alt text-primary mr-2"></i>
+            <span class="small text-muted">Sin logo cargado. Se usa el icono por defecto.</span>
           </div>
-        <?php else: ?>
-          <div class="small text-muted">Actualmente se usa el icono de auto por defecto.</div>
-        <?php endif; ?>
+        </div>
       </div>
       <div class="col-md-4 mb-2">
         <div class="custom-control custom-checkbox mt-2">

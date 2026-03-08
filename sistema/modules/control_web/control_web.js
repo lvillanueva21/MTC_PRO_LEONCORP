@@ -100,7 +100,12 @@
             }
 
             function loadView(target) {
-                var url = target === 'menu' ? cfg.menuUrl : cfg.cabeceraUrl;
+                var routes = {
+                    cabecera: cfg.cabeceraUrl,
+                    menu: cfg.menuUrl,
+                    caracteristicas: cfg.caracteristicasUrl
+                };
+                var url = routes[target] || '';
                 if (!url) {
                     setFeedback('No se encontro la configuracion para cargar la vista.', 'danger');
                     return;
@@ -127,6 +132,11 @@
 
                     if (target === 'menu') {
                         initMenuForm();
+                        return;
+                    }
+
+                    if (target === 'caracteristicas') {
+                        initFeaturesForm();
                     }
                 });
             }
@@ -138,6 +148,7 @@
                 var ajaxConfig = options.ajaxConfig || {};
                 var defaultButtonText = options.defaultButtonText || 'Guardar cambios';
                 var defaultError = options.defaultError || 'No se pudo guardar la configuracion.';
+                var onSuccess = (typeof options.onSuccess === 'function') ? options.onSuccess : null;
 
                 var action = String($form.attr('action') || '');
                 if (!action) {
@@ -165,6 +176,9 @@
                 $.ajax(config).done(function (res) {
                     if (res && res.ok) {
                         showAlert($alert, escapeHtml(res.message || 'Cambios guardados correctamente.'), 'success');
+                        if (onSuccess) {
+                            onSuccess(res);
+                        }
                         return;
                     }
                     var failMsg = escapeHtml((res && res.message) || defaultError);
@@ -318,6 +332,131 @@
                 return items;
             }
 
+            function initMenuLogoPreview() {
+                var $form = $('#cw-menu-form');
+                var $logoInput = $('#cw_logo_archivo');
+                var $removeCheck = $('#cw_eliminar_logo');
+                var $img = $('#cw-logo-preview-img');
+                var $fallback = $('#cw-logo-preview-fallback');
+                var $alert = $('#cw-menu-alert');
+
+                if (
+                    !$form.length ||
+                    !$logoInput.length ||
+                    !$removeCheck.length ||
+                    !$img.length ||
+                    !$fallback.length
+                ) {
+                    return;
+                }
+
+                var currentSrc = $.trim(String($img.attr('data-current-src') || $img.attr('src') || ''));
+                var objectPreviewUrl = '';
+
+                function revokeObjectPreview() {
+                    if (objectPreviewUrl && window.URL && typeof window.URL.revokeObjectURL === 'function') {
+                        window.URL.revokeObjectURL(objectPreviewUrl);
+                    }
+                    objectPreviewUrl = '';
+                }
+
+                function showFallback() {
+                    $img.attr('src', '').addClass('d-none');
+                    $fallback.removeClass('d-none');
+                }
+
+                function showImage(src) {
+                    if (!src) {
+                        showFallback();
+                        return;
+                    }
+                    $img.attr('src', src).removeClass('d-none');
+                    $fallback.addClass('d-none');
+                }
+
+                function showCurrent() {
+                    if (currentSrc) {
+                        showImage(currentSrc);
+                        return;
+                    }
+                    showFallback();
+                }
+
+                function previewFile(file) {
+                    if (!file) {
+                        showCurrent();
+                        return;
+                    }
+
+                    var typeOk = /^image\/(png|jpeg|webp)$/i.test(String(file.type || ''));
+                    var nameOk = /\.(png|jpe?g|webp)$/i.test(String(file.name || ''));
+                    if (!typeOk && !nameOk) {
+                        showAlert($alert, 'Formato no permitido para previsualizacion. Usa PNG, WEBP o JPEG.', 'warning');
+                        $logoInput.val('');
+                        showCurrent();
+                        return;
+                    }
+
+                    revokeObjectPreview();
+                    if (window.URL && typeof window.URL.createObjectURL === 'function') {
+                        objectPreviewUrl = window.URL.createObjectURL(file);
+                        showImage(objectPreviewUrl);
+                        return;
+                    }
+
+                    if (window.FileReader) {
+                        var reader = new FileReader();
+                        reader.onload = function (ev) {
+                            showImage(String((ev && ev.target && ev.target.result) || ''));
+                        };
+                        reader.readAsDataURL(file);
+                        return;
+                    }
+
+                    showCurrent();
+                }
+
+                showCurrent();
+
+                $logoInput.off('change.cwLogoPreview').on('change.cwLogoPreview', function () {
+                    var file = (this.files && this.files[0]) ? this.files[0] : null;
+                    if (!file) {
+                        if ($removeCheck.is(':checked')) {
+                            showFallback();
+                            return;
+                        }
+                        showCurrent();
+                        return;
+                    }
+                    $removeCheck.prop('checked', false);
+                    previewFile(file);
+                });
+
+                $removeCheck.off('change.cwLogoPreview').on('change.cwLogoPreview', function () {
+                    if ($(this).is(':checked')) {
+                        revokeObjectPreview();
+                        $logoInput.val('');
+                        showFallback();
+                        return;
+                    }
+                    var file = ($logoInput[0].files && $logoInput[0].files[0]) ? $logoInput[0].files[0] : null;
+                    if (file) {
+                        previewFile(file);
+                        return;
+                    }
+                    showCurrent();
+                });
+
+                $form.data('cwLogoPreview', {
+                    setCurrent: function (src) {
+                        currentSrc = $.trim(String(src || ''));
+                        $img.attr('data-current-src', currentSrc);
+                        revokeObjectPreview();
+                        showCurrent();
+                    }
+                });
+            }
+
             function initMenuForm() {
                 var $form = $('#cw-menu-form');
                 if (!$form.length || $form.data('cwReady')) {
@@ -343,6 +482,173 @@
                 });
                 refreshMenuItems();
                 syncMenuItemsJson();
+                initMenuLogoPreview();
+            }
+
+            function initCharCounter($field) {
+                var counterId = String($field.data('cwCounter') || '');
+                if (!counterId) {
+                    return;
+                }
+
+                var $counter = $('#' + counterId);
+                if (!$counter.length) {
+                    return;
+                }
+
+                function render() {
+                    var max = parseInt($field.attr('maxlength'), 10);
+                    if (!isFinite(max) || max < 0) {
+                        max = 0;
+                    }
+
+                    var current = String($field.val() || '');
+                    var len = current.length;
+                    var rest = max - len;
+                    if (rest < 0) {
+                        rest = 0;
+                    }
+                    $counter.text(rest);
+                }
+
+                $field.off('input.cwCounter change.cwCounter')
+                    .on('input.cwCounter change.cwCounter', render);
+                render();
+            }
+
+            function initFeaturesImagePreview($form) {
+                var $imageInput = $form.find('#cw_feat_imagen_archivo');
+                var $removeCheck = $form.find('#cw_feat_eliminar_imagen');
+                var $image = $form.find('#cw-features-preview-img');
+                var $alert = $('#cw-features-alert');
+
+                if (!$imageInput.length || !$removeCheck.length || !$image.length) {
+                    return;
+                }
+
+                var defaultSrc = $.trim(String($image.attr('data-default-src') || ''));
+                var currentSrc = $.trim(String($image.attr('data-current-src') || $image.attr('src') || defaultSrc));
+                if (!currentSrc) {
+                    currentSrc = defaultSrc;
+                }
+
+                var objectPreviewUrl = '';
+
+                function revokeObjectPreview() {
+                    if (objectPreviewUrl && window.URL && typeof window.URL.revokeObjectURL === 'function') {
+                        window.URL.revokeObjectURL(objectPreviewUrl);
+                    }
+                    objectPreviewUrl = '';
+                }
+
+                function showImage(src) {
+                    var target = $.trim(String(src || ''));
+                    if (!target) {
+                        target = defaultSrc;
+                    }
+                    $image.attr('src', target);
+                }
+
+                function showCurrent() {
+                    showImage(currentSrc || defaultSrc);
+                }
+
+                function showDefault() {
+                    showImage(defaultSrc);
+                }
+
+                function previewFile(file) {
+                    if (!file) {
+                        showCurrent();
+                        return;
+                    }
+
+                    var typeOk = /^image\/(png|jpeg|webp)$/i.test(String(file.type || ''));
+                    var nameOk = /\.(png|jpe?g|webp)$/i.test(String(file.name || ''));
+                    if (!typeOk && !nameOk) {
+                        showAlert($alert, 'Formato no permitido para previsualizacion. Usa PNG, WEBP o JPEG.', 'warning');
+                        $imageInput.val('');
+                        showCurrent();
+                        return;
+                    }
+
+                    revokeObjectPreview();
+                    if (window.URL && typeof window.URL.createObjectURL === 'function') {
+                        objectPreviewUrl = window.URL.createObjectURL(file);
+                        showImage(objectPreviewUrl);
+                        return;
+                    }
+
+                    if (window.FileReader) {
+                        var reader = new FileReader();
+                        reader.onload = function (ev) {
+                            showImage(String((ev && ev.target && ev.target.result) || defaultSrc));
+                        };
+                        reader.readAsDataURL(file);
+                        return;
+                    }
+
+                    showCurrent();
+                }
+
+                showCurrent();
+
+                $imageInput.off('change.cwFeaturesPreview').on('change.cwFeaturesPreview', function () {
+                    var file = (this.files && this.files[0]) ? this.files[0] : null;
+                    if (!file) {
+                        if ($removeCheck.is(':checked')) {
+                            showDefault();
+                            return;
+                        }
+                        showCurrent();
+                        return;
+                    }
+
+                    $removeCheck.prop('checked', false);
+                    previewFile(file);
+                });
+
+                $removeCheck.off('change.cwFeaturesPreview').on('change.cwFeaturesPreview', function () {
+                    if ($(this).is(':checked')) {
+                        revokeObjectPreview();
+                        $imageInput.val('');
+                        showDefault();
+                        return;
+                    }
+
+                    var file = ($imageInput[0].files && $imageInput[0].files[0]) ? $imageInput[0].files[0] : null;
+                    if (file) {
+                        previewFile(file);
+                        return;
+                    }
+                    showCurrent();
+                });
+
+                $form.data('cwFeaturesPreview', {
+                    setCurrent: function (src) {
+                        currentSrc = $.trim(String(src || defaultSrc));
+                        if (!currentSrc) {
+                            currentSrc = defaultSrc;
+                        }
+                        $image.attr('data-current-src', currentSrc);
+                        revokeObjectPreview();
+                        showCurrent();
+                    }
+                });
+            }
+
+            function initFeaturesForm() {
+                var $form = $('#cw-features-form');
+                if (!$form.length || $form.data('cwReady')) {
+                    return;
+                }
+                $form.data('cwReady', 1);
+
+                $form.find('[data-cw-counter]').each(function () {
+                    initCharCounter($(this));
+                });
+
+                initFeaturesImagePreview($form);
             }
 
             $(document).on('click', '.cw-action-btn', function () {
@@ -434,7 +740,43 @@
                         contentType: false
                     },
                     defaultButtonText: 'Guardar menu',
-                    defaultError: 'No se pudo guardar la configuracion de menu.'
+                    defaultError: 'No se pudo guardar la configuracion de menu.',
+                    onSuccess: function (res) {
+                        var previewApi = $form.data('cwLogoPreview');
+                        if (previewApi && typeof previewApi.setCurrent === 'function') {
+                            previewApi.setCurrent(String((res && res.logo_url) || ''));
+                        }
+                        $('#cw_logo_archivo').val('');
+                        $('#cw_eliminar_logo').prop('checked', false);
+                    }
+                });
+            });
+
+            $(document).on('submit', '#cw-features-form', function (e) {
+                e.preventDefault();
+
+                var $form = $(this);
+                var formData = new FormData($form[0]);
+
+                submitAjaxForm({
+                    form: $form,
+                    alert: $('#cw-features-alert'),
+                    submit: $form.find('#cw-features-submit'),
+                    ajaxConfig: {
+                        data: formData,
+                        processData: false,
+                        contentType: false
+                    },
+                    defaultButtonText: 'Guardar caracteristicas',
+                    defaultError: 'No se pudo guardar la configuracion de caracteristicas.',
+                    onSuccess: function (res) {
+                        var previewApi = $form.data('cwFeaturesPreview');
+                        if (previewApi && typeof previewApi.setCurrent === 'function') {
+                            previewApi.setCurrent(String((res && res.imagen_url) || ''));
+                        }
+                        $('#cw_feat_imagen_archivo').val('');
+                        $('#cw_feat_eliminar_imagen').prop('checked', false);
+                    }
                 });
             });
 
