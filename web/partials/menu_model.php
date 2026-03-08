@@ -200,6 +200,6 @@ if (!function_exists('cw_menu_logo_public_url')) {
             return '/sistema/' . $logoPath;
         }
 
-        return rtrim(BASE_URL, '/') . '/sistema/' . $logoPath;
+        return rtrim(BASE_URL, '/') . '/' . $logoPath;
     }
 }

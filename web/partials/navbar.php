@@ -29,6 +29,13 @@ if (!empty($items)) {
 }
 
 $logoUrl = cw_menu_logo_public_url((string)($menuData['logo_path'] ?? ''));
+$logoPathRel = ltrim(trim((string)($menuData['logo_path'] ?? '')), '/\\');
+if ($logoPathRel !== '' && !preg_match('#^https?://#i', $logoPathRel)) {
+    $logoAbs = realpath(__DIR__ . '/../../sistema/' . $logoPathRel);
+    if (!$logoAbs || !is_file($logoAbs)) {
+        $logoUrl = '';
+    }
+}
 $tituloPagina = trim((string)($menuData['titulo_pagina'] ?? ''));
 if ($tituloPagina === '') {
     $tituloPagina = 'Cental';
@@ -83,7 +90,7 @@ foreach ($items as $item) {
         <nav class="navbar navbar-expand-lg navbar-light">
             <a href="/" class="navbar-brand p-0 cw-navbar-brand">
                 <?php if ($logoUrl !== ''): ?>
-                    <img src="<?php echo cw_nav_h($logoUrl); ?>" alt="<?php echo cw_nav_h($tituloPagina); ?>" class="cw-navbar-brand-logo">
+                    <img src="<?php echo cw_nav_h($logoUrl); ?>" alt="Logo del sitio" class="cw-navbar-brand-logo">
                 <?php else: ?>
                     <i class="fas fa-car-alt text-primary"></i>
                 <?php endif; ?>
