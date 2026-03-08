@@ -1,0 +1,81 @@
+/* Ver 08-03-26 */
+#avExamRoot {
+  max-width: 980px;
+  margin: 22px auto;
+  padding: 0 12px 28px;
+}
+
+#avExamRoot .card {
+  border-radius: 12px;
+  border: 1px solid #d7dde6;
+}
+
+#avExamRoot .avex-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+#avExamRoot .avex-meta {
+  font-size: 0.9rem;
+  color: #5f6b7a;
+}
+
+#avExamRoot .avex-time {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+#avExamRoot .avex-question {
+  border: 1px solid #d7dde6;
+  border-radius: 10px;
+  padding: 0.75rem;
+  margin-bottom: 0.65rem;
+  background: #fff;
+}
+
+#avExamRoot .avex-question-title {
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+#avExamRoot .avex-option {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+#avExamRoot .avex-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+#avExamRoot .avex-saved {
+  font-size: 0.85rem;
+  color: #5f6b7a;
+}
+
+#avExamRoot .avex-cats {
+  border: 1px solid #d7dde6;
+  border-radius: 10px;
+  padding: 0.5rem 0.6rem;
+  max-height: 180px;
+  overflow: auto;
+}
+
+#avExamRoot .avex-final-score {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+#avExamRoot .avex-hidden {
+  display: none !important;
+}
+
+@media (max-width: 575.98px) {
+  #avExamRoot .avex-actions .btn {
+    width: 100%;
+  }
+}

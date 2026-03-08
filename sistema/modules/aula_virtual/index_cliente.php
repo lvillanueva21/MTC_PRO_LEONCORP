@@ -171,6 +171,54 @@ if ($courseSel && !$courseBlocked) {
   $temas = $st->get_result()->fetch_all(MYSQLI_ASSOC);
 }
 
+/* Examenes AULA del curso/grupo seleccionado */
+$examenesAula = [];
+if ($courseSel && $uid > 0) {
+  $grupoSelId = (int)($courseSel['grupo_id'] ?? 0);
+  if ($grupoSelId > 0) {
+    $st = $db->prepare(
+      "SELECT
+          f.id,
+          f.titulo,
+          f.descripcion,
+          f.intentos_max,
+          f.tiempo_activo,
+          f.duracion_min,
+          f.nota_min,
+          f.mostrar_resultado,
+          (
+            SELECT COUNT(*) FROM cr_formulario_intentos i
+            WHERE i.formulario_id = f.id
+              AND i.usuario_id = mg.usuario_id
+          ) AS intentos_usados,
+          (
+            SELECT COUNT(*) FROM cr_formulario_intentos i
+            WHERE i.formulario_id = f.id
+              AND i.usuario_id = mg.usuario_id
+              AND i.status = 'EN_PROGRESO'
+          ) AS intentos_en_progreso
+       FROM cr_formularios f
+       JOIN cr_matriculas_grupo mg ON mg.grupo_id = f.grupo_id
+         AND mg.curso_id = f.curso_id
+         AND mg.usuario_id = ?
+         AND mg.estado = 1
+       JOIN mtp_usuarios ux ON ux.id = mg.usuario_id
+       JOIN cr_grupos g ON g.id = f.grupo_id
+         AND g.empresa_id = ux.id_empresa
+       WHERE f.modo = 'AULA'
+         AND f.tipo = 'EXAMEN'
+         AND f.estado = 'PUBLICADO'
+         AND f.curso_id = ?
+         AND f.grupo_id = ?
+         AND g.activo = 1
+       ORDER BY f.id DESC"
+    );
+    $st->bind_param('iii', $uid, $selectedId, $grupoSelId);
+    $st->execute();
+    $examenesAula = $st->get_result()->fetch_all(MYSQLI_ASSOC);
+  }
+}
+
 /* Conteo inicial para progreso */
 $totalTemas = (int)count($temas);
 $doneInicial = 0;
@@ -305,7 +353,44 @@ include __DIR__ . '/../../includes/header.php';
                     <?php endif; ?>
                   </div>
                   <div class="tab-pane fade" id="tab_exam" role="tabpanel">
-                    <p class="text-muted mb-0">Sin contenido disponible</p>
+                    <?php if ($courseBlocked): ?>
+                      <div class="alert alert-warning mb-0">Los examenes estan bloqueados mientras el curso este fuera del rango horario del grupo.</div>
+                    <?php elseif (!$courseSel): ?>
+                      <p class="text-muted mb-0">Selecciona un curso para ver examenes.</p>
+                    <?php elseif (!$examenesAula): ?>
+                      <p class="text-muted mb-0">No hay examenes disponibles para este curso y grupo.</p>
+                    <?php else: ?>
+                      <div class="av-exam-list">
+                        <?php foreach ($examenesAula as $ex):
+                          $intentosMax = (int)($ex['intentos_max'] ?? 1);
+                          $intentosUsados = (int)($ex['intentos_usados'] ?? 0);
+                          $enProgreso = (int)($ex['intentos_en_progreso'] ?? 0);
+                          $restantes = max(0, $intentosMax - $intentosUsados);
+                          $puedeAbrir = ($enProgreso > 0 || $restantes > 0);
+                          $btnLabel = $enProgreso > 0 ? 'Continuar' : 'Comenzar';
+                          $duracionTxt = ((int)($ex['tiempo_activo'] ?? 0) === 1 && (int)($ex['duracion_min'] ?? 0) > 0)
+                            ? ((int)$ex['duracion_min'] . ' min')
+                            : 'Sin limite';
+                        ?>
+                          <div class="av-exam-item">
+                            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                              <div>
+                                <div class="fw-semibold"><?= h((string)($ex['titulo'] ?? 'Examen')) ?></div>
+                                <div class="small text-muted"><?= !empty($ex['descripcion']) ? h((string)$ex['descripcion']) : 'Sin descripcion' ?></div>
+                                <div class="small text-muted mt-1">
+                                  Intentos: <?= $intentosUsados ?>/<?= $intentosMax ?> - Restantes: <?= $restantes ?> - Duracion: <?= h($duracionTxt) ?> - Nota minima: <?= h((string)$ex['nota_min']) ?>
+                                </div>
+                              </div>
+                              <?php if ($puedeAbrir): ?>
+                                <a class="btn btn-sm btn-primary" href="<?= h(BASE_URL . '/modules/aula_virtual/aula_examen.php?pub=' . (int)$ex['id']) ?>"><?= h($btnLabel) ?></a>
+                              <?php else: ?>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" disabled>Sin intentos</button>
+                              <?php endif; ?>
+                            </div>
+                          </div>
+                        <?php endforeach; ?>
+                      </div>
+                    <?php endif; ?>
                   </div>
                   <div class="tab-pane fade" id="tab_calif" role="tabpanel">
                     <p class="text-muted mb-0">Sin contenido disponible</p>

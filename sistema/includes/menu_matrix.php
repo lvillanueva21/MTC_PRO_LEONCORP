@@ -103,6 +103,7 @@ return [
                 // Solo Administracion: nuevo orden y separacion de submenus
                 ['path' => 'modules/aula_virtual/aula_virtual_administracion_matriculas.php', 'icon' => 'fas fa-user-check', 'label' => 'Matriculas', 'roles' => [$R['ADM']]],
                 ['path' => 'modules/aula_virtual/aula_virtual_administracion_cursos.php', 'icon' => 'fas fa-book-open', 'label' => 'Cursos', 'roles' => [$R['ADM']]],
+                ['path' => 'modules/aula_virtual/aula_virtual_administracion_formularios.php', 'icon' => 'fas fa-clipboard-list', 'label' => 'Formularios', 'roles' => [$R['ADM']]],
                 ['path' => 'modules/certificados/', 'icon' => 'fas fa-file-signature', 'label' => 'Certificados', 'roles' => [$R['ADM']]],
 
                 // Resto de roles: mantener estructura actual

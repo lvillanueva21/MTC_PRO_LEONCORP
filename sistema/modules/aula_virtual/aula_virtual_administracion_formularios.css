@@ -1,0 +1,134 @@
+/* Ver 08-03-26 */
+#avRoot #avAdminFormsRoot .ava-table-wrap {
+  overflow: auto;
+}
+
+#avRoot #avAdminFormsRoot .ava-table td,
+#avRoot #avAdminFormsRoot .ava-table th {
+  vertical-align: middle;
+}
+
+#avRoot #avAdminFormsRoot .ava-help {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+#avRoot #avAdminFormsRoot .ava-selected {
+  border: 1px dashed var(--card-border);
+  border-radius: 10px;
+  padding: 0.7rem 0.8rem;
+  background: var(--highlight-bg);
+}
+
+#avRoot #avAdminFormsRoot .avf-row-title {
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+#avRoot #avAdminFormsRoot .avf-row-meta {
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.25;
+}
+
+#avRoot #avAdminFormsRoot .avf-state-badge {
+  font-size: 0.72rem;
+  border-radius: 999px;
+  padding: 0.3rem 0.52rem;
+}
+
+#avRoot #avAdminFormsRoot .avf-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+#avRoot #avAdminFormsRoot .avf-actions .btn {
+  white-space: nowrap;
+}
+
+#avRoot #avAdminFormsRoot .ava-empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 1rem 0.5rem;
+}
+
+#avRoot #avAdminFormsRoot .avf-qr-image {
+  max-width: 100%;
+  width: 380px;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 0.4rem;
+  background: #fff;
+}
+
+#avRoot #avAdminFormsRoot .avf-link-readonly {
+  font-size: 0.86rem;
+}
+
+#avRoot #avAdminFormEditorRoot .avfe-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+#avRoot #avAdminFormEditorRoot .avfe-card {
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: var(--card);
+}
+
+#avRoot #avAdminFormEditorRoot .avfe-card .card-header {
+  border-bottom: 1px solid var(--card-border);
+  background: transparent;
+}
+
+#avRoot #avAdminFormEditorRoot .avfe-actions {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+#avRoot #avAdminFormEditorRoot .avfe-question-item {
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  padding: 0.62rem 0.7rem;
+  margin-bottom: 0.55rem;
+  background: var(--highlight-bg);
+}
+
+#avRoot #avAdminFormEditorRoot .avfe-question-title {
+  font-weight: 700;
+}
+
+#avRoot #avAdminFormEditorRoot .avfe-option-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 0.45rem;
+}
+
+#avRoot #avAdminFormEditorRoot .avfe-total {
+  font-weight: 700;
+}
+
+#avRoot #avAdminFormEditorRoot .avfe-total.ok {
+  color: #0a7f47;
+}
+
+#avRoot #avAdminFormEditorRoot .avfe-total.bad {
+  color: #b91c1c;
+}
+
+@media (max-width: 991.98px) {
+  #avRoot #avAdminFormsRoot .avf-actions .btn {
+    flex: 1 1 auto;
+  }
+}
+
+@media (max-width: 575.98px) {
+  #avRoot #avAdminFormEditorRoot .avfe-option-row {
+    grid-template-columns: 1fr;
+  }
+}

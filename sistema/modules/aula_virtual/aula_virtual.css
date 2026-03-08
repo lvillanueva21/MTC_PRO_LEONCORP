@@ -230,6 +230,19 @@
 
 .av-mini{ width:44px; height:30px; object-fit:cover; border-radius:6px; border:1px solid var(--card-border); }
 
+/* Examenes tab */
+.av-exam-list{
+  display:flex;
+  flex-direction:column;
+  gap:.55rem;
+}
+.av-exam-item{
+  border:1px solid var(--card-border);
+  border-radius:10px;
+  background:var(--card);
+  padding:.65rem .7rem;
+}
+
 /* Controles */
 .av-controls .btn{ border-radius:10px; }
 .btn-brand{ background:var(--brand-600); color:#fff; border:1px solid var(--brand-600); }
