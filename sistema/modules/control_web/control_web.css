@@ -1,0 +1,41 @@
+.cw-actions {
+    gap: 12px;
+}
+
+.cw-action-btn {
+    border: 0;
+    border-radius: 999px;
+    color: #fff;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    min-width: 140px;
+    padding: 10px 20px;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+}
+
+.cw-action-btn:hover {
+    color: #fff;
+    opacity: 0.95;
+    transform: translateY(-1px);
+}
+
+.cw-action-btn:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.35);
+    color: #fff;
+}
+
+.cw-action-btn.is-active {
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.85), 0 0 0 6px rgba(0, 123, 255, 0.3);
+}
+
+.cw-btn-cabecera {
+    background: linear-gradient(135deg, #ff9966 0%, #ff5e62 100%);
+}
+
+.cw-btn-menu {
+    background: linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%);
+}
+
+.cw-workspace {
+    min-height: 360px;
+}

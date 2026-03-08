@@ -14,10 +14,13 @@ if (!function_exists('h')) {
     }
 }
 
-$pageTitle = 'Control Web';
+$pageTitle = 'Control de Página Web';
+$cwBaseUrl = BASE_URL . '/modules/control_web';
 
 include __DIR__ . '/../../includes/header.php';
 ?>
+
+<link rel="stylesheet" href="<?php echo h($cwBaseUrl . '/control_web.css?v=1'); ?>">
 
 <div class="content-wrapper">
   <div class="content-header">
@@ -39,15 +42,35 @@ include __DIR__ . '/../../includes/header.php';
   <section class="content pb-3">
     <div class="container-fluid">
       <div class="card card-outline card-primary">
-        <div class="card-body">
-          <h5 class="mb-2">Sistema web en construcción</h5>
-          <p class="text-muted mb-0">
-            Este módulo será usado para administrar de forma dinámica el contenido del sitio web.
-          </p>
+        <div class="card-body pb-2">
+          <div class="cw-actions d-flex flex-wrap">
+            <button type="button" class="btn cw-action-btn cw-btn-cabecera" data-target="cabecera">
+              Cabecera
+            </button>
+            <button type="button" class="btn cw-action-btn cw-btn-menu" data-target="menu">
+              Menú
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="cw-feedback" class="mb-2" style="display:none;"></div>
+
+      <div id="cw-workspace" class="card card-outline card-secondary cw-workspace">
+        <div class="card-body text-muted">
+          Selecciona una opción para continuar.
         </div>
       </div>
     </div>
   </section>
 </div>
+
+<script>
+window.CONTROL_WEB = {
+    cabeceraUrl: <?php echo json_encode($cwBaseUrl . '/cabecera/index.php'); ?>,
+    menuUrl: <?php echo json_encode($cwBaseUrl . '/menu/index.php'); ?>
+};
+</script>
+<script src="<?php echo h($cwBaseUrl . '/control_web.js?v=1'); ?>"></script>
 
 <?php include __DIR__ . '/../../includes/footer.php'; ?>
