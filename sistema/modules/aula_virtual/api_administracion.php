@@ -100,22 +100,23 @@ function sync_usuario_curso(mysqli $db, int $usuarioId, int $cursoId, int $activ
   $st->execute();
 }
 
-function fetch_active_group_for_course(mysqli $db, int $cursoId): ?array {
+function fetch_active_group_for_course(mysqli $db, int $cursoId, int $empresaId): ?array {
   $st = $db->prepare(
-    "SELECT id, curso_id, nombre, descripcion, inicio_at, fin_at, codigo, activo
+    "SELECT id, curso_id, empresa_id, nombre, descripcion, inicio_at, fin_at, codigo, activo
      FROM cr_grupos
      WHERE curso_id = ?
-       AND activo = 1
-     ORDER BY id ASC
-     LIMIT 1"
+       AND empresa_id = ?
+        AND activo = 1
+      ORDER BY id ASC
+      LIMIT 1"
   );
-  $st->bind_param('i', $cursoId);
+  $st->bind_param('ii', $cursoId, $empresaId);
   $st->execute();
   $row = $st->get_result()->fetch_assoc();
   return $row ?: null;
 }
 
-function matricular_cliente_en_grupo(mysqli $db, int $usuarioId, int $cursoId, int $grupoId, int $actorId): array {
+function matricular_cliente_en_grupo(mysqli $db, int $usuarioId, int $cursoId, int $grupoId, int $actorId, int $empresaId): array {
   $stC = $db->prepare("SELECT id, nombre FROM cr_cursos WHERE id = ? AND activo = 1");
   $stC->bind_param('i', $cursoId);
   $stC->execute();
@@ -125,16 +126,17 @@ function matricular_cliente_en_grupo(mysqli $db, int $usuarioId, int $cursoId, i
   }
 
   $stG = $db->prepare(
-    "SELECT id, curso_id, nombre, descripcion, inicio_at, fin_at, codigo, activo
+    "SELECT id, curso_id, empresa_id, nombre, descripcion, inicio_at, fin_at, codigo, activo
      FROM cr_grupos
-     WHERE id = ?
-     LIMIT 1"
+      WHERE id = ?
+       AND empresa_id = ?
+      LIMIT 1"
   );
-  $stG->bind_param('i', $grupoId);
+  $stG->bind_param('ii', $grupoId, $empresaId);
   $stG->execute();
   $grupo = $stG->get_result()->fetch_assoc();
   if (!$grupo) {
-    jerror(404, 'El grupo no existe.');
+    jerror(404, 'El grupo no existe en tu empresa.');
   }
   if ((int)$grupo['activo'] !== 1) {
     jerror(400, 'Solo puedes matricular en grupos activos.');
@@ -207,21 +209,22 @@ function matricular_cliente_en_grupo(mysqli $db, int $usuarioId, int $cursoId, i
   ];
 }
 
-function expulsar_cliente_de_curso(mysqli $db, int $usuarioId, int $cursoId, int $actorId): array {
+function expulsar_cliente_de_curso(mysqli $db, int $usuarioId, int $cursoId, int $actorId, int $empresaId): array {
   $db->begin_transaction();
   try {
     $st = $db->prepare(
       "SELECT mg.id, mg.curso_id, mg.grupo_id, c.nombre AS curso_nombre, g.nombre AS grupo_nombre, g.codigo AS grupo_codigo
        FROM cr_matriculas_grupo mg
        JOIN cr_cursos c ON c.id = mg.curso_id
-       LEFT JOIN cr_grupos g ON g.id = mg.grupo_id
+       JOIN cr_grupos g ON g.id = mg.grupo_id
        WHERE mg.usuario_id = ?
          AND mg.curso_id = ?
+         AND g.empresa_id = ?
          AND mg.estado = 1
        LIMIT 1
        FOR UPDATE"
     );
-    $st->bind_param('ii', $usuarioId, $cursoId);
+    $st->bind_param('iii', $usuarioId, $cursoId, $empresaId);
     $st->execute();
     $row = $st->get_result()->fetch_assoc();
     if (!$row) {
@@ -291,13 +294,14 @@ try {
       if ($cursoId <= 0) jerror(400, 'curso_id requerido.');
 
       $st = $db->prepare(
-        "SELECT id, curso_id, nombre, descripcion, inicio_at, fin_at, codigo, activo, created_at, updated_at
+        "SELECT id, curso_id, empresa_id, nombre, descripcion, inicio_at, fin_at, codigo, activo, created_at, updated_at
          FROM cr_grupos
          WHERE curso_id = ?
+           AND empresa_id = ?
            AND activo = 1
          ORDER BY id DESC"
       );
-      $st->bind_param('i', $cursoId);
+      $st->bind_param('ii', $cursoId, $empresaId);
       $st->execute();
       $rows = $st->get_result()->fetch_all(MYSQLI_ASSOC);
       jok(['data' => $rows]);
@@ -333,10 +337,10 @@ try {
       try {
         $descParam = ($descripcion !== '') ? $descripcion : null;
         $st = $db->prepare(
-          "INSERT INTO cr_grupos (curso_id, nombre, descripcion, inicio_at, fin_at, codigo, activo, created_at)
-           VALUES (?, ?, ?, ?, ?, NULL, ?, NOW())"
+          "INSERT INTO cr_grupos (curso_id, empresa_id, nombre, descripcion, inicio_at, fin_at, codigo, activo, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, NULL, ?, NOW())"
         );
-        $st->bind_param('issssi', $cursoId, $nombre, $descParam, $inicioAt, $finAt, $activo);
+        $st->bind_param('iissssi', $cursoId, $empresaId, $nombre, $descParam, $inicioAt, $finAt, $activo);
         $st->execute();
         $gid = (int)$db->insert_id;
 
@@ -352,7 +356,7 @@ try {
         $db->commit();
 
         $stR = $db->prepare(
-          "SELECT id, curso_id, nombre, descripcion, inicio_at, fin_at, codigo, activo, created_at, updated_at
+          "SELECT id, curso_id, empresa_id, nombre, descripcion, inicio_at, fin_at, codigo, activo, created_at, updated_at
            FROM cr_grupos
            WHERE id = ?"
         );
@@ -394,9 +398,18 @@ try {
       }
 
       if ($cursoId > 0) {
-        $where[] = 'EXISTS (SELECT 1 FROM cr_matriculas_grupo mg2 WHERE mg2.usuario_id = u.id AND mg2.curso_id = ? AND mg2.estado = 1)';
-        $types .= 'i';
+        $where[] = 'EXISTS (
+          SELECT 1
+          FROM cr_matriculas_grupo mg2
+          JOIN cr_grupos g2 ON g2.id = mg2.grupo_id
+          WHERE mg2.usuario_id = u.id
+            AND mg2.curso_id = ?
+            AND mg2.estado = 1
+            AND g2.empresa_id = ?
+        )';
+        $types .= 'ii';
         $pars[] = $cursoId;
+        $pars[] = $empresaId;
       }
 
       $wSql = 'WHERE ' . implode(' AND ', $where);
@@ -412,17 +425,19 @@ try {
                 u.nombres,
                 u.apellidos,
                 MAX(du.ruta_foto) AS foto,
-                COUNT(DISTINCT CASE WHEN mg.estado = 1 THEN mg.curso_id END) AS cursos_count
+                COUNT(DISTINCT CASE WHEN mg.estado = 1 AND gg.id IS NOT NULL THEN mg.curso_id END) AS cursos_count
               FROM mtp_usuarios u
               LEFT JOIN cr_matriculas_grupo mg ON mg.usuario_id = u.id
+              LEFT JOIN cr_grupos gg ON gg.id = mg.grupo_id AND gg.empresa_id = ?
               LEFT JOIN mtp_detalle_usuario du ON du.id_usuario = u.id
               {$wSql}
               GROUP BY u.id, u.usuario, u.nombres, u.apellidos
               ORDER BY u.id DESC
               LIMIT ? OFFSET ?";
 
-      $types2 = $types . 'ii';
-      $pars2  = $pars;
+      $types2 = 'i' . $types . 'ii';
+      $pars2  = [$empresaId];
+      foreach ($pars as $p) $pars2[] = $p;
       $pars2[] = $perPage;
       $pars2[] = $offset;
 
@@ -644,11 +659,12 @@ try {
            mg.updated_at
          FROM cr_matriculas_grupo mg
          JOIN cr_cursos c ON c.id = mg.curso_id
-         LEFT JOIN cr_grupos g ON g.id = mg.grupo_id
+         JOIN cr_grupos g ON g.id = mg.grupo_id
          WHERE mg.usuario_id = ?
+           AND g.empresa_id = ?
          ORDER BY mg.updated_at DESC, mg.id DESC"
       );
-      $st->bind_param('i', $usuarioId);
+      $st->bind_param('ii', $usuarioId, $empresaId);
       $st->execute();
       $rows = $st->get_result()->fetch_all(MYSQLI_ASSOC);
 
@@ -678,7 +694,7 @@ try {
         jerror(404, 'Cliente no encontrado en tu empresa.');
       }
 
-      $matricula = matricular_cliente_en_grupo($db, $usuarioId, $cursoId, $grupoId, $actorId);
+      $matricula = matricular_cliente_en_grupo($db, $usuarioId, $cursoId, $grupoId, $actorId, $empresaId);
       jok([
         'msg' => 'Cliente matriculado correctamente.',
         'data' => $matricula,
@@ -696,7 +712,7 @@ try {
         jerror(404, 'Cliente no encontrado en tu empresa.');
       }
 
-      $info = expulsar_cliente_de_curso($db, $usuarioId, $cursoId, $actorId);
+      $info = expulsar_cliente_de_curso($db, $usuarioId, $cursoId, $actorId, $empresaId);
       jok([
         'msg' => 'Cliente expulsado correctamente del curso.',
         'data' => $info,
@@ -713,12 +729,13 @@ try {
         "SELECT c.id, c.nombre, mg.grupo_id, g.nombre AS grupo_nombre, g.codigo AS grupo_codigo
          FROM cr_matriculas_grupo mg
          JOIN cr_cursos c ON c.id = mg.curso_id
-         LEFT JOIN cr_grupos g ON g.id = mg.grupo_id
+         JOIN cr_grupos g ON g.id = mg.grupo_id
          WHERE mg.usuario_id = ?
+           AND g.empresa_id = ?
            AND mg.estado = 1
          ORDER BY c.nombre ASC"
       );
-      $st->bind_param('i', $usuarioId);
+      $st->bind_param('ii', $usuarioId, $empresaId);
       $st->execute();
       $rows = $st->get_result()->fetch_all(MYSQLI_ASSOC);
       jok(['data' => $rows]);
@@ -737,14 +754,14 @@ try {
         jerror(404, 'Cliente no encontrado en tu empresa.');
       }
       if ($grupoId <= 0) {
-        $grupo = fetch_active_group_for_course($db, $cursoId);
+        $grupo = fetch_active_group_for_course($db, $cursoId, $empresaId);
         if (!$grupo) {
           jerror(409, 'No hay grupos activos para ese curso. Crea un grupo antes de matricular.');
         }
         $grupoId = (int)$grupo['id'];
       }
 
-      $matricula = matricular_cliente_en_grupo($db, $usuarioId, $cursoId, $grupoId, $actorId);
+      $matricula = matricular_cliente_en_grupo($db, $usuarioId, $cursoId, $grupoId, $actorId, $empresaId);
       jok([
         'msg' => 'Cliente matriculado correctamente.',
         'data' => $matricula,
@@ -758,7 +775,7 @@ try {
       if ($usuarioId <= 0 || $cursoId <= 0) jerror(400, 'Parametros invalidos.');
       if (!is_client_in_company($db, $usuarioId, $empresaId)) jerror(404, 'Cliente no encontrado en tu empresa.');
 
-      $info = expulsar_cliente_de_curso($db, $usuarioId, $cursoId, $actorId);
+      $info = expulsar_cliente_de_curso($db, $usuarioId, $cursoId, $actorId, $empresaId);
       jok([
         'msg' => 'Cliente expulsado correctamente del curso.',
         'data' => $info,
@@ -781,6 +798,9 @@ try {
   }
   if ($errCode === 1146) {
     jerror(500, 'Faltan tablas del Paso 1 (cr_grupos o cr_matriculas_grupo). Ejecuta el SQL de migracion.');
+  }
+  if ($errCode === 1054 && stripos((string)$e->getMessage(), 'empresa_id') !== false) {
+    jerror(500, 'Falta la columna empresa_id en cr_grupos. Ejecuta la migracion SQL del modulo Aula Virtual.');
   }
   jerror(500, 'Error interno del servidor.', ['dev' => $e->getMessage()]);
 } catch (Throwable $e) {

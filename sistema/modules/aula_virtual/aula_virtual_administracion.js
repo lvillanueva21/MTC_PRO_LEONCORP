@@ -27,6 +27,7 @@
     formBasePhoto: '',
     enrollCourse: null,
     expelTarget: null,
+    availableCourseQuery: '',
   };
 
   function $(sel) {
@@ -43,6 +44,14 @@
         "'": '&#39;',
       }[m];
     });
+  }
+
+  function normalizeText(text) {
+    const base = String(text ?? '').toLowerCase();
+    if (typeof base.normalize === 'function') {
+      return base.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+    }
+    return base.trim();
   }
 
   function debounce(fn, delay) {
@@ -316,8 +325,10 @@
     const matriculasBox = $('#avaMatriculasList');
     const availableEmpty = $('#avaAvailableEmpty');
     const matriculasEmpty = $('#avaMatriculasEmpty');
+    const availableSearch = $('#avaAvailableCourseSearch');
 
     if (!availableBox || !matriculasBox || !availableEmpty || !matriculasEmpty) return;
+    if (availableSearch) availableSearch.disabled = !state.selectedClient;
 
     if (!state.selectedClient) {
       availableBox.innerHTML = '';
@@ -330,8 +341,13 @@
     }
 
     const activeMap = activeMatriculaMap();
+    const query = normalizeText(state.availableCourseQuery || '');
+    const filteredCourses = (state.courses || []).filter(function (c) {
+      if (!query) return true;
+      return normalizeText(c.nombre || '').indexOf(query) !== -1;
+    });
     const availableRows = [];
-    (state.courses || []).forEach(function (c) {
+    filteredCourses.forEach(function (c) {
       const m = activeMap.get(Number(c.id));
       if (m) {
         const gname = m.grupo_nombre || ('Grupo #' + (m.grupo_id || 0));
@@ -358,7 +374,9 @@
     if (!availableRows.length) {
       availableBox.innerHTML = '';
       availableEmpty.classList.remove('d-none');
-      availableEmpty.textContent = 'No hay cursos activos disponibles.';
+      availableEmpty.textContent = query
+        ? 'No hay cursos que coincidan con la busqueda.'
+        : 'No hay cursos activos disponibles.';
     } else {
       availableEmpty.classList.add('d-none');
       availableBox.innerHTML = availableRows.join('');
@@ -935,8 +953,14 @@
     loadClients().catch(function (err) { notify('error', err.message || 'No se pudo filtrar la lista.'); });
   }, 320);
 
+  const onAvailableCourseInput = debounce(function (e) {
+    state.availableCourseQuery = (e.target.value || '').trim();
+    renderCourseLists();
+  }, 180);
+
   root.addEventListener('input', function (e) {
     if (e.target && e.target.id === 'avaFilterQ') onQInput(e);
+    if (e.target && e.target.id === 'avaAvailableCourseSearch') onAvailableCourseInput(e);
   });
 
   root.addEventListener('change', function (e) {

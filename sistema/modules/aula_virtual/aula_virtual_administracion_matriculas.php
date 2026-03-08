@@ -119,6 +119,9 @@ include __DIR__ . '/../../includes/header.php';
               <div class="ava-course-columns">
                 <div class="ava-course-box">
                   <div class="ava-course-title">Cursos disponibles</div>
+                  <div class="ava-course-search mb-2">
+                    <input type="text" id="avaAvailableCourseSearch" class="form-control form-control-sm" placeholder="Buscar curso por nombre...">
+                  </div>
                   <div id="avaAvailableList" class="ava-course-list"></div>
                   <div id="avaAvailableEmpty" class="ava-help">Selecciona un cliente para ver cursos disponibles.</div>
                 </div>
