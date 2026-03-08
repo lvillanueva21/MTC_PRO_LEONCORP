@@ -18,15 +18,15 @@
         <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
 
         <!-- Libraries Stylesheet -->
-        <link href="lib/animate/animate.min.css" rel="stylesheet">
-        <link href="lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
+        <link href="/web/lib/animate/animate.min.css" rel="stylesheet">
+        <link href="/web/lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
 
 
         <!-- Customized Bootstrap Stylesheet -->
-        <link href="css/bootstrap.min.css" rel="stylesheet">
+        <link href="/web/css/bootstrap.min.css" rel="stylesheet">
 
         <!-- Template Stylesheet -->
-        <link href="css/style.css" rel="stylesheet">
+        <link href="/web/css/style.css" rel="stylesheet">
     </head>
 
     <body>
@@ -67,31 +67,31 @@
         <div class="container-fluid nav-bar sticky-top px-0 px-lg-4 py-2 py-lg-0">
             <div class="container">
                 <nav class="navbar navbar-expand-lg navbar-light">
-                    <a href="" class="navbar-brand p-0">
+                    <a href="/" class="navbar-brand p-0">
                         <h1 class="display-6 text-primary"><i class="fas fa-car-alt me-3"></i></i>Cental</h1>
-                        <!-- <img src="img/logo.png" alt="Logo"> -->
+                        <!-- <img src="/web/img/logo.png" alt="Logo"> -->
                     </a>
                     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
                         <span class="fa fa-bars"></span>
                     </button>
                     <div class="collapse navbar-collapse" id="navbarCollapse">
                         <div class="navbar-nav mx-auto py-0">
-                            <a href="index.html" class="nav-item nav-link active">Home</a>
-                            <a href="about.html" class="nav-item nav-link">About</a>
-                            <a href="service.html" class="nav-item nav-link">Service</a>
-                            <a href="blog.html" class="nav-item nav-link">Blog</a>
+                            <a href="/" class="nav-item nav-link active">Home</a>
+                            <a href="/web/about.html" class="nav-item nav-link">About</a>
+                            <a href="/web/service.html" class="nav-item nav-link">Service</a>
+                            <a href="/web/blog.html" class="nav-item nav-link">Blog</a>
                             
                             <div class="nav-item dropdown">
                                 <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Pages</a>
                                 <div class="dropdown-menu m-0">
-                                    <a href="feature.html" class="dropdown-item">Our Feature</a>
-                                    <a href="cars.html" class="dropdown-item">Our Cars</a>
-                                    <a href="team.html" class="dropdown-item">Our Team</a>
-                                    <a href="testimonial.html" class="dropdown-item">Testimonial</a>
-                                    <a href="404.html" class="dropdown-item">404 Page</a>
+                                    <a href="/web/feature.html" class="dropdown-item">Our Feature</a>
+                                    <a href="/web/cars.html" class="dropdown-item">Our Cars</a>
+                                    <a href="/web/team.html" class="dropdown-item">Our Team</a>
+                                    <a href="/web/testimonial.html" class="dropdown-item">Testimonial</a>
+                                    <a href="/web/404.html" class="dropdown-item">404 Page</a>
                                 </div>
                             </div>
-                            <a href="contact.html" class="nav-item nav-link">Contact</a>
+                            <a href="/web/contact.html" class="nav-item nav-link">Contact</a>
                         </div>
                         <a href="#" class="btn btn-primary rounded-pill py-2 px-4">Get Started</a>
                     </div>
@@ -109,7 +109,7 @@
                 </ol>
                 <div class="carousel-inner" role="listbox">
                     <div class="carousel-item active">
-                        <img src="img/carousel-2.jpg" class="img-fluid w-100" alt="First slide"/>
+                        <img src="/web/img/carousel-2.jpg" class="img-fluid w-100" alt="First slide"/>
                         <div class="carousel-caption">
                             <div class="container py-4">
                                 <div class="row g-5">
@@ -198,7 +198,7 @@
                         </div>
                     </div>
                     <div class="carousel-item">
-                        <img src="img/carousel-1.jpg" class="img-fluid w-100" alt="First slide"/>
+                        <img src="/web/img/carousel-1.jpg" class="img-fluid w-100" alt="First slide"/>
                         <div class="carousel-caption">
                             <div class="container py-4">
                                 <div class="row g-5">
@@ -327,7 +327,7 @@
                         </div>
                     </div>
                     <div class="col-lg-12 col-xl-4 wow fadeInUp" data-wow-delay="0.2s">
-                        <img src="img/features-img.png" class="img-fluid w-100" style="object-fit: cover;" alt="Img">
+                        <img src="/web/img/features-img.png" class="img-fluid w-100" style="object-fit: cover;" alt="Img">
                     </div>
                     <div class="col-xl-4">
                         <div class="row gy-4 gx-0">
@@ -375,7 +375,7 @@
                                 <div class="col-lg-6">
                                     <div class="about-item-inner border p-4">
                                         <div class="about-icon mb-4">
-                                            <img src="img/about-icon-1.png" class="img-fluid w-50 h-50" alt="Icon">
+                                            <img src="/web/img/about-icon-1.png" class="img-fluid w-50 h-50" alt="Icon">
                                         </div>
                                         <h5 class="mb-3">Our Vision</h5>
                                         <p class="mb-0">Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
@@ -384,7 +384,7 @@
                                 <div class="col-lg-6">
                                     <div class="about-item-inner border p-4">
                                         <div class="about-icon mb-4">
-                                            <img src="img/about-icon-2.png" class="img-fluid h-50 w-50" alt="Icon">
+                                            <img src="/web/img/about-icon-2.png" class="img-fluid h-50 w-50" alt="Icon">
                                         </div>
                                         <h5 class="mb-3">Our Mision</h5>
                                         <p class="mb-0">Lorem ipsum dolor sit amet consectetur adipisicing elit.</p>
@@ -413,7 +413,7 @@
                                 </div>
                                 <div class="col-lg-7">
                                     <div class="d-flex align-items-center">
-                                        <img src="img/attachment-img.jpg" class="img-fluid rounded-circle border border-4 border-secondary" style="width: 100px; height: 100px;" alt="Image">
+                                        <img src="/web/img/attachment-img.jpg" class="img-fluid rounded-circle border border-4 border-secondary" style="width: 100px; height: 100px;" alt="Image">
                                         <div class="ms-4">
                                             <h4>William Burgess</h4>
                                             <p class="mb-0">Carveo Founder</p>
@@ -426,10 +426,10 @@
                     <div class="col-xl-6 wow fadeInRight" data-wow-delay="0.2s">
                         <div class="about-img">
                             <div class="img-1">
-                                <img src="img/about-img.jpg" class="img-fluid rounded h-100 w-100" alt="">
+                                <img src="/web/img/about-img.jpg" class="img-fluid rounded h-100 w-100" alt="">
                             </div>
                             <div class="img-2">
-                                <img src="img/about-img-1.jpg" class="img-fluid rounded w-100" alt="">
+                                <img src="/web/img/about-img-1.jpg" class="img-fluid rounded w-100" alt="">
                             </div>
                         </div>
                     </div>
@@ -575,7 +575,7 @@
                     <div class="categories-item p-4">
                         <div class="categories-item-inner">
                             <div class="categories-img rounded-top">
-                                <img src="img/car-1.png" class="img-fluid w-100 rounded-top" alt="">
+                                <img src="/web/img/car-1.png" class="img-fluid w-100 rounded-top" alt="">
                             </div>
                             <div class="categories-content rounded-bottom p-4">
                                 <h4>Mercedes Benz R3</h4>
@@ -619,7 +619,7 @@
                     <div class="categories-item p-4">
                         <div class="categories-item-inner">
                             <div class="categories-img rounded-top">
-                                <img src="img/car-2.png" class="img-fluid w-100 rounded-top" alt="">
+                                <img src="/web/img/car-2.png" class="img-fluid w-100 rounded-top" alt="">
                             </div>
                             <div class="categories-content rounded-bottom p-4">
                                 <h4>Toyota Corolla Cross</h4>
@@ -663,7 +663,7 @@
                     <div class="categories-item p-4">
                         <div class="categories-item-inner">
                             <div class="categories-img rounded-top">
-                                <img src="img/car-3.png" class="img-fluid w-100 rounded-top" alt="">
+                                <img src="/web/img/car-3.png" class="img-fluid w-100 rounded-top" alt="">
                             </div>
                             <div class="categories-content rounded-bottom p-4">
                                 <h4>Tesla Model S Plaid</h4>
@@ -707,7 +707,7 @@
                     <div class="categories-item p-4">
                         <div class="categories-item-inner">
                             <div class="categories-img rounded-top">
-                                <img src="img/car-4.png" class="img-fluid w-100 rounded-top" alt="">
+                                <img src="/web/img/car-4.png" class="img-fluid w-100 rounded-top" alt="">
                             </div>
                             <div class="categories-content rounded-bottom p-4">
                                 <h4>Hyundai Kona Electric</h4>
@@ -800,7 +800,7 @@
                     <div class="col-lg-4 wow fadeInUp" data-wow-delay="0.1s">
                         <div class="blog-item">
                             <div class="blog-img">
-                                <img src="img/blog-1.jpg" class="img-fluid rounded-top w-100" alt="Image">
+                                <img src="/web/img/blog-1.jpg" class="img-fluid rounded-top w-100" alt="Image">
                             </div>
                             <div class="blog-content rounded-bottom p-4">
                                 <div class="blog-date">30 Dec 2025</div>
@@ -817,7 +817,7 @@
                     <div class="col-lg-4 wow fadeInUp" data-wow-delay="0.3s">
                         <div class="blog-item">
                             <div class="blog-img">
-                                <img src="img/blog-2.jpg" class="img-fluid rounded-top w-100" alt="Image">
+                                <img src="/web/img/blog-2.jpg" class="img-fluid rounded-top w-100" alt="Image">
                             </div>
                             <div class="blog-content rounded-bottom p-4">
                                 <div class="blog-date">25 Dec 2025</div>
@@ -834,7 +834,7 @@
                     <div class="col-lg-4 wow fadeInUp" data-wow-delay="0.5s">
                         <div class="blog-item">
                             <div class="blog-img">
-                                <img src="img/blog-3.jpg" class="img-fluid rounded-top w-100" alt="Image">
+                                <img src="/web/img/blog-3.jpg" class="img-fluid rounded-top w-100" alt="Image">
                             </div>
                             <div class="blog-content rounded-bottom p-4">
                                 <div class="blog-date">27 Dec 2025</div>
@@ -857,7 +857,7 @@
         <div class="container-fluid banner pb-5 wow zoomInDown" data-wow-delay="0.1s">
             <div class="container pb-5">
                 <div class="banner-item rounded">
-                    <img src="img/banner-1.jpg" class="img-fluid rounded w-100" alt="">
+                    <img src="/web/img/banner-1.jpg" class="img-fluid rounded w-100" alt="">
                     <div class="banner-content">
                         <h2 class="text-primary">Rent Your Car</h2>
                         <h1 class="text-white">Interested in Renting?</h1>
@@ -884,7 +884,7 @@
                     <div class="col-md-6 col-lg-6 col-xl-3 wow fadeInUp" data-wow-delay="0.1s">
                         <div class="team-item p-4 pt-0">
                             <div class="team-img">
-                                <img src="img/team-1.jpg" class="img-fluid rounded w-100" alt="Image">
+                                <img src="/web/img/team-1.jpg" class="img-fluid rounded w-100" alt="Image">
                             </div>
                             <div class="team-content pt-4">
                                 <h4>MARTIN DOE</h4>
@@ -901,7 +901,7 @@
                     <div class="col-md-6 col-lg-6 col-xl-3 wow fadeInUp" data-wow-delay="0.3s">
                         <div class="team-item p-4 pt-0">
                             <div class="team-img">
-                                <img src="img/team-2.jpg" class="img-fluid rounded w-100" alt="Image">
+                                <img src="/web/img/team-2.jpg" class="img-fluid rounded w-100" alt="Image">
                             </div>
                             <div class="team-content pt-4">
                                 <h4>MARTIN DOE</h4>
@@ -918,7 +918,7 @@
                     <div class="col-md-6 col-lg-6 col-xl-3 wow fadeInUp" data-wow-delay="0.5s">
                         <div class="team-item p-4 pt-0">
                             <div class="team-img">
-                                <img src="img/team-3.jpg" class="img-fluid rounded w-100" alt="Image">
+                                <img src="/web/img/team-3.jpg" class="img-fluid rounded w-100" alt="Image">
                             </div>
                             <div class="team-content pt-4">
                                 <h4>MARTIN DOE</h4>
@@ -935,7 +935,7 @@
                     <div class="col-md-6 col-lg-6 col-xl-3 wow fadeInUp" data-wow-delay="0.7s">
                         <div class="team-item p-4 pt-0">
                             <div class="team-img">
-                                <img src="img/team-4.jpg" class="img-fluid rounded w-100" alt="Image">
+                                <img src="/web/img/team-4.jpg" class="img-fluid rounded w-100" alt="Image">
                             </div>
                             <div class="team-content pt-4">
                                 <h4>MARTIN DOE</h4>
@@ -967,7 +967,7 @@
                         <div class="testimonial-quote"><i class="fa fa-quote-right fa-2x"></i>
                         </div>
                         <div class="testimonial-inner p-4">
-                            <img src="img/testimonial-1.jpg" class="img-fluid" alt="">
+                            <img src="/web/img/testimonial-1.jpg" class="img-fluid" alt="">
                             <div class="ms-4">
                                 <h4>Person Name</h4>
                                 <p>Profession</p>
@@ -988,7 +988,7 @@
                         <div class="testimonial-quote"><i class="fa fa-quote-right fa-2x"></i>
                         </div>
                         <div class="testimonial-inner p-4">
-                            <img src="img/testimonial-2.jpg" class="img-fluid" alt="">
+                            <img src="/web/img/testimonial-2.jpg" class="img-fluid" alt="">
                             <div class="ms-4">
                                 <h4>Person Name</h4>
                                 <p>Profession</p>
@@ -1009,7 +1009,7 @@
                         <div class="testimonial-quote"><i class="fa fa-quote-right fa-2x"></i>
                         </div>
                         <div class="testimonial-inner p-4">
-                            <img src="img/testimonial-3.jpg" class="img-fluid" alt="">
+                            <img src="/web/img/testimonial-3.jpg" class="img-fluid" alt="">
                             <div class="ms-4">
                                 <h4>Person Name</h4>
                                 <p>Profession</p>
@@ -1121,15 +1121,15 @@
     <!-- JavaScript Libraries -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="lib/wow/wow.min.js"></script>
-    <script src="lib/easing/easing.min.js"></script>
-    <script src="lib/waypoints/waypoints.min.js"></script>
-    <script src="lib/counterup/counterup.min.js"></script>
-    <script src="lib/owlcarousel/owl.carousel.min.js"></script>
+    <script src="/web/lib/wow/wow.min.js"></script>
+    <script src="/web/lib/easing/easing.min.js"></script>
+    <script src="/web/lib/waypoints/waypoints.min.js"></script>
+    <script src="/web/lib/counterup/counterup.min.js"></script>
+    <script src="/web/lib/owlcarousel/owl.carousel.min.js"></script>
     
 
     <!-- Template Javascript -->
-    <script src="js/main.js"></script>
+    <script src="/web/js/main.js"></script>
     </body>
 
 </html>
