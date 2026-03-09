@@ -113,6 +113,7 @@
                     nosotros: cfg.nosotrosUrl,
                     contadores: cfg.contadoresUrl,
                     servicios: cfg.serviciosUrl,
+                    carrusel_servicios: cfg.carruselServiciosUrl,
                     proceso: cfg.procesoUrl,
                     banner: cfg.bannerUrl,
                     formulario_carrusel: cfg.formularioCarruselUrl
@@ -159,6 +160,11 @@
 
                     if (target === 'servicios') {
                         initServicesForm();
+                        return;
+                    }
+
+                    if (target === 'carrusel_servicios') {
+                        initCarruselServiciosForm();
                         return;
                     }
 
@@ -834,6 +840,399 @@
                 $form.find('[data-cw-counter]').each(function () {
                     initCharCounter($(this));
                 });
+            }
+
+            function csCounterId(prefix) {
+                return 'cw_cs_' + String(prefix || 'field') + '_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+            }
+
+            function csDetailDefaults() {
+                return [
+                    { visible: 1, icono: 'fa fa-users', texto: '4 Seat' },
+                    { visible: 1, icono: 'fa fa-car', texto: 'AT/MT' },
+                    { visible: 1, icono: 'fa fa-gas-pump', texto: 'Petrol' },
+                    { visible: 1, icono: 'fa fa-car', texto: '2015' },
+                    { visible: 1, icono: 'fa fa-cogs', texto: 'AUTO' },
+                    { visible: 1, icono: 'fa fa-road', texto: '27K' }
+                ];
+            }
+
+            function createCsDetailRowHtml(detailIndex, detailData) {
+                var defaults = csDetailDefaults();
+                var base = defaults[detailIndex] || { visible: 1, icono: 'fa fa-circle', texto: 'Detalle' };
+                var d = detailData || {};
+                var visible = !(String(d.visible || '').trim() === '0' || d.visible === 0 || d.visible === false);
+                var icono = $.trim(String(d.icono || base.icono || 'fa fa-circle'));
+                var texto = $.trim(String(d.texto || base.texto || 'Detalle'));
+                var checkId = csCounterId('detail_visible_' + detailIndex);
+
+                return ''
+                    + '<div class="form-row align-items-center cw-cs-detail-row mb-2" data-detail-index="' + detailIndex + '">'
+                    + '  <div class="col-md-2 mb-2 mb-md-0">'
+                    + '    <div class="custom-control custom-checkbox">'
+                    + '      <input type="hidden" class="cw-cs-detail-visible-hidden" value="' + (visible ? '1' : '0') + '">'
+                    + '      <input type="checkbox" class="custom-control-input cw-cs-detail-visible-check" id="' + checkId + '" value="1" ' + (visible ? 'checked' : '') + '>'
+                    + '      <label class="custom-control-label small cw-cs-detail-visible-label" for="' + checkId + '">Mostrar</label>'
+                    + '    </div>'
+                    + '  </div>'
+                    + '  <div class="col-md-5 mb-2 mb-md-0">'
+                    + '    <input type="text" class="form-control form-control-sm cw-cs-detail-icon" maxlength="120" value="' + escapeHtml(icono) + '" placeholder="fa fa-car">'
+                    + '  </div>'
+                    + '  <div class="col-md-5">'
+                    + '    <input type="text" class="form-control form-control-sm cw-cs-detail-text" maxlength="40" value="' + escapeHtml(texto) + '" placeholder="Texto breve">'
+                    + '  </div>'
+                    + '</div>';
+            }
+
+            function createCsItemCard(data) {
+                var d = data || {};
+                var title = $.trim(String(d.titulo || ''));
+                var reviewText = $.trim(String(d.review_text || ''));
+                var badgeText = $.trim(String(d.badge_text || ''));
+                var buttonText = $.trim(String(d.boton_texto || ''));
+                var buttonUrl = $.trim(String(d.boton_url || '#'));
+                var defaultImage = $.trim(String(d.default_image || '/web/img/car-1.png'));
+                var currentImage = $.trim(String(d.current_image || defaultImage));
+                var showStars = !(String(d.mostrar_estrellas || '').trim() === '0' || d.mostrar_estrellas === 0 || d.mostrar_estrellas === false);
+                var rating = parseInt(d.rating, 10);
+                if (!isFinite(rating) || rating < 1 || rating > 5) {
+                    rating = 4;
+                }
+
+                var removeId = csCounterId('remove');
+                var starsId = csCounterId('stars');
+                var titleCounterId = csCounterId('titulo');
+                var reviewCounterId = csCounterId('review');
+                var badgeCounterId = csCounterId('badge');
+                var btnTextCounterId = csCounterId('btn_text');
+                var btnUrlCounterId = csCounterId('btn_url');
+
+                var ratingOptions = '';
+                for (var r = 1; r <= 5; r += 1) {
+                    var selected = (r === rating) ? ' selected' : '';
+                    ratingOptions += '<option value="' + r + '"' + selected + '>' + r + '</option>';
+                }
+
+                var details = Array.isArray(d.detalles) ? d.detalles.slice(0, 6) : csDetailDefaults();
+                if (details.length < 6) {
+                    var defaults = csDetailDefaults();
+                    for (var i = details.length; i < 6; i += 1) {
+                        details.push(defaults[i]);
+                    }
+                }
+                var detailsHtml = '';
+                details.forEach(function (detail, detailIndex) {
+                    detailsHtml += createCsDetailRowHtml(detailIndex, detail);
+                });
+
+                var html = ''
+                    + '<div class="card card-outline card-light cw-cs-item mb-3" data-default-image="' + escapeHtml(defaultImage) + '">'
+                    + '  <div class="card-header py-2 d-flex justify-content-between align-items-center">'
+                    + '    <div>'
+                    + '      <strong class="cw-cs-item-title">Servicio</strong>'
+                    + '      <span class="badge badge-light ml-2 cw-cs-item-slide-label">Slide 1</span>'
+                    + '    </div>'
+                    + '    <button type="button" class="btn btn-sm btn-outline-danger cw-cs-remove-item">Quitar</button>'
+                    + '  </div>'
+                    + '  <div class="card-body py-3">'
+                    + '    <input type="hidden" class="cw-cs-item-id" value="0">'
+                    + '    <div class="form-row">'
+                    + '      <div class="form-group col-md-6">'
+                    + '        <div class="d-flex justify-content-between">'
+                    + '          <label class="mb-1">Titulo</label>'
+                    + '          <small class="text-muted cw-char-counter"><span id="' + titleCounterId + '">80</span> restantes</small>'
+                    + '        </div>'
+                    + '        <input type="text" class="form-control cw-cs-item-titulo" maxlength="80" data-cw-counter="' + titleCounterId + '" value="' + escapeHtml(title) + '" placeholder="Nombre del servicio">'
+                    + '      </div>'
+                    + '      <div class="form-group col-md-3">'
+                    + '        <div class="d-flex justify-content-between">'
+                    + '          <label class="mb-1">Texto review</label>'
+                    + '          <small class="text-muted cw-char-counter"><span id="' + reviewCounterId + '">60</span> restantes</small>'
+                    + '        </div>'
+                    + '        <input type="text" class="form-control cw-cs-item-review" maxlength="60" data-cw-counter="' + reviewCounterId + '" value="' + escapeHtml(reviewText) + '" placeholder="4.5 Review">'
+                    + '      </div>'
+                    + '      <div class="form-group col-md-3">'
+                    + '        <label class="mb-1">Estrellas</label>'
+                    + '        <div class="d-flex align-items-center">'
+                    + '          <select class="form-control form-control-sm cw-cs-item-rating mr-2">' + ratingOptions + '</select>'
+                    + '          <div class="custom-control custom-checkbox">'
+                    + '            <input type="hidden" class="cw-cs-stars-visible-hidden" value="' + (showStars ? '1' : '0') + '">'
+                    + '            <input type="checkbox" class="custom-control-input cw-cs-stars-visible-check" id="' + starsId + '" value="1" ' + (showStars ? 'checked' : '') + '>'
+                    + '            <label class="custom-control-label small cw-cs-stars-visible-label" for="' + starsId + '">Mostrar</label>'
+                    + '          </div>'
+                    + '        </div>'
+                    + '      </div>'
+                    + '    </div>'
+                    + '    <div class="form-row">'
+                    + '      <div class="form-group col-md-6">'
+                    + '        <div class="d-flex justify-content-between">'
+                    + '          <label class="mb-1">Badge precio / texto</label>'
+                    + '          <small class="text-muted cw-char-counter"><span id="' + badgeCounterId + '">80</span> restantes</small>'
+                    + '        </div>'
+                    + '        <input type="text" class="form-control cw-cs-item-badge" maxlength="80" data-cw-counter="' + badgeCounterId + '" value="' + escapeHtml(badgeText) + '" placeholder="$99:00/Day">'
+                    + '      </div>'
+                    + '      <div class="form-group col-md-3">'
+                    + '        <div class="d-flex justify-content-between">'
+                    + '          <label class="mb-1">Texto boton</label>'
+                    + '          <small class="text-muted cw-char-counter"><span id="' + btnTextCounterId + '">50</span> restantes</small>'
+                    + '        </div>'
+                    + '        <input type="text" class="form-control cw-cs-item-btn-text" maxlength="50" data-cw-counter="' + btnTextCounterId + '" value="' + escapeHtml(buttonText) + '" placeholder="Book Now">'
+                    + '      </div>'
+                    + '      <div class="form-group col-md-3">'
+                    + '        <div class="d-flex justify-content-between">'
+                    + '          <label class="mb-1">Enlace boton</label>'
+                    + '          <small class="text-muted cw-char-counter"><span id="' + btnUrlCounterId + '">255</span> restantes</small>'
+                    + '        </div>'
+                    + '        <input type="text" class="form-control cw-cs-item-btn-url" maxlength="255" data-cw-counter="' + btnUrlCounterId + '" value="' + escapeHtml(buttonUrl) + '" placeholder="# o /ruta o https://">'
+                    + '      </div>'
+                    + '    </div>'
+                    + '    <div class="form-row">'
+                    + '      <div class="form-group col-md-6">'
+                    + '        <label class="mb-1">Imagen</label>'
+                    + '        <input type="file" class="form-control-file cw-cs-item-imagen" accept=".png,.webp,.jpg,.jpeg,image/png,image/webp,image/jpeg">'
+                    + '        <small class="form-text text-muted">Categoria: <strong>img_carrusel_servicios</strong>.</small>'
+                    + '        <div class="custom-control custom-checkbox mt-2">'
+                    + '          <input type="hidden" class="cw-cs-item-remove-hidden" value="0">'
+                    + '          <input type="checkbox" class="custom-control-input cw-cs-item-remove-check" id="' + removeId + '" value="1">'
+                    + '          <label class="custom-control-label cw-cs-item-remove-label" for="' + removeId + '">Quitar imagen personalizada</label>'
+                    + '        </div>'
+                    + '      </div>'
+                    + '      <div class="form-group col-md-6">'
+                    + '        <label class="d-block mb-1">Vista previa</label>'
+                    + '        <div class="cw-cs-image-preview p-2 border rounded bg-light">'
+                    + '          <img class="cw-cs-item-preview-img img-fluid" src="' + escapeHtml(currentImage) + '" data-current-src="' + escapeHtml(currentImage) + '" data-default-src="' + escapeHtml(defaultImage) + '" alt="Preview servicio">'
+                    + '        </div>'
+                    + '      </div>'
+                    + '    </div>'
+                    + '    <div class="card card-outline card-secondary mt-2 mb-1">'
+                    + '      <div class="card-header py-2"><strong>Detalles (hasta 6 iconos)</strong></div>'
+                    + '      <div class="card-body py-2">'
+                    +            detailsHtml
+                    + '        <small class="text-muted">Puedes ocultar cualquiera de los 6 detalles o cambiar icono/texto libremente.</small>'
+                    + '      </div>'
+                    + '    </div>'
+                    + '  </div>'
+                    + '</div>';
+
+                return $(html);
+            }
+
+            function syncCsStarsVisibility($item) {
+                if (!$item || !$item.length) {
+                    return;
+                }
+
+                var checked = $item.find('.cw-cs-stars-visible-check').is(':checked');
+                $item.find('.cw-cs-stars-visible-hidden').val(checked ? '1' : '0');
+            }
+
+            function renumberCsItems() {
+                var $items = $('#cw-cs-items .cw-cs-item');
+                var total = $items.length;
+
+                $items.each(function (idx) {
+                    var index = idx + 1;
+                    var $item = $(this);
+                    var removeId = 'cw_cs_remove_' + index + '_' + Date.now();
+                    var starsId = 'cw_cs_stars_' + index + '_' + Date.now();
+
+                    $item.attr('data-index', idx);
+                    $item.find('.cw-cs-item-title').text('Servicio ' + index);
+                    $item.find('.cw-cs-item-slide-label').text('Slide ' + index);
+
+                    $item.find('.cw-cs-item-id').attr('name', 'item_id[' + idx + ']');
+                    $item.find('.cw-cs-item-titulo').attr('name', 'item_titulo[' + idx + ']');
+                    $item.find('.cw-cs-item-review').attr('name', 'item_review_text[' + idx + ']');
+                    $item.find('.cw-cs-item-rating').attr('name', 'item_rating[' + idx + ']');
+                    $item.find('.cw-cs-item-badge').attr('name', 'item_badge_text[' + idx + ']');
+                    $item.find('.cw-cs-item-btn-text').attr('name', 'item_boton_texto[' + idx + ']');
+                    $item.find('.cw-cs-item-btn-url').attr('name', 'item_boton_url[' + idx + ']');
+                    $item.find('.cw-cs-item-imagen').attr('name', 'item_imagen_archivo[' + idx + ']');
+
+                    var $removeHidden = $item.find('.cw-cs-item-remove-hidden');
+                    var $removeCheck = $item.find('.cw-cs-item-remove-check');
+                    $removeHidden.attr('name', 'item_eliminar_imagen[' + idx + ']');
+                    $removeHidden.val($removeCheck.is(':checked') ? '1' : '0');
+                    $removeCheck.attr('id', removeId);
+                    $item.find('.cw-cs-item-remove-label').attr('for', removeId);
+
+                    var $starsHidden = $item.find('.cw-cs-stars-visible-hidden');
+                    var $starsCheck = $item.find('.cw-cs-stars-visible-check');
+                    $starsHidden.attr('name', 'item_mostrar_estrellas[' + idx + ']');
+                    $starsHidden.val($starsCheck.is(':checked') ? '1' : '0');
+                    $starsCheck.attr('id', starsId);
+                    $item.find('.cw-cs-stars-visible-label').attr('for', starsId);
+
+                    $item.find('.cw-cs-detail-row').each(function (detailIdx) {
+                        var $row = $(this);
+                        var detailId = 'cw_cs_detail_' + index + '_' + detailIdx + '_' + Date.now();
+                        var $visibleHidden = $row.find('.cw-cs-detail-visible-hidden');
+                        var $visibleCheck = $row.find('.cw-cs-detail-visible-check');
+                        var $icon = $row.find('.cw-cs-detail-icon');
+                        var $text = $row.find('.cw-cs-detail-text');
+
+                        $visibleHidden.attr('name', 'item_detalle_visible[' + idx + '][' + detailIdx + ']');
+                        $visibleHidden.val($visibleCheck.is(':checked') ? '1' : '0');
+                        $visibleCheck.attr('id', detailId);
+                        $row.find('.cw-cs-detail-visible-label').attr('for', detailId);
+                        $icon.attr('name', 'item_detalle_icono[' + idx + '][' + detailIdx + ']');
+                        $text.attr('name', 'item_detalle_texto[' + idx + '][' + detailIdx + ']');
+                    });
+                });
+
+                var disableRemove = total <= 1;
+                $items.find('.cw-cs-remove-item')
+                    .prop('disabled', disableRemove)
+                    .toggleClass('disabled', disableRemove);
+
+                $('#cw-cs-add-item').prop('disabled', total >= 9);
+            }
+
+            function initCsItemPreview($item) {
+                if (!$item || !$item.length) {
+                    return;
+                }
+
+                var $imageInput = $item.find('.cw-cs-item-imagen');
+                var $removeCheck = $item.find('.cw-cs-item-remove-check');
+                var $removeHidden = $item.find('.cw-cs-item-remove-hidden');
+                var $image = $item.find('.cw-cs-item-preview-img');
+                var $alert = $('#cw-cs-alert');
+
+                if (!$imageInput.length || !$removeCheck.length || !$removeHidden.length || !$image.length) {
+                    return;
+                }
+
+                var defaultSrc = $.trim(String($image.attr('data-default-src') || $item.data('defaultImage') || ''));
+                var currentSrc = $.trim(String($image.attr('data-current-src') || $image.attr('src') || defaultSrc));
+                if (!currentSrc) {
+                    currentSrc = defaultSrc;
+                }
+
+                var objectPreviewUrl = '';
+
+                function revokeObjectPreview() {
+                    if (objectPreviewUrl && window.URL && typeof window.URL.revokeObjectURL === 'function') {
+                        window.URL.revokeObjectURL(objectPreviewUrl);
+                    }
+                    objectPreviewUrl = '';
+                }
+
+                function showImage(src) {
+                    var target = $.trim(String(src || ''));
+                    if (!target) {
+                        target = defaultSrc;
+                    }
+                    $image.attr('src', target);
+                }
+
+                function showCurrent() {
+                    showImage(currentSrc || defaultSrc);
+                }
+
+                function showDefault() {
+                    showImage(defaultSrc);
+                }
+
+                function previewFile(file) {
+                    if (!file) {
+                        showCurrent();
+                        return;
+                    }
+
+                    var typeOk = /^image\/(png|jpeg|webp)$/i.test(String(file.type || ''));
+                    var nameOk = /\.(png|jpe?g|webp)$/i.test(String(file.name || ''));
+                    if (!typeOk && !nameOk) {
+                        showAlert($alert, 'Formato no permitido para previsualizacion. Usa PNG, WEBP o JPEG.', 'warning');
+                        $imageInput.val('');
+                        showCurrent();
+                        return;
+                    }
+
+                    revokeObjectPreview();
+                    if (window.URL && typeof window.URL.createObjectURL === 'function') {
+                        objectPreviewUrl = window.URL.createObjectURL(file);
+                        showImage(objectPreviewUrl);
+                        return;
+                    }
+
+                    if (window.FileReader) {
+                        var reader = new FileReader();
+                        reader.onload = function (ev) {
+                            showImage(String((ev && ev.target && ev.target.result) || defaultSrc));
+                        };
+                        reader.readAsDataURL(file);
+                        return;
+                    }
+
+                    showCurrent();
+                }
+
+                showCurrent();
+
+                $imageInput.off('change.cwCsPreview').on('change.cwCsPreview', function () {
+                    var file = (this.files && this.files[0]) ? this.files[0] : null;
+                    if (!file) {
+                        if ($removeCheck.is(':checked')) {
+                            showDefault();
+                            return;
+                        }
+                        showCurrent();
+                        return;
+                    }
+
+                    $removeCheck.prop('checked', false);
+                    $removeHidden.val('0');
+                    previewFile(file);
+                });
+
+                $removeCheck.off('change.cwCsPreview').on('change.cwCsPreview', function () {
+                    var checked = $(this).is(':checked');
+                    $removeHidden.val(checked ? '1' : '0');
+
+                    if (checked) {
+                        revokeObjectPreview();
+                        $imageInput.val('');
+                        showDefault();
+                        return;
+                    }
+
+                    var file = ($imageInput[0].files && $imageInput[0].files[0]) ? $imageInput[0].files[0] : null;
+                    if (file) {
+                        previewFile(file);
+                        return;
+                    }
+                    showCurrent();
+                });
+            }
+
+            function refreshCsItems() {
+                renumberCsItems();
+
+                $('#cw-cs-items .cw-cs-item').each(function () {
+                    var $item = $(this);
+
+                    $item.find('[data-cw-counter]').each(function () {
+                        initCharCounter($(this));
+                    });
+
+                    syncCsStarsVisibility($item);
+                    initCsItemPreview($item);
+                });
+            }
+
+            function initCarruselServiciosForm() {
+                var $form = $('#cw-cs-form');
+                if (!$form.length || $form.data('cwReady')) {
+                    return;
+                }
+                $form.data('cwReady', 1);
+
+                $form.find('[data-cw-counter]').each(function () {
+                    initCharCounter($(this));
+                });
+
+                refreshCsItems();
             }
 
             function processCounterId(prefix) {
@@ -1666,6 +2065,63 @@
                 syncMenuItemsJson();
             });
 
+            $(document).on('click', '#cw-cs-add-item', function () {
+                var $container = $('#cw-cs-items');
+                var count = $container.find('.cw-cs-item').length;
+                if (count >= 9) {
+                    showAlert($('#cw-cs-alert'), 'Solo se permiten hasta 9 servicios en el carrusel.', 'warning');
+                    return;
+                }
+
+                var defaultImage = '';
+                var $sourceImage = $container.find('.cw-cs-item-preview-img').first();
+                if ($sourceImage.length) {
+                    defaultImage = $.trim(String($sourceImage.attr('data-default-src') || ''));
+                }
+                if (!defaultImage) {
+                    defaultImage = '/web/img/car-1.png';
+                }
+
+                var $card = createCsItemCard({
+                    titulo: '',
+                    review_text: '',
+                    rating: 4,
+                    mostrar_estrellas: 1,
+                    badge_text: '',
+                    boton_texto: '',
+                    boton_url: '#',
+                    default_image: defaultImage,
+                    current_image: defaultImage,
+                    detalles: csDetailDefaults()
+                });
+
+                $container.append($card);
+                refreshCsItems();
+            });
+
+            $(document).on('click', '#cw-cs-items .cw-cs-remove-item', function () {
+                var $container = $('#cw-cs-items');
+                var count = $container.find('.cw-cs-item').length;
+                if (count <= 1) {
+                    showAlert($('#cw-cs-alert'), 'Debes mantener al menos 1 servicio.', 'warning');
+                    return;
+                }
+
+                $(this).closest('.cw-cs-item').remove();
+                refreshCsItems();
+            });
+
+            $(document).on('change', '#cw-cs-items .cw-cs-stars-visible-check', function () {
+                var $item = $(this).closest('.cw-cs-item');
+                syncCsStarsVisibility($item);
+            });
+
+            $(document).on('change', '#cw-cs-items .cw-cs-detail-visible-check', function () {
+                var $row = $(this).closest('.cw-cs-detail-row');
+                var checked = $(this).is(':checked');
+                $row.find('.cw-cs-detail-visible-hidden').val(checked ? '1' : '0');
+            });
+
             $(document).on('click', '#cw-process-add-item', function () {
                 var $container = $('#cw-process-items');
                 var count = $container.find('.cw-process-item').length;
@@ -1922,6 +2378,41 @@
                     },
                     defaultButtonText: 'Guardar servicios',
                     defaultError: 'No se pudo guardar la configuracion de servicios.'
+                });
+            });
+
+            $(document).on('submit', '#cw-cs-form', function (e) {
+                e.preventDefault();
+
+                var $form = $(this);
+                refreshCsItems();
+
+                var count = $('#cw-cs-items .cw-cs-item').length;
+                if (count < 1) {
+                    showAlert($('#cw-cs-alert'), 'Debes registrar al menos 1 servicio.', 'warning');
+                    return;
+                }
+                if (count > 9) {
+                    showAlert($('#cw-cs-alert'), 'Solo se permiten hasta 9 servicios.', 'warning');
+                    return;
+                }
+
+                var formData = new FormData($form[0]);
+
+                submitAjaxForm({
+                    form: $form,
+                    alert: $('#cw-cs-alert'),
+                    submit: $form.find('#cw-cs-submit'),
+                    ajaxConfig: {
+                        data: formData,
+                        processData: false,
+                        contentType: false
+                    },
+                    defaultButtonText: 'Guardar carrusel de servicios',
+                    defaultError: 'No se pudo guardar la configuracion de carrusel de servicios.',
+                    onSuccess: function () {
+                        loadView('carrusel_servicios');
+                    }
                 });
             });
 

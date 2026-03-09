@@ -10,7 +10,7 @@ Beneficios principales:
 
 ## 2) Arquitectura actual
 ### 2.1 Flujo general
-1. El sitio publico (`index.php` raiz) incluye 9 partials:
+1. El sitio publico (`index.php` raiz) incluye 10 partials:
    - `web/partials/topbar.php`
    - `web/partials/navbar.php`
    - `web/partials/formulario_carrusel.php`
@@ -18,10 +18,11 @@ Beneficios principales:
    - `web/partials/about.php`
    - `web/partials/counter.php`
    - `web/partials/services.php`
+   - `web/partials/carrusel_servicios.php`
    - `web/partials/process.php`
    - `web/partials/banner.php`
 2. Cada partial consulta su `*_model.php` y aplica defaults si no hay datos en BD.
-3. El modulo admin `sistema/modules/control_web/index.php` muestra 9 botones (`data-target`) y expone sus URLs en `window.CONTROL_WEB`.
+3. El modulo admin `sistema/modules/control_web/index.php` muestra 10 botones (`data-target`) y expone sus URLs en `window.CONTROL_WEB`.
 4. `control_web.js` carga cada subvista por AJAX (`loadView`) y envia formularios a `guardar.php` sin recargar.
 5. `formulario_carrusel` ademas tiene:
    - Endpoint publico de envio: `web/partials/formulario_carrusel_submit.php`
@@ -30,7 +31,7 @@ Beneficios principales:
 ### 2.2 Carpetas que participan
 - `sistema/modules/control_web/`
   - Vista principal de control web (`index.php`), JS y CSS.
-  - Submodulos: `cabecera`, `menu`, `caracteristicas`, `nosotros`, `contadores`, `servicios`, `proceso`, `banner`, `formulario_carrusel`.
+  - Submodulos: `cabecera`, `menu`, `caracteristicas`, `nosotros`, `contadores`, `servicios`, `carrusel_servicios`, `proceso`, `banner`, `formulario_carrusel`.
 - `web/partials/`
   - Render del frontend publico + modelos (`*_model.php`) compartidos con admin.
 
@@ -38,7 +39,7 @@ Beneficios principales:
 Cada submodulo admin incluye un `model.php` que hace `require_once` al modelo del partial correspondiente.  
 Ejemplo: `sistema/modules/control_web/servicios/model.php` -> `web/partials/services_model.php`.
 
-## 3) Modularizaciones activas (9)
+## 3) Modularizaciones activas (10)
 1. Cabecera
 - Admin: `sistema/modules/control_web/cabecera/`
 - Publico: `web/partials/topbar.php` + `topbar_model.php`
@@ -75,19 +76,27 @@ Ejemplo: `sistema/modules/control_web/servicios/model.php` -> `web/partials/serv
 - Tabla: `web_servicios`
 - Controla: titulo, descripcion e items de servicios.
 
-7. Proceso
+7. Carrusel Servicios (Vehicle Categories)
+- Admin: `sistema/modules/control_web/carrusel_servicios/`
+- Publico: `web/partials/carrusel_servicios.php` + `carrusel_servicios_model.php`
+- Tablas:
+  - `web_carrusel_servicios_config` (encabezado del bloque)
+  - `web_carrusel_servicios_items` (items del carrusel)
+- Controla por item: imagen, titulo, review, estrellas (1..5 u ocultas), badge de precio/texto, 6 detalles (icono + texto + visibilidad), boton.
+
+8. Proceso
 - Admin: `sistema/modules/control_web/proceso/`
 - Publico: `web/partials/process.php` + `process_model.php`
 - Tabla: `web_proceso`
 - Controla: titulo, descripcion e items del proceso.
 
-8. Banner
+9. Banner
 - Admin: `sistema/modules/control_web/banner/`
 - Publico: `web/partials/banner.php` + `banner_model.php`
 - Tabla: `web_banner`
 - Controla: textos, botones e imagen del banner.
 
-9. Formulario y Carrusel
+10. Formulario y Carrusel
 - Admin: `sistema/modules/control_web/formulario_carrusel/`
 - Publico: `web/partials/formulario_carrusel.php` + `formulario_carrusel_model.php`
 - Submit publico: `web/partials/formulario_carrusel_submit.php`
@@ -125,10 +134,12 @@ Hay dos patrones:
 - `web_nosotros`
 - `web_contadores`
 - `web_servicios`
+- `web_carrusel_servicios_config`
 - `web_proceso`
 - `web_banner`
 
-2. Multi-fila (caso especial `formulario_carrusel`)
+2. Multi-fila (casos especiales)
+- `web_carrusel_servicios_items`: 1..9 filas ordenadas (`orden`), con altas/ediciones/borrados.
 - `web_formulario_carrusel_items`: hasta 5 filas ordenadas (`orden`), con altas/ediciones/borrados.
 - `web_formulario_carrusel_mensajes`: historial de leads con paginacion y estados.
 
@@ -142,7 +153,7 @@ Hay dos patrones:
 ## 6) AJAX y endpoints
 ### 6.1 Carga de vistas admin
 - `control_web.js` mapea `target -> url` y usa `$workspace.load(url)`.
-- Targets activos: `cabecera`, `menu`, `caracteristicas`, `nosotros`, `contadores`, `servicios`, `proceso`, `banner`, `formulario_carrusel`.
+- Targets activos: `cabecera`, `menu`, `caracteristicas`, `nosotros`, `contadores`, `servicios`, `carrusel_servicios`, `proceso`, `banner`, `formulario_carrusel`.
 
 ### 6.2 Guardado admin
 - Cada formulario envia a su `guardar.php` via AJAX.
@@ -169,6 +180,7 @@ Categorias usadas:
 - Caracteristicas: `img_caracteristica`
 - Nosotros: `img_nosotros`
 - Banner: `img_banner`
+- Carrusel servicios: `img_carrusel_servicios`
 - Formulario/Carrusel: `img_formulario_carrusel`
 
 Reglas vigentes:
@@ -188,6 +200,7 @@ Migraciones actuales de control web:
 - `2026-03-08_control_web_nosotros.sql`
 - `2026-03-08_control_web_contadores.sql`
 - `2026-03-09_control_web_servicios.sql`
+- `2026-03-09_control_web_carrusel_servicios.sql`
 - `2026-03-09_control_web_proceso.sql`
 - `2026-03-09_control_web_banner.sql`
 - `2026-03-09_control_web_formulario_carrusel.sql`
