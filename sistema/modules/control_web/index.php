@@ -20,7 +20,7 @@ $cwBaseUrl = BASE_URL . '/modules/control_web';
 include __DIR__ . '/../../includes/header.php';
 ?>
 
-<link rel="stylesheet" href="<?php echo h($cwBaseUrl . '/control_web.css?v=7'); ?>">
+<link rel="stylesheet" href="<?php echo h($cwBaseUrl . '/control_web.css?v=8'); ?>">
 
 <div class="content-wrapper">
   <div class="content-header">
@@ -59,6 +59,9 @@ include __DIR__ . '/../../includes/header.php';
             <button type="button" class="btn cw-action-btn cw-btn-contadores" data-target="contadores">
               Contadores
             </button>
+            <button type="button" class="btn cw-action-btn cw-btn-servicios" data-target="servicios">
+              Servicios
+            </button>
           </div>
         </div>
       </div>
@@ -80,9 +83,10 @@ window.CONTROL_WEB = {
     menuUrl: <?php echo json_encode($cwBaseUrl . '/menu/index.php'); ?>,
     caracteristicasUrl: <?php echo json_encode($cwBaseUrl . '/caracteristicas/index.php'); ?>,
     nosotrosUrl: <?php echo json_encode($cwBaseUrl . '/nosotros/index.php'); ?>,
-    contadoresUrl: <?php echo json_encode($cwBaseUrl . '/contadores/index.php'); ?>
+    contadoresUrl: <?php echo json_encode($cwBaseUrl . '/contadores/index.php'); ?>,
+    serviciosUrl: <?php echo json_encode($cwBaseUrl . '/servicios/index.php'); ?>
 };
 </script>
-<script src="<?php echo h($cwBaseUrl . '/control_web.js?v=8'); ?>"></script>
+<script src="<?php echo h($cwBaseUrl . '/control_web.js?v=9'); ?>"></script>
 
 <?php include __DIR__ . '/../../includes/footer.php'; ?>

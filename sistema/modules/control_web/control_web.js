@@ -105,7 +105,8 @@
                     menu: cfg.menuUrl,
                     caracteristicas: cfg.caracteristicasUrl,
                     nosotros: cfg.nosotrosUrl,
-                    contadores: cfg.contadoresUrl
+                    contadores: cfg.contadoresUrl,
+                    servicios: cfg.serviciosUrl
                 };
                 var url = routes[target] || '';
                 if (!url) {
@@ -144,6 +145,11 @@
 
                     if (target === 'nosotros') {
                         initAboutForm();
+                        return;
+                    }
+
+                    if (target === 'servicios') {
+                        initServicesForm();
                         return;
                     }
                 });
@@ -659,6 +665,18 @@
                 initFeaturesImagePreview($form);
             }
 
+            function initServicesForm() {
+                var $form = $('#cw-services-form');
+                if (!$form.length || $form.data('cwReady')) {
+                    return;
+                }
+                $form.data('cwReady', 1);
+
+                $form.find('[data-cw-counter]').each(function () {
+                    initCharCounter($(this));
+                });
+            }
+
             function initAboutImagePreview($form, config) {
                 var opts = config || {};
                 var key = String(opts.key || '');
@@ -914,6 +932,22 @@
                     },
                     defaultButtonText: 'Guardar contadores',
                     defaultError: 'No se pudo guardar la configuracion de contadores.'
+                });
+            });
+
+            $(document).on('submit', '#cw-services-form', function (e) {
+                e.preventDefault();
+
+                var $form = $(this);
+                submitAjaxForm({
+                    form: $form,
+                    alert: $('#cw-services-alert'),
+                    submit: $form.find('#cw-services-submit'),
+                    ajaxConfig: {
+                        data: $form.serialize()
+                    },
+                    defaultButtonText: 'Guardar servicios',
+                    defaultError: 'No se pudo guardar la configuracion de servicios.'
                 });
             });
 
