@@ -114,6 +114,7 @@
                     contadores: cfg.contadoresUrl,
                     servicios: cfg.serviciosUrl,
                     carrusel_servicios: cfg.carruselServiciosUrl,
+                    carrusel_empresas: cfg.carruselEmpresasUrl,
                     proceso: cfg.procesoUrl,
                     banner: cfg.bannerUrl,
                     formulario_carrusel: cfg.formularioCarruselUrl
@@ -165,6 +166,11 @@
 
                     if (target === 'carrusel_servicios') {
                         initCarruselServiciosForm();
+                        return;
+                    }
+
+                    if (target === 'carrusel_empresas') {
+                        initCarruselEmpresasForm();
                         return;
                     }
 
@@ -1235,6 +1241,342 @@
                 refreshCsItems();
             }
 
+            function ceCounterId(prefix) {
+                return 'cw_ce_' + String(prefix || 'field') + '_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+            }
+
+            function ceSocialMeta() {
+                return [
+                    { key: 'whatsapp', icon: 'fab fa-whatsapp', label: 'WhatsApp' },
+                    { key: 'facebook', icon: 'fab fa-facebook-f', label: 'Facebook' },
+                    { key: 'instagram', icon: 'fab fa-instagram', label: 'Instagram' },
+                    { key: 'youtube', icon: 'fab fa-youtube', label: 'YouTube' }
+                ];
+            }
+
+            function createCeSocialRowHtml(meta, data) {
+                var m = meta || { key: 'whatsapp', icon: 'fab fa-whatsapp', label: 'WhatsApp' };
+                var d = data || {};
+                var visible = !(String(d.visible || '').trim() === '0' || d.visible === 0 || d.visible === false);
+                var link = $.trim(String(d.link || '#'));
+                var checkId = ceCounterId('social_' + String(m.key || 'social'));
+
+                return ''
+                    + '<div class="form-row align-items-center cw-ce-social-row mb-2" data-network="' + escapeHtml(m.key) + '">'
+                    + '  <div class="col-md-3 mb-2 mb-md-0">'
+                    + '    <div class="custom-control custom-checkbox">'
+                    + '      <input type="hidden" class="cw-ce-social-visible-hidden" value="' + (visible ? '1' : '0') + '">'
+                    + '      <input type="checkbox" class="custom-control-input cw-ce-social-visible-check" id="' + checkId + '" value="1" ' + (visible ? 'checked' : '') + '>'
+                    + '      <label class="custom-control-label small cw-ce-social-visible-label" for="' + checkId + '"><i class="' + escapeHtml(m.icon) + ' mr-1"></i>Mostrar</label>'
+                    + '    </div>'
+                    + '  </div>'
+                    + '  <div class="col-md-9">'
+                    + '    <input type="text" class="form-control form-control-sm cw-ce-social-link" maxlength="255" value="' + escapeHtml(link || '#') + '" placeholder="Enlace de ' + escapeHtml(m.label || 'red social') + '">'
+                    + '  </div>'
+                    + '</div>';
+            }
+
+            function createCeItemCard(data) {
+                var d = data || {};
+                var title = $.trim(String(d.titulo || ''));
+                var profession = $.trim(String(d.profesion || ''));
+                var defaultImage = $.trim(String(d.default_image || '/web/img/team-1.jpg'));
+                var currentImage = $.trim(String(d.current_image || defaultImage));
+                var titleCounterId = ceCounterId('titulo');
+                var professionCounterId = ceCounterId('profesion');
+                var removeId = ceCounterId('remove');
+
+                var socialsSource = (d.redes && typeof d.redes === 'object') ? d.redes : {};
+                var socialsHtml = '';
+                ceSocialMeta().forEach(function (meta) {
+                    var row = (socialsSource && socialsSource[meta.key] && typeof socialsSource[meta.key] === 'object')
+                        ? socialsSource[meta.key]
+                        : { visible: 1, link: '#' };
+                    socialsHtml += createCeSocialRowHtml(meta, row);
+                });
+
+                var html = ''
+                    + '<div class="card card-outline card-light cw-ce-item mb-3" data-default-image="' + escapeHtml(defaultImage) + '">'
+                    + '  <div class="card-header py-2 d-flex justify-content-between align-items-center">'
+                    + '    <div>'
+                    + '      <strong class="cw-ce-item-title">Empresa</strong>'
+                    + '      <span class="badge badge-light ml-2 cw-ce-item-slide-label">Slide 1</span>'
+                    + '    </div>'
+                    + '    <button type="button" class="btn btn-sm btn-outline-danger cw-ce-remove-item">Quitar</button>'
+                    + '  </div>'
+                    + '  <div class="card-body py-3">'
+                    + '    <input type="hidden" class="cw-ce-item-id" value="0">'
+                    + '    <div class="form-row">'
+                    + '      <div class="form-group col-md-6">'
+                    + '        <div class="d-flex justify-content-between">'
+                    + '          <label class="mb-1">Titulo</label>'
+                    + '          <small class="text-muted cw-char-counter"><span id="' + titleCounterId + '">80</span> restantes</small>'
+                    + '        </div>'
+                    + '        <input type="text" class="form-control cw-ce-item-titulo" maxlength="80" data-cw-counter="' + titleCounterId + '" value="' + escapeHtml(title) + '" placeholder="Nombre de la empresa">'
+                    + '      </div>'
+                    + '      <div class="form-group col-md-6">'
+                    + '        <div class="d-flex justify-content-between">'
+                    + '          <label class="mb-1">Profesion</label>'
+                    + '          <small class="text-muted cw-char-counter"><span id="' + professionCounterId + '">80</span> restantes</small>'
+                    + '        </div>'
+                    + '        <input type="text" class="form-control cw-ce-item-profesion" maxlength="80" data-cw-counter="' + professionCounterId + '" value="' + escapeHtml(profession) + '" placeholder="Descripcion corta">'
+                    + '      </div>'
+                    + '    </div>'
+                    + '    <div class="form-row">'
+                    + '      <div class="form-group col-md-6">'
+                    + '        <label class="mb-1">Imagen</label>'
+                    + '        <input type="file" class="form-control-file cw-ce-item-imagen" accept=".png,.webp,.jpg,.jpeg,image/png,image/webp,image/jpeg">'
+                    + '        <small class="form-text text-muted">Categoria: <strong>img_carrusel_empresas</strong>.</small>'
+                    + '        <div class="custom-control custom-checkbox mt-2">'
+                    + '          <input type="hidden" class="cw-ce-item-remove-hidden" value="0">'
+                    + '          <input type="checkbox" class="custom-control-input cw-ce-item-remove-check" id="' + removeId + '" value="1">'
+                    + '          <label class="custom-control-label cw-ce-item-remove-label" for="' + removeId + '">Quitar imagen personalizada</label>'
+                    + '        </div>'
+                    + '      </div>'
+                    + '      <div class="form-group col-md-6">'
+                    + '        <label class="d-block mb-1">Vista previa</label>'
+                    + '        <div class="cw-ce-image-preview p-2 border rounded bg-light">'
+                    + '          <img class="cw-ce-item-preview-img img-fluid" src="' + escapeHtml(currentImage) + '" data-current-src="' + escapeHtml(currentImage) + '" data-default-src="' + escapeHtml(defaultImage) + '" alt="Preview empresa">'
+                    + '        </div>'
+                    + '      </div>'
+                    + '    </div>'
+                    + '    <div class="card card-outline card-secondary mt-2 mb-1">'
+                    + '      <div class="card-header py-2"><strong>Redes sociales (minimo 1 visible)</strong></div>'
+                    + '      <div class="card-body py-2">'
+                    +           socialsHtml
+                    + '        <small class="text-muted">Orden fijo de iconos en la web: WhatsApp, Facebook, Instagram y YouTube.</small>'
+                    + '      </div>'
+                    + '    </div>'
+                    + '  </div>'
+                    + '</div>';
+
+                return $(html);
+            }
+
+            function syncCeSocialVisibility($item) {
+                if (!$item || !$item.length) {
+                    return;
+                }
+
+                $item.find('.cw-ce-social-row').each(function () {
+                    var $row = $(this);
+                    var checked = $row.find('.cw-ce-social-visible-check').is(':checked');
+                    $row.find('.cw-ce-social-visible-hidden').val(checked ? '1' : '0');
+                });
+            }
+
+            function countCeVisibleSocials($item) {
+                if (!$item || !$item.length) {
+                    return 0;
+                }
+                var count = 0;
+                $item.find('.cw-ce-social-visible-check').each(function () {
+                    if ($(this).is(':checked')) {
+                        count += 1;
+                    }
+                });
+                return count;
+            }
+
+            function renumberCeItems() {
+                var $items = $('#cw-ce-items .cw-ce-item');
+                var total = $items.length;
+
+                $items.each(function (idx) {
+                    var index = idx + 1;
+                    var $item = $(this);
+                    var removeId = 'cw_ce_remove_' + index + '_' + Date.now();
+
+                    $item.attr('data-index', idx);
+                    $item.find('.cw-ce-item-title').text('Empresa ' + index);
+                    $item.find('.cw-ce-item-slide-label').text('Slide ' + index);
+
+                    $item.find('.cw-ce-item-id').attr('name', 'item_id[' + idx + ']');
+                    $item.find('.cw-ce-item-titulo').attr('name', 'item_titulo[' + idx + ']');
+                    $item.find('.cw-ce-item-profesion').attr('name', 'item_profesion[' + idx + ']');
+                    $item.find('.cw-ce-item-imagen').attr('name', 'item_imagen_archivo[' + idx + ']');
+
+                    var $removeHidden = $item.find('.cw-ce-item-remove-hidden');
+                    var $removeCheck = $item.find('.cw-ce-item-remove-check');
+                    $removeHidden.attr('name', 'item_eliminar_imagen[' + idx + ']');
+                    $removeHidden.val($removeCheck.is(':checked') ? '1' : '0');
+                    $removeCheck.attr('id', removeId);
+                    $item.find('.cw-ce-item-remove-label').attr('for', removeId);
+
+                    $item.find('.cw-ce-social-row').each(function () {
+                        var $row = $(this);
+                        var network = $.trim(String($row.data('network') || ''));
+                        if (!network) {
+                            return;
+                        }
+                        var checkId = 'cw_ce_social_' + network + '_' + index + '_' + Date.now();
+                        var $visibleHidden = $row.find('.cw-ce-social-visible-hidden');
+                        var $visibleCheck = $row.find('.cw-ce-social-visible-check');
+                        var $socialLink = $row.find('.cw-ce-social-link');
+
+                        $visibleHidden.attr('name', 'item_red_visible[' + idx + '][' + network + ']');
+                        $visibleHidden.val($visibleCheck.is(':checked') ? '1' : '0');
+                        $visibleCheck.attr('id', checkId);
+                        $row.find('.cw-ce-social-visible-label').attr('for', checkId);
+                        $socialLink.attr('name', 'item_red_link[' + idx + '][' + network + ']');
+                    });
+                });
+
+                var disableRemove = total <= 1;
+                $items.find('.cw-ce-remove-item')
+                    .prop('disabled', disableRemove)
+                    .toggleClass('disabled', disableRemove);
+
+                $('#cw-ce-add-item').prop('disabled', total >= 15);
+            }
+
+            function initCeItemPreview($item) {
+                if (!$item || !$item.length) {
+                    return;
+                }
+
+                var $imageInput = $item.find('.cw-ce-item-imagen');
+                var $removeCheck = $item.find('.cw-ce-item-remove-check');
+                var $removeHidden = $item.find('.cw-ce-item-remove-hidden');
+                var $image = $item.find('.cw-ce-item-preview-img');
+                var $alert = $('#cw-ce-alert');
+
+                if (!$imageInput.length || !$removeCheck.length || !$removeHidden.length || !$image.length) {
+                    return;
+                }
+
+                var defaultSrc = $.trim(String($image.attr('data-default-src') || $item.data('defaultImage') || ''));
+                var currentSrc = $.trim(String($image.attr('data-current-src') || $image.attr('src') || defaultSrc));
+                if (!currentSrc) {
+                    currentSrc = defaultSrc;
+                }
+
+                var objectPreviewUrl = '';
+
+                function revokeObjectPreview() {
+                    if (objectPreviewUrl && window.URL && typeof window.URL.revokeObjectURL === 'function') {
+                        window.URL.revokeObjectURL(objectPreviewUrl);
+                    }
+                    objectPreviewUrl = '';
+                }
+
+                function showImage(src) {
+                    var target = $.trim(String(src || ''));
+                    if (!target) {
+                        target = defaultSrc;
+                    }
+                    $image.attr('src', target);
+                }
+
+                function showCurrent() {
+                    showImage(currentSrc || defaultSrc);
+                }
+
+                function showDefault() {
+                    showImage(defaultSrc);
+                }
+
+                function previewFile(file) {
+                    if (!file) {
+                        showCurrent();
+                        return;
+                    }
+
+                    var typeOk = /^image\/(png|jpeg|webp)$/i.test(String(file.type || ''));
+                    var nameOk = /\.(png|jpe?g|webp)$/i.test(String(file.name || ''));
+                    if (!typeOk && !nameOk) {
+                        showAlert($alert, 'Formato no permitido para previsualizacion. Usa PNG, WEBP o JPEG.', 'warning');
+                        $imageInput.val('');
+                        showCurrent();
+                        return;
+                    }
+
+                    revokeObjectPreview();
+                    if (window.URL && typeof window.URL.createObjectURL === 'function') {
+                        objectPreviewUrl = window.URL.createObjectURL(file);
+                        showImage(objectPreviewUrl);
+                        return;
+                    }
+
+                    if (window.FileReader) {
+                        var reader = new FileReader();
+                        reader.onload = function (ev) {
+                            showImage(String((ev && ev.target && ev.target.result) || defaultSrc));
+                        };
+                        reader.readAsDataURL(file);
+                        return;
+                    }
+
+                    showCurrent();
+                }
+
+                showCurrent();
+
+                $imageInput.off('change.cwCePreview').on('change.cwCePreview', function () {
+                    var file = (this.files && this.files[0]) ? this.files[0] : null;
+                    if (!file) {
+                        if ($removeCheck.is(':checked')) {
+                            showDefault();
+                            return;
+                        }
+                        showCurrent();
+                        return;
+                    }
+
+                    $removeCheck.prop('checked', false);
+                    $removeHidden.val('0');
+                    previewFile(file);
+                });
+
+                $removeCheck.off('change.cwCePreview').on('change.cwCePreview', function () {
+                    var checked = $(this).is(':checked');
+                    $removeHidden.val(checked ? '1' : '0');
+
+                    if (checked) {
+                        revokeObjectPreview();
+                        $imageInput.val('');
+                        showDefault();
+                        return;
+                    }
+
+                    var file = ($imageInput[0].files && $imageInput[0].files[0]) ? $imageInput[0].files[0] : null;
+                    if (file) {
+                        previewFile(file);
+                        return;
+                    }
+                    showCurrent();
+                });
+            }
+
+            function refreshCeItems() {
+                renumberCeItems();
+
+                $('#cw-ce-items .cw-ce-item').each(function () {
+                    var $item = $(this);
+
+                    $item.find('[data-cw-counter]').each(function () {
+                        initCharCounter($(this));
+                    });
+
+                    syncCeSocialVisibility($item);
+                    initCeItemPreview($item);
+                });
+            }
+
+            function initCarruselEmpresasForm() {
+                var $form = $('#cw-ce-form');
+                if (!$form.length || $form.data('cwReady')) {
+                    return;
+                }
+                $form.data('cwReady', 1);
+
+                $form.find('[data-cw-counter]').each(function () {
+                    initCharCounter($(this));
+                });
+
+                refreshCeItems();
+            }
+
             function processCounterId(prefix) {
                 return 'cw_process_' + String(prefix || 'field') + '_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
             }
@@ -2122,6 +2464,65 @@
                 $row.find('.cw-cs-detail-visible-hidden').val(checked ? '1' : '0');
             });
 
+            $(document).on('click', '#cw-ce-add-item', function () {
+                var $container = $('#cw-ce-items');
+                var count = $container.find('.cw-ce-item').length;
+                if (count >= 15) {
+                    showAlert($('#cw-ce-alert'), 'Solo se permiten hasta 15 empresas en el carrusel.', 'warning');
+                    return;
+                }
+
+                var defaultImage = '';
+                var $sourceImage = $container.find('.cw-ce-item-preview-img').first();
+                if ($sourceImage.length) {
+                    defaultImage = $.trim(String($sourceImage.attr('data-default-src') || ''));
+                }
+                if (!defaultImage) {
+                    defaultImage = '/web/img/team-1.jpg';
+                }
+
+                var $card = createCeItemCard({
+                    titulo: '',
+                    profesion: '',
+                    default_image: defaultImage,
+                    current_image: defaultImage,
+                    redes: {
+                        whatsapp: { visible: 1, link: '#' },
+                        facebook: { visible: 1, link: '#' },
+                        instagram: { visible: 1, link: '#' },
+                        youtube: { visible: 1, link: '#' }
+                    }
+                });
+
+                $container.append($card);
+                refreshCeItems();
+            });
+
+            $(document).on('click', '#cw-ce-items .cw-ce-remove-item', function () {
+                var $container = $('#cw-ce-items');
+                var count = $container.find('.cw-ce-item').length;
+                if (count <= 1) {
+                    showAlert($('#cw-ce-alert'), 'Debes mantener al menos 1 empresa.', 'warning');
+                    return;
+                }
+
+                $(this).closest('.cw-ce-item').remove();
+                refreshCeItems();
+            });
+
+            $(document).on('change', '#cw-ce-items .cw-ce-social-visible-check', function () {
+                var $check = $(this);
+                var $item = $check.closest('.cw-ce-item');
+                var checked = $check.is(':checked');
+
+                if (!checked && countCeVisibleSocials($item) < 1) {
+                    $check.prop('checked', true);
+                    showAlert($('#cw-ce-alert'), 'Cada empresa debe mostrar al menos 1 red social.', 'warning');
+                }
+
+                syncCeSocialVisibility($item);
+            });
+
             $(document).on('click', '#cw-process-add-item', function () {
                 var $container = $('#cw-process-items');
                 var count = $container.find('.cw-process-item').length;
@@ -2412,6 +2813,55 @@
                     defaultError: 'No se pudo guardar la configuracion de carrusel de servicios.',
                     onSuccess: function () {
                         loadView('carrusel_servicios');
+                    }
+                });
+            });
+
+            $(document).on('submit', '#cw-ce-form', function (e) {
+                e.preventDefault();
+
+                var $form = $(this);
+                refreshCeItems();
+
+                var count = $('#cw-ce-items .cw-ce-item').length;
+                if (count < 1) {
+                    showAlert($('#cw-ce-alert'), 'Debes registrar al menos 1 empresa.', 'warning');
+                    return;
+                }
+                if (count > 15) {
+                    showAlert($('#cw-ce-alert'), 'Solo se permiten hasta 15 empresas.', 'warning');
+                    return;
+                }
+
+                var hasInvalidSocials = false;
+                $('#cw-ce-items .cw-ce-item').each(function (idx) {
+                    var visible = countCeVisibleSocials($(this));
+                    if (visible < 1) {
+                        hasInvalidSocials = true;
+                        showAlert($('#cw-ce-alert'), 'La empresa ' + (idx + 1) + ' debe mostrar al menos 1 red social.', 'warning');
+                        return false;
+                    }
+                    return true;
+                });
+                if (hasInvalidSocials) {
+                    return;
+                }
+
+                var formData = new FormData($form[0]);
+
+                submitAjaxForm({
+                    form: $form,
+                    alert: $('#cw-ce-alert'),
+                    submit: $form.find('#cw-ce-submit'),
+                    ajaxConfig: {
+                        data: formData,
+                        processData: false,
+                        contentType: false
+                    },
+                    defaultButtonText: 'Guardar carrusel de empresas',
+                    defaultError: 'No se pudo guardar la configuracion de carrusel de empresas.',
+                    onSuccess: function () {
+                        loadView('carrusel_empresas');
                     }
                 });
             });

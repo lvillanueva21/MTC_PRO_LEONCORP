@@ -56,6 +56,10 @@
     background: linear-gradient(135deg, #1d4ed8 0%, #0ea5e9 100%);
 }
 
+.cw-btn-carrusel-empresas {
+    background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
+}
+
 .cw-btn-proceso {
     background: linear-gradient(135deg, #355c7d 0%, #6c5b7b 100%);
 }
@@ -164,6 +168,20 @@
 }
 
 .cw-cs-image-preview img {
+    display: block;
+    max-height: 190px;
+    width: auto;
+}
+
+.cw-ce-item .card-header {
+    background: #f8f9fa;
+}
+
+.cw-ce-image-preview {
+    min-height: 92px;
+}
+
+.cw-ce-image-preview img {
     display: block;
     max-height: 190px;
     width: auto;

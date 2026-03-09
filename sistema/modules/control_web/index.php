@@ -20,7 +20,7 @@ $cwBaseUrl = BASE_URL . '/modules/control_web';
 include __DIR__ . '/../../includes/header.php';
 ?>
 
-<link rel="stylesheet" href="<?php echo h($cwBaseUrl . '/control_web.css?v=13'); ?>">
+<link rel="stylesheet" href="<?php echo h($cwBaseUrl . '/control_web.css?v=14'); ?>">
 
 <div class="content-wrapper">
   <div class="content-header">
@@ -65,6 +65,9 @@ include __DIR__ . '/../../includes/header.php';
             <button type="button" class="btn cw-action-btn cw-btn-carrusel-servicios" data-target="carrusel_servicios">
               Carrusel Servicios
             </button>
+            <button type="button" class="btn cw-action-btn cw-btn-carrusel-empresas" data-target="carrusel_empresas">
+              Carrusel Empresas
+            </button>
             <button type="button" class="btn cw-action-btn cw-btn-proceso" data-target="proceso">
               Proceso
             </button>
@@ -98,11 +101,12 @@ window.CONTROL_WEB = {
     contadoresUrl: <?php echo json_encode($cwBaseUrl . '/contadores/index.php'); ?>,
     serviciosUrl: <?php echo json_encode($cwBaseUrl . '/servicios/index.php'); ?>,
     carruselServiciosUrl: <?php echo json_encode($cwBaseUrl . '/carrusel_servicios/index.php'); ?>,
+    carruselEmpresasUrl: <?php echo json_encode($cwBaseUrl . '/carrusel_empresas/index.php'); ?>,
     procesoUrl: <?php echo json_encode($cwBaseUrl . '/proceso/index.php'); ?>,
     bannerUrl: <?php echo json_encode($cwBaseUrl . '/banner/index.php'); ?>,
     formularioCarruselUrl: <?php echo json_encode($cwBaseUrl . '/formulario_carrusel/index.php'); ?>
 };
 </script>
-<script src="<?php echo h($cwBaseUrl . '/control_web.js?v=13'); ?>"></script>
+<script src="<?php echo h($cwBaseUrl . '/control_web.js?v=14'); ?>"></script>
 
 <?php include __DIR__ . '/../../includes/footer.php'; ?>
