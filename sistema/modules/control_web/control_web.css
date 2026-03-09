@@ -40,6 +40,14 @@
     background: linear-gradient(135deg, #ffb347 0%, #ff6f61 100%);
 }
 
+.cw-btn-nosotros {
+    background: linear-gradient(135deg, #7f7fd5 0%, #86a8e7 50%, #91eae4 100%);
+}
+
+.cw-btn-contadores {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
 .cw-workspace {
     min-height: 360px;
 }
@@ -92,6 +100,24 @@
 }
 
 .cw-features-image-preview img {
+    display: block;
+    max-height: 190px;
+    width: auto;
+}
+
+.cw-about-card .card-header {
+    background: #f8f9fa;
+}
+
+#cw-about-form textarea {
+    resize: vertical;
+}
+
+.cw-about-image-preview {
+    min-height: 92px;
+}
+
+.cw-about-image-preview img {
     display: block;
     max-height: 190px;
     width: auto;

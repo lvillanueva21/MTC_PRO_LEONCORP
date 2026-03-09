@@ -103,7 +103,9 @@
                 var routes = {
                     cabecera: cfg.cabeceraUrl,
                     menu: cfg.menuUrl,
-                    caracteristicas: cfg.caracteristicasUrl
+                    caracteristicas: cfg.caracteristicasUrl,
+                    nosotros: cfg.nosotrosUrl,
+                    contadores: cfg.contadoresUrl
                 };
                 var url = routes[target] || '';
                 if (!url) {
@@ -137,6 +139,12 @@
 
                     if (target === 'caracteristicas') {
                         initFeaturesForm();
+                        return;
+                    }
+
+                    if (target === 'nosotros') {
+                        initAboutForm();
+                        return;
                     }
                 });
             }
@@ -651,6 +659,185 @@
                 initFeaturesImagePreview($form);
             }
 
+            function initAboutImagePreview($form, config) {
+                var opts = config || {};
+                var key = String(opts.key || '');
+                var inputSelector = String(opts.input || '');
+                var removeSelector = String(opts.remove || '');
+                var imageSelector = String(opts.img || '');
+
+                if (!inputSelector || !removeSelector || !imageSelector) {
+                    return null;
+                }
+
+                var $imageInput = $form.find(inputSelector);
+                var $removeCheck = $form.find(removeSelector);
+                var $image = $form.find(imageSelector);
+                var $alert = $('#cw-about-alert');
+
+                if (!$imageInput.length || !$removeCheck.length || !$image.length) {
+                    return null;
+                }
+
+                var defaultSrc = $.trim(String($image.attr('data-default-src') || ''));
+                var currentSrc = $.trim(String($image.attr('data-current-src') || $image.attr('src') || defaultSrc));
+                if (!currentSrc) {
+                    currentSrc = defaultSrc;
+                }
+
+                var objectPreviewUrl = '';
+                var eventNs = '.cwAboutPreview' + key;
+
+                function revokeObjectPreview() {
+                    if (objectPreviewUrl && window.URL && typeof window.URL.revokeObjectURL === 'function') {
+                        window.URL.revokeObjectURL(objectPreviewUrl);
+                    }
+                    objectPreviewUrl = '';
+                }
+
+                function showImage(src) {
+                    var target = $.trim(String(src || ''));
+                    if (!target) {
+                        target = defaultSrc;
+                    }
+                    $image.attr('src', target);
+                }
+
+                function showCurrent() {
+                    showImage(currentSrc || defaultSrc);
+                }
+
+                function showDefault() {
+                    showImage(defaultSrc);
+                }
+
+                function previewFile(file) {
+                    if (!file) {
+                        showCurrent();
+                        return;
+                    }
+
+                    var typeOk = /^image\/(png|jpeg|webp)$/i.test(String(file.type || ''));
+                    var nameOk = /\.(png|jpe?g|webp)$/i.test(String(file.name || ''));
+                    if (!typeOk && !nameOk) {
+                        showAlert($alert, 'Formato no permitido para previsualizacion. Usa PNG, WEBP o JPEG.', 'warning');
+                        $imageInput.val('');
+                        showCurrent();
+                        return;
+                    }
+
+                    revokeObjectPreview();
+                    if (window.URL && typeof window.URL.createObjectURL === 'function') {
+                        objectPreviewUrl = window.URL.createObjectURL(file);
+                        showImage(objectPreviewUrl);
+                        return;
+                    }
+
+                    if (window.FileReader) {
+                        var reader = new FileReader();
+                        reader.onload = function (ev) {
+                            showImage(String((ev && ev.target && ev.target.result) || defaultSrc));
+                        };
+                        reader.readAsDataURL(file);
+                        return;
+                    }
+
+                    showCurrent();
+                }
+
+                showCurrent();
+
+                $imageInput.off('change' + eventNs).on('change' + eventNs, function () {
+                    var file = (this.files && this.files[0]) ? this.files[0] : null;
+                    if (!file) {
+                        if ($removeCheck.is(':checked')) {
+                            showDefault();
+                            return;
+                        }
+                        showCurrent();
+                        return;
+                    }
+
+                    $removeCheck.prop('checked', false);
+                    previewFile(file);
+                });
+
+                $removeCheck.off('change' + eventNs).on('change' + eventNs, function () {
+                    if ($(this).is(':checked')) {
+                        revokeObjectPreview();
+                        $imageInput.val('');
+                        showDefault();
+                        return;
+                    }
+
+                    var file = ($imageInput[0].files && $imageInput[0].files[0]) ? $imageInput[0].files[0] : null;
+                    if (file) {
+                        previewFile(file);
+                        return;
+                    }
+                    showCurrent();
+                });
+
+                return {
+                    setCurrent: function (src) {
+                        currentSrc = $.trim(String(src || defaultSrc));
+                        if (!currentSrc) {
+                            currentSrc = defaultSrc;
+                        }
+                        $image.attr('data-current-src', currentSrc);
+                        revokeObjectPreview();
+                        showCurrent();
+                    }
+                };
+            }
+
+            function initAboutForm() {
+                var $form = $('#cw-about-form');
+                if (!$form.length || $form.data('cwReady')) {
+                    return;
+                }
+                $form.data('cwReady', 1);
+
+                $form.find('[data-cw-counter]').each(function () {
+                    initCharCounter($(this));
+                });
+
+                var previews = {
+                    icon1: initAboutImagePreview($form, {
+                        key: 'Icon1',
+                        input: '#cw_about_icono_archivo_1',
+                        remove: '#cw_about_eliminar_icono_1',
+                        img: '#cw-about-preview-icon-1'
+                    }),
+                    icon2: initAboutImagePreview($form, {
+                        key: 'Icon2',
+                        input: '#cw_about_icono_archivo_2',
+                        remove: '#cw_about_eliminar_icono_2',
+                        img: '#cw-about-preview-icon-2'
+                    }),
+                    fundador: initAboutImagePreview($form, {
+                        key: 'Fundador',
+                        input: '#cw_about_imagen_fundador_archivo',
+                        remove: '#cw_about_eliminar_imagen_fundador',
+                        img: '#cw-about-preview-fundador'
+                    }),
+                    principal: initAboutImagePreview($form, {
+                        key: 'Principal',
+                        input: '#cw_about_imagen_principal_archivo',
+                        remove: '#cw_about_eliminar_imagen_principal',
+                        img: '#cw-about-preview-principal'
+                    }),
+                    secundaria: initAboutImagePreview($form, {
+                        key: 'Secundaria',
+                        input: '#cw_about_imagen_secundaria_archivo',
+                        remove: '#cw_about_eliminar_imagen_secundaria',
+                        img: '#cw-about-preview-secundaria'
+                    })
+                };
+
+                $form.data('cwAboutPreviews', previews);
+            }
+
             $(document).on('click', '.cw-action-btn', function () {
                 var target = String($(this).data('target') || '');
                 loadView(target);
@@ -711,6 +898,22 @@
                     },
                     defaultButtonText: 'Guardar cambios',
                     defaultError: 'No se pudo guardar la configuracion.'
+                });
+            });
+
+            $(document).on('submit', '#cw-counter-form', function (e) {
+                e.preventDefault();
+
+                var $form = $(this);
+                submitAjaxForm({
+                    form: $form,
+                    alert: $('#cw-counter-alert'),
+                    submit: $form.find('#cw-counter-submit'),
+                    ajaxConfig: {
+                        data: $form.serialize()
+                    },
+                    defaultButtonText: 'Guardar contadores',
+                    defaultError: 'No se pudo guardar la configuracion de contadores.'
                 });
             });
 
@@ -776,6 +979,48 @@
                         }
                         $('#cw_feat_imagen_archivo').val('');
                         $('#cw_feat_eliminar_imagen').prop('checked', false);
+                    }
+                });
+            });
+
+            $(document).on('submit', '#cw-about-form', function (e) {
+                e.preventDefault();
+
+                var $form = $(this);
+                var formData = new FormData($form[0]);
+
+                submitAjaxForm({
+                    form: $form,
+                    alert: $('#cw-about-alert'),
+                    submit: $form.find('#cw-about-submit'),
+                    ajaxConfig: {
+                        data: formData,
+                        processData: false,
+                        contentType: false
+                    },
+                    defaultButtonText: 'Guardar nosotros',
+                    defaultError: 'No se pudo guardar la seccion Nosotros.',
+                    onSuccess: function (res) {
+                        var previews = $form.data('cwAboutPreviews') || {};
+
+                        if (previews.icon1 && typeof previews.icon1.setCurrent === 'function') {
+                            previews.icon1.setCurrent(String((res && res.icono_1_url) || ''));
+                        }
+                        if (previews.icon2 && typeof previews.icon2.setCurrent === 'function') {
+                            previews.icon2.setCurrent(String((res && res.icono_2_url) || ''));
+                        }
+                        if (previews.fundador && typeof previews.fundador.setCurrent === 'function') {
+                            previews.fundador.setCurrent(String((res && res.imagen_fundador_url) || ''));
+                        }
+                        if (previews.principal && typeof previews.principal.setCurrent === 'function') {
+                            previews.principal.setCurrent(String((res && res.imagen_principal_url) || ''));
+                        }
+                        if (previews.secundaria && typeof previews.secundaria.setCurrent === 'function') {
+                            previews.secundaria.setCurrent(String((res && res.imagen_secundaria_url) || ''));
+                        }
+
+                        $('#cw_about_icono_archivo_1, #cw_about_icono_archivo_2, #cw_about_imagen_fundador_archivo, #cw_about_imagen_principal_archivo, #cw_about_imagen_secundaria_archivo').val('');
+                        $('#cw_about_eliminar_icono_1, #cw_about_eliminar_icono_2, #cw_about_eliminar_imagen_fundador, #cw_about_eliminar_imagen_principal, #cw_about_eliminar_imagen_secundaria').prop('checked', false);
                     }
                 });
             });

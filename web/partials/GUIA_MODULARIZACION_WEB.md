@@ -14,8 +14,10 @@ Beneficios:
    - `web/partials/topbar.php`
    - `web/partials/navbar.php`
    - `web/partials/features.php`
+   - `web/partials/about.php`
+   - `web/partials/counter.php`
 2. Cada partial consulta su modelo (`*_model.php`), que lee BD y cae a defaults si no hay datos.
-3. El modulo admin `sistema/modules/control_web/index.php` muestra botones (Cabecera, Menu, Caracteristicas).
+3. El modulo admin `sistema/modules/control_web/index.php` muestra botones (Cabecera, Menu, Caracteristicas, Nosotros, Contadores).
 4. `control_web.js` carga cada subvista por AJAX y envia formularios a `guardar.php` sin recargar pagina.
 
 ### 2.2 Carpetas que participan
@@ -25,12 +27,16 @@ Beneficios:
     - `cabecera/`
     - `menu/`
     - `caracteristicas/`
+    - `nosotros/`
+    - `contadores/`
 - `web/partials/`
   - Render del frontend publico y modelos de datos.
   - Aqui viven:
     - `topbar.php` + `topbar_model.php`
     - `navbar.php` + `menu_model.php`
     - `features.php` + `features_model.php`
+    - `about.php` + `about_model.php`
+    - `counter.php` + `counter_model.php`
 
 ## 3) Modulos implementados hasta hoy
 1. Cabecera
@@ -50,6 +56,26 @@ Beneficios:
 - Render publico: `web/partials/features.php`
 - Tabla: `web_caracteristicas`
 - Controla: titulo en 2 partes, descripcion, imagen central, 4 tarjetas de caracteristicas
+
+4. Nosotros (About)
+- Control admin: `sistema/modules/control_web/nosotros/`
+- Render publico: `web/partials/about.php`
+- Tabla: `web_nosotros`
+- Controla:
+  - Titulo en 2 partes y descripcion principal
+  - 2 tarjetas (Vision/Mision) con icono imagen + titulo + texto
+  - Descripcion complementaria
+  - Caja de experiencia (numero + texto)
+  - Checklist de 4 items
+  - Boton CTA (texto + enlace)
+  - Fundador (nombre, cargo, imagen)
+  - Imagen principal e imagen secundaria del bloque derecho
+
+5. Contadores (Fact Counter)
+- Control admin: `sistema/modules/control_web/contadores/`
+- Render publico: `web/partials/counter.php`
+- Tabla: `web_contadores`
+- Controla: 4 contadores del bloque (`numero` + `titulo`), manteniendo iconos y estilo del tema
 
 ## 4) Regla de acceso (rol que puede editar)
 Todos los endpoints de `control_web` usan:
@@ -72,7 +98,7 @@ Para agregar un boton nuevo:
 4. Crear carpeta del submodulo con `index.php`, `guardar.php`, `model.php`.
 
 Patron actual:
-- Botones: Cabecera, Menu, Caracteristicas
+- Botones: Cabecera, Menu, Caracteristicas, Nosotros, Contadores
 - `control_web.js` usa `loadView(target)` + `$workspace.load(url)`
 
 ## 6) Reglas de negocio y programacion (patron vigente)
@@ -107,6 +133,8 @@ Ejemplos reales:
 - `db/migrations/2026-03-08_control_web_topbar.sql`
 - `db/migrations/2026-03-08_control_web_menu.sql`
 - `db/migrations/2026-03-08_control_web_caracteristicas.sql`
+- `db/migrations/2026-03-08_control_web_nosotros.sql`
+- `db/migrations/2026-03-08_control_web_contadores.sql`
 
 Convenciones usadas:
 - Prefijo funcional: `web_...`
@@ -132,7 +160,8 @@ ON DUPLICATE KEY UPDATE id = id;
 ### 8.1 Texto
 - Se normaliza con `trim`.
 - Se limita por longitud maxima en backend.
-- En caracteristicas se usan contadores de caracteres desde `control_web.js`.
+- En caracteristicas y nosotros se usan contadores de caracteres desde `control_web.js`.
+- En contadores, `numero` se valida como digitos (1 a 8) y `titulo` hasta 80 caracteres.
 
 ### 8.2 Email y telefono
 - Email con `FILTER_VALIDATE_EMAIL`.
@@ -141,10 +170,14 @@ ON DUPLICATE KEY UPDATE id = id;
 ### 8.3 URLs
 - Cabecera valida dominio permitido por red social.
 - Menu valida `#seccion`, `http(s)`, rutas relativas, y bloquea `javascript:`/`data:`.
+- Nosotros reutiliza validacion de enlaces tipo menu para el CTA.
 
 ### 8.4 JSON
 - Menu principal/submenu via `menu_items_json`.
 - Se parsea con `json_decode` y se normaliza con `cw_menu_normalize_items`.
+- Caracteristicas usa `items_json` y `cw_features_normalize_items`.
+- Nosotros usa `tarjetas_json` y `checklist_json` con `cw_about_normalize_cards` + `cw_about_normalize_checklist`.
+- Contadores usa `items_json` con `cw_counter_normalize_items`.
 
 ## 9) Subida, reemplazo y eliminacion de archivos
 Se usa:
@@ -160,6 +193,8 @@ Estructura de almacenamiento:
 Categorias usadas hasta hoy:
 - Menu logo: `logo_web`
 - Imagen de caracteristicas: `img_caracteristica`
+- Imagenes de nosotros (iconos/tarjetas/fundador/columna derecha): `img_nosotros`
+- Contadores no usa subida de archivos (solo campos de texto/numero).
 
 Reglas vigentes:
 - Maximo 3MB
