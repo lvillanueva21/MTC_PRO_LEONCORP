@@ -60,6 +60,14 @@
     background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
 }
 
+.cw-btn-testimonios {
+    background: linear-gradient(135deg, #ea580c 0%, #fb923c 100%);
+}
+
+.cw-btn-novedades {
+    background: linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%);
+}
+
 .cw-btn-proceso {
     background: linear-gradient(135deg, #355c7d 0%, #6c5b7b 100%);
 }
@@ -182,6 +190,42 @@
 }
 
 .cw-ce-image-preview img {
+    display: block;
+    max-height: 190px;
+    width: auto;
+}
+
+.cw-testimonios-item .card-header {
+    background: #f8f9fa;
+}
+
+#cw-testimonios-form textarea {
+    resize: vertical;
+}
+
+.cw-testimonios-image-preview {
+    min-height: 92px;
+}
+
+.cw-testimonios-image-preview img {
+    display: block;
+    max-height: 190px;
+    width: auto;
+}
+
+.cw-nv-item .card-header {
+    background: #f8f9fa;
+}
+
+#cw-nv-form textarea {
+    resize: vertical;
+}
+
+.cw-nv-image-preview {
+    min-height: 92px;
+}
+
+.cw-nv-image-preview img {
     display: block;
     max-height: 190px;
     width: auto;

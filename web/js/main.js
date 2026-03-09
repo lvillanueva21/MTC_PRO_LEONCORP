@@ -87,6 +87,35 @@
         }
     });
 
+    // Novedades carousel
+    $(".novedades-carousel").owlCarousel({
+        autoplay: true,
+        smartSpeed: 1200,
+        center: false,
+        dots: true,
+        loop: true,
+        margin: 25,
+        nav: false,
+        responsiveClass: true,
+        responsive: {
+            0:{
+                items:1
+            },
+            576:{
+                items:1
+            },
+            768:{
+                items:2
+            },
+            992:{
+                items:3
+            },
+            1200:{
+                items:3
+            }
+        }
+    });
+
 
     // testimonial carousel
     $(".testimonial-carousel").owlCarousel({

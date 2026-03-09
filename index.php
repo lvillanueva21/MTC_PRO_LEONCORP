@@ -75,70 +75,9 @@
         <?php include __DIR__ . '/web/partials/process.php'; ?>
         <!-- Car Steps End -->
 
-        <!-- Blog Start -->
-        <div id="blog" class="container-fluid blog py-5">
-            <div class="container py-5">
-                <div class="text-center mx-auto pb-5 wow fadeInUp" data-wow-delay="0.1s" style="max-width: 800px;">
-                    <h1 class="display-5 text-capitalize mb-3">Cental<span class="text-primary"> Blog & News</span></h1>
-                    <p class="mb-0">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Ut amet nemo expedita asperiores commodi accusantium at cum harum, excepturi, quia tempora cupiditate! Adipisci facilis modi quisquam quia distinctio,
-                    </p>
-                </div>
-                <div class="row g-4">
-                    <div class="col-lg-4 wow fadeInUp" data-wow-delay="0.1s">
-                        <div class="blog-item">
-                            <div class="blog-img">
-                                <img src="/web/img/blog-1.jpg" class="img-fluid rounded-top w-100" alt="Image">
-                            </div>
-                            <div class="blog-content rounded-bottom p-4">
-                                <div class="blog-date">30 Dec 2025</div>
-                                <div class="blog-comment my-3">
-                                    <div class="small"><span class="fa fa-user text-primary"></span><span class="ms-2">Martin.C</span></div>
-                                    <div class="small"><span class="fa fa-comment-alt text-primary"></span><span class="ms-2">6 Comments</span></div>
-                                </div>
-                                <a href="#" class="h4 d-block mb-3">Rental Cars how to check driving fines?</a>
-                                <p class="mb-3">Lorem, ipsum dolor sit amet consectetur adipisicing elit. Eius libero soluta impedit eligendi? Quibusdam, laudantium.</p>
-                                <a href="#" class="">Read More  <i class="fa fa-arrow-right"></i></a>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-4 wow fadeInUp" data-wow-delay="0.3s">
-                        <div class="blog-item">
-                            <div class="blog-img">
-                                <img src="/web/img/blog-2.jpg" class="img-fluid rounded-top w-100" alt="Image">
-                            </div>
-                            <div class="blog-content rounded-bottom p-4">
-                                <div class="blog-date">25 Dec 2025</div>
-                                <div class="blog-comment my-3">
-                                    <div class="small"><span class="fa fa-user text-primary"></span><span class="ms-2">Martin.C</span></div>
-                                    <div class="small"><span class="fa fa-comment-alt text-primary"></span><span class="ms-2">6 Comments</span></div>
-                                </div>
-                                <a href="#" class="h4 d-block mb-3">Rental cost of sport and other cars</a>
-                                <p class="mb-3">Lorem, ipsum dolor sit amet consectetur adipisicing elit. Eius libero soluta impedit eligendi? Quibusdam, laudantium.</p>
-                                <a href="#" class="">Read More  <i class="fa fa-arrow-right"></i></a>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-4 wow fadeInUp" data-wow-delay="0.5s">
-                        <div class="blog-item">
-                            <div class="blog-img">
-                                <img src="/web/img/blog-3.jpg" class="img-fluid rounded-top w-100" alt="Image">
-                            </div>
-                            <div class="blog-content rounded-bottom p-4">
-                                <div class="blog-date">27 Dec 2025</div>
-                                <div class="blog-comment my-3">
-                                    <div class="small"><span class="fa fa-user text-primary"></span><span class="ms-2">Martin.C</span></div>
-                                    <div class="small"><span class="fa fa-comment-alt text-primary"></span><span class="ms-2">6 Comments</span></div>
-                                </div>
-                                <a href="#" class="h4 d-block mb-3">Document required for car rental</a>
-                                <p class="mb-3">Lorem, ipsum dolor sit amet consectetur adipisicing elit. Eius libero soluta impedit eligendi? Quibusdam, laudantium.</p>
-                                <a href="#" class="">Read More  <i class="fa fa-arrow-right"></i></a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- Blog End -->
+        <!-- Novedades Start -->
+        <?php include __DIR__ . '/web/partials/novedades.php'; ?>
+        <!-- Novedades End -->
 
         <!-- Banner Start -->
         <?php include __DIR__ . '/web/partials/banner.php'; ?>
@@ -149,80 +88,7 @@
         <!-- Team End -->
 
         <!-- Testimonial Start -->
-        <div id="testimonios" class="container-fluid testimonial pb-5">
-            <div class="container pb-5">
-                <div class="text-center mx-auto pb-5 wow fadeInUp" data-wow-delay="0.1s" style="max-width: 800px;">
-                    <h1 class="display-5 text-capitalize mb-3">Our Clients<span class="text-primary"> Riviews</span></h1>
-                    <p class="mb-0">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Ut amet nemo expedita asperiores commodi accusantium at cum harum, excepturi, quia tempora cupiditate! Adipisci facilis modi quisquam quia distinctio,
-                    </p>
-                </div>
-                <div class="owl-carousel testimonial-carousel wow fadeInUp" data-wow-delay="0.1s">
-                    <div class="testimonial-item">
-                        <div class="testimonial-quote"><i class="fa fa-quote-right fa-2x"></i>
-                        </div>
-                        <div class="testimonial-inner p-4">
-                            <img src="/web/img/testimonial-1.jpg" class="img-fluid" alt="">
-                            <div class="ms-4">
-                                <h4>Person Name</h4>
-                                <p>Profession</p>
-                                <div class="d-flex text-primary">
-                                    <i class="fas fa-star"></i>
-                                    <i class="fas fa-star"></i>
-                                    <i class="fas fa-star"></i>
-                                    <i class="fas fa-star"></i>
-                                    <i class="fas fa-star text-body"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="border-top rounded-bottom p-4">
-                            <p class="mb-0">Lorem ipsum dolor sit amet consectetur adipisicing elit. Quam soluta neque ab repudiandae reprehenderit ipsum eos cumque esse repellendus impedit.</p>
-                        </div>
-                    </div>
-                    <div class="testimonial-item">
-                        <div class="testimonial-quote"><i class="fa fa-quote-right fa-2x"></i>
-                        </div>
-                        <div class="testimonial-inner p-4">
-                            <img src="/web/img/testimonial-2.jpg" class="img-fluid" alt="">
-                            <div class="ms-4">
-                                <h4>Person Name</h4>
-                                <p>Profession</p>
-                                <div class="d-flex text-primary">
-                                    <i class="fas fa-star"></i>
-                                    <i class="fas fa-star"></i>
-                                    <i class="fas fa-star"></i>
-                                    <i class="fas fa-star text-body"></i>
-                                    <i class="fas fa-star text-body"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="border-top rounded-bottom p-4">
-                            <p class="mb-0">Lorem ipsum dolor sit amet consectetur adipisicing elit. Quam soluta neque ab repudiandae reprehenderit ipsum eos cumque esse repellendus impedit.</p>
-                        </div>
-                    </div>
-                    <div class="testimonial-item">
-                        <div class="testimonial-quote"><i class="fa fa-quote-right fa-2x"></i>
-                        </div>
-                        <div class="testimonial-inner p-4">
-                            <img src="/web/img/testimonial-3.jpg" class="img-fluid" alt="">
-                            <div class="ms-4">
-                                <h4>Person Name</h4>
-                                <p>Profession</p>
-                                <div class="d-flex text-primary">
-                                    <i class="fas fa-star"></i>
-                                    <i class="fas fa-star"></i>
-                                    <i class="fas fa-star text-body"></i>
-                                    <i class="fas fa-star text-body"></i>
-                                    <i class="fas fa-star text-body"></i>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="border-top rounded-bottom p-4">
-                            <p class="mb-0">Lorem ipsum dolor sit amet consectetur adipisicing elit. Quam soluta neque ab repudiandae reprehenderit ipsum eos cumque esse repellendus impedit.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <?php include __DIR__ . '/web/partials/testimonios.php'; ?>
         <!-- Testimonial End -->
 
         <!-- Footer Start -->
@@ -232,50 +98,45 @@
                     <div class="col-md-6 col-lg-6 col-xl-3">
                         <div class="footer-item d-flex flex-column">
                             <div class="footer-item">
-                                <h4 class="text-white mb-4">About Us</h4>
+                                <h4 class="text-white mb-4">Sobre Nosotros</h4>
                                 <p class="mb-3">Dolor amet sit justo amet elitr clita ipsum elitr est.Lorem ipsum dolor sit amet, consectetur adipiscing elit consectetur adipiscing elit.</p>
                             </div>
-                            <div class="position-relative">
-                                <input class="form-control rounded-pill w-100 py-3 ps-4 pe-5" type="text" placeholder="Enter your email">
-                                <button type="button" class="btn btn-secondary rounded-pill position-absolute top-0 end-0 py-2 mt-2 me-2">Subscribe</button>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-6 col-xl-3">
+                        <div class="footer-item d-flex flex-column">
+                            <h4 class="text-white mb-4">Links rápidos</h4>
+                            <a href="#"><i class="fas fa-angle-right me-2"></i> Nosotros</a>
+                            <a href="#"><i class="fas fa-angle-right me-2"></i> Servicios</a>
+                            <a href="#"><i class="fas fa-angle-right me-2"></i> Empresas</a>
+                            <a href="#"><i class="fas fa-angle-right me-2"></i> Beneficios</a>
+                            <a href="#"><i class="fas fa-angle-right me-2"></i> Contáctanos</a>
+                            <a href="#"><i class="fas fa-angle-right me-2"></i> Términos y condiciones</a>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-6 col-xl-3">
+                        <div class="footer-item d-flex flex-column">
+                            <h4 class="text-white mb-4">Horario de atención</h4>
+                            <div class="mb-3">
+                                <h6 class="text-muted mb-0">Lunes - Viernes:</h6>
+                                <p class="text-white mb-0">07.00 am to 04.00 pm</p>
+                            </div>
+                            <div class="mb-3">
+                                <h6 class="text-muted mb-0">Sábado:</h6>
+                                <p class="text-white mb-0">7.00 am to 01.00 pm</p>
+                            </div>
+                            <div class="mb-3">
+                                <h6 class="text-muted mb-0">Domingo:</h6>
+                                <p class="text-white mb-0">7.00 am to 01.00 pm (Previa coordinación)</p>
                             </div>
                         </div>
                     </div>
                     <div class="col-md-6 col-lg-6 col-xl-3">
                         <div class="footer-item d-flex flex-column">
-                            <h4 class="text-white mb-4">Quick Links</h4>
-                            <a href="#"><i class="fas fa-angle-right me-2"></i> About</a>
-                            <a href="#"><i class="fas fa-angle-right me-2"></i> Cars</a>
-                            <a href="#"><i class="fas fa-angle-right me-2"></i> Car Types</a>
-                            <a href="#"><i class="fas fa-angle-right me-2"></i> Team</a>
-                            <a href="#"><i class="fas fa-angle-right me-2"></i> Contact us</a>
-                            <a href="#"><i class="fas fa-angle-right me-2"></i> Terms & Conditions</a>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-6 col-xl-3">
-                        <div class="footer-item d-flex flex-column">
-                            <h4 class="text-white mb-4">Business Hours</h4>
-                            <div class="mb-3">
-                                <h6 class="text-muted mb-0">Mon - Friday:</h6>
-                                <p class="text-white mb-0">09.00 am to 07.00 pm</p>
-                            </div>
-                            <div class="mb-3">
-                                <h6 class="text-muted mb-0">Saturday:</h6>
-                                <p class="text-white mb-0">10.00 am to 05.00 pm</p>
-                            </div>
-                            <div class="mb-3">
-                                <h6 class="text-muted mb-0">Vacation:</h6>
-                                <p class="text-white mb-0">All Sunday is our vacation</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-6 col-xl-3">
-                        <div class="footer-item d-flex flex-column">
-                            <h4 class="text-white mb-4">Contact Info</h4>
-                            <a href="#"><i class="fa fa-map-marker-alt me-2"></i> 123 Street, New York, USA</a>
-                            <a href="mailto:info@example.com"><i class="fas fa-envelope me-2"></i> info@example.com</a>
-                            <a href="tel:+012 345 67890"><i class="fas fa-phone me-2"></i> +012 345 67890</a>
-                            <a href="tel:+012 345 67890" class="mb-3"><i class="fas fa-print me-2"></i> +012 345 67890</a>
+                            <h4 class="text-white mb-4">Contacto</h4>
+                            <a href="#"><i class="fa fa-map-marker-alt me-2"></i> Calle 8 de setiembre 1345</a>
+                            <a href="mailto:info@example.com"><i class="fas fa-envelope me-2"></i> q@gmail.com</a>
+                            <a href="tel:+012 345 67890"><i class="fas fa-phone me-2"></i> 964881841</a>
                             <div class="d-flex">
                                 <a class="btn btn-secondary btn-md-square rounded-circle me-3" href=""><i class="fab fa-facebook-f text-white"></i></a>
                                 <a class="btn btn-secondary btn-md-square rounded-circle me-3" href=""><i class="fab fa-twitter text-white"></i></a>
@@ -294,13 +155,10 @@
             <div class="container">
                 <div class="row g-4 align-items-center">
                     <div class="col-md-6 text-center text-md-start mb-md-0">
-                        <span class="text-body"><a href="#" class="border-bottom text-white"><i class="fas fa-copyright text-light me-2"></i>Your Site Name</a>, All right reserved.</span>
+                        <span class="text-body"><a href="#" class="border-bottom text-white"><i class="fas fa-copyright text-light me-2"></i>LuigiSistemas</a>, Todos los derechos reservados.</span>
                     </div>
                     <div class="col-md-6 text-center text-md-end text-body">
-                        <!--/*** This template is free as long as you keep the below author’s credit link/attribution link/backlink. ***/-->
-                        <!--/*** If you'd like to use the template without the below author’s credit link/attribution link/backlink, ***/-->
-                        <!--/*** you can purchase the Credit Removal License from "https://htmlcodex.com/credit-removal". ***/-->
-                        Designed By <a class="border-bottom text-white" href="https://htmlcodex.com">HTML Codex</a> Distributed By <a class="border-bottom text-white" href="https://themewagon.com">ThemeWagon</a>
+                        Designed By <a class="border-bottom text-white" href="https://htmlcodex.com">LuigiSistemas</a> Para <a class="border-bottom text-white" href="#">Grupo Génesis</a>
                     </div>
                 </div>
             </div>

@@ -115,6 +115,8 @@
                     servicios: cfg.serviciosUrl,
                     carrusel_servicios: cfg.carruselServiciosUrl,
                     carrusel_empresas: cfg.carruselEmpresasUrl,
+                    testimonios: cfg.testimoniosUrl,
+                    novedades: cfg.novedadesUrl,
                     proceso: cfg.procesoUrl,
                     banner: cfg.bannerUrl,
                     formulario_carrusel: cfg.formularioCarruselUrl
@@ -171,6 +173,16 @@
 
                     if (target === 'carrusel_empresas') {
                         initCarruselEmpresasForm();
+                        return;
+                    }
+
+                    if (target === 'testimonios') {
+                        initTestimoniosForm();
+                        return;
+                    }
+
+                    if (target === 'novedades') {
+                        initNovedadesForm();
                         return;
                     }
 
@@ -1577,6 +1589,507 @@
                 refreshCeItems();
             }
 
+            function initTestimoniosItemPreview($item) {
+                if (!$item || !$item.length) {
+                    return;
+                }
+
+                var $imageInput = $item.find('.cw-testimonios-item-imagen');
+                var $removeCheck = $item.find('.cw-testimonios-item-remove-check');
+                var $removeHidden = $item.find('.cw-testimonios-item-remove-hidden');
+                var $image = $item.find('.cw-testimonios-item-preview-img');
+                var $alert = $('#cw-testimonios-alert');
+
+                if (!$imageInput.length || !$removeCheck.length || !$removeHidden.length || !$image.length) {
+                    return;
+                }
+
+                var defaultSrc = $.trim(String($image.attr('data-default-src') || $item.data('defaultImage') || ''));
+                var currentSrc = $.trim(String($image.attr('data-current-src') || $image.attr('src') || defaultSrc));
+                if (!currentSrc) {
+                    currentSrc = defaultSrc;
+                }
+
+                var objectPreviewUrl = '';
+
+                function revokeObjectPreview() {
+                    if (objectPreviewUrl && window.URL && typeof window.URL.revokeObjectURL === 'function') {
+                        window.URL.revokeObjectURL(objectPreviewUrl);
+                    }
+                    objectPreviewUrl = '';
+                }
+
+                function showImage(src) {
+                    var target = $.trim(String(src || ''));
+                    if (!target) {
+                        target = defaultSrc;
+                    }
+                    $image.attr('src', target);
+                }
+
+                function showCurrent() {
+                    showImage(currentSrc || defaultSrc);
+                }
+
+                function showDefault() {
+                    showImage(defaultSrc);
+                }
+
+                function previewFile(file) {
+                    if (!file) {
+                        showCurrent();
+                        return;
+                    }
+
+                    var typeOk = /^image\/(png|jpeg|webp)$/i.test(String(file.type || ''));
+                    var nameOk = /\.(png|jpe?g|webp)$/i.test(String(file.name || ''));
+                    if (!typeOk && !nameOk) {
+                        showAlert($alert, 'Formato no permitido para previsualizacion. Usa PNG, WEBP o JPEG.', 'warning');
+                        $imageInput.val('');
+                        showCurrent();
+                        return;
+                    }
+
+                    revokeObjectPreview();
+                    if (window.URL && typeof window.URL.createObjectURL === 'function') {
+                        objectPreviewUrl = window.URL.createObjectURL(file);
+                        showImage(objectPreviewUrl);
+                        return;
+                    }
+
+                    if (window.FileReader) {
+                        var reader = new FileReader();
+                        reader.onload = function (ev) {
+                            showImage(String((ev && ev.target && ev.target.result) || defaultSrc));
+                        };
+                        reader.readAsDataURL(file);
+                        return;
+                    }
+
+                    showCurrent();
+                }
+
+                $removeHidden.val($removeCheck.is(':checked') ? '1' : '0');
+                showCurrent();
+
+                $imageInput.off('change.cwTestimoniosPreview').on('change.cwTestimoniosPreview', function () {
+                    var file = (this.files && this.files[0]) ? this.files[0] : null;
+                    if (!file) {
+                        if ($removeCheck.is(':checked')) {
+                            showDefault();
+                            return;
+                        }
+                        showCurrent();
+                        return;
+                    }
+
+                    $removeCheck.prop('checked', false);
+                    $removeHidden.val('0');
+                    previewFile(file);
+                });
+
+                $removeCheck.off('change.cwTestimoniosPreview').on('change.cwTestimoniosPreview', function () {
+                    var checked = $(this).is(':checked');
+                    $removeHidden.val(checked ? '1' : '0');
+
+                    if (checked) {
+                        revokeObjectPreview();
+                        $imageInput.val('');
+                        showDefault();
+                        return;
+                    }
+
+                    var file = ($imageInput[0].files && $imageInput[0].files[0]) ? $imageInput[0].files[0] : null;
+                    if (file) {
+                        previewFile(file);
+                        return;
+                    }
+                    showCurrent();
+                });
+            }
+
+            function refreshTestimoniosItems() {
+                $('#cw-testimonios-items .cw-testimonios-item').each(function () {
+                    var $item = $(this);
+
+                    $item.find('[data-cw-counter]').each(function () {
+                        initCharCounter($(this));
+                    });
+
+                    initTestimoniosItemPreview($item);
+                });
+            }
+
+            function initTestimoniosForm() {
+                var $form = $('#cw-testimonios-form');
+                if (!$form.length || $form.data('cwReady')) {
+                    return;
+                }
+                $form.data('cwReady', 1);
+
+                $form.find('[data-cw-counter]').each(function () {
+                    initCharCounter($(this));
+                });
+
+                refreshTestimoniosItems();
+            }
+
+            function nvCounterId(prefix) {
+                return 'cw_nv_' + String(prefix || 'field') + '_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+            }
+
+            function createNvItemCard(data) {
+                var d = data || {};
+                var itemId = parseInt(d.id, 10);
+                if (!isFinite(itemId) || itemId < 1) {
+                    itemId = 0;
+                }
+
+                var title = $.trim(String(d.titulo || ''));
+                var meta1Icon = $.trim(String(d.meta_1_icono || 'fa fa-user text-primary'));
+                var meta1Text = $.trim(String(d.meta_1_texto || ''));
+                var meta2Icon = $.trim(String(d.meta_2_icono || 'fa fa-comment-alt text-primary'));
+                var meta2Text = $.trim(String(d.meta_2_texto || ''));
+                var badgeText = $.trim(String(d.badge_texto || ''));
+                var resumeText = $.trim(String(d.resumen_texto || ''));
+                var buttonText = $.trim(String(d.boton_texto || ''));
+                var buttonUrl = $.trim(String(d.boton_url || '#'));
+                var visible = !(String(d.visible || '').trim() === '0' || d.visible === 0 || d.visible === false);
+
+                var defaultImage = $.trim(String(d.default_image || '/web/img/blog-1.jpg'));
+                var currentImage = $.trim(String(d.current_image || defaultImage));
+
+                var titleCounterId = nvCounterId('titulo');
+                var meta1TextCounterId = nvCounterId('meta1_texto');
+                var meta2TextCounterId = nvCounterId('meta2_texto');
+                var badgeCounterId = nvCounterId('badge');
+                var resumeCounterId = nvCounterId('resumen');
+                var btnTextCounterId = nvCounterId('btn_text');
+                var btnUrlCounterId = nvCounterId('btn_url');
+                var removeId = nvCounterId('remove');
+                var visibleId = nvCounterId('visible');
+
+                var html = ''
+                    + '<div class="card card-outline card-light cw-nv-item mb-3" data-default-image="' + escapeHtml(defaultImage) + '">'
+                    + '  <div class="card-header py-2 d-flex justify-content-between align-items-center">'
+                    + '    <div>'
+                    + '      <strong class="cw-nv-item-title">Novedad</strong>'
+                    + '      <span class="badge badge-light ml-2 cw-nv-item-slide-label">Slide 1</span>'
+                    + '    </div>'
+                    + '    <button type="button" class="btn btn-sm btn-outline-danger cw-nv-remove-item">Quitar</button>'
+                    + '  </div>'
+                    + '  <div class="card-body py-3">'
+                    + '    <input type="hidden" class="cw-nv-item-id" value="' + itemId + '">'
+                    + '    <div class="form-row">'
+                    + '      <div class="form-group col-md-8">'
+                    + '        <div class="d-flex justify-content-between">'
+                    + '          <label class="mb-1">Titulo de la novedad</label>'
+                    + '          <small class="text-muted cw-char-counter"><span id="' + titleCounterId + '">110</span> restantes</small>'
+                    + '        </div>'
+                    + '        <input type="text" class="form-control cw-nv-item-titulo" maxlength="110" data-cw-counter="' + titleCounterId + '" value="' + escapeHtml(title) + '" placeholder="Titulo de la novedad">'
+                    + '      </div>'
+                    + '      <div class="form-group col-md-4">'
+                    + '        <label class="mb-1 d-block">Visibilidad</label>'
+                    + '        <div class="custom-control custom-checkbox mt-2">'
+                    + '          <input type="hidden" class="cw-nv-item-visible-hidden" value="' + (visible ? '1' : '0') + '">'
+                    + '          <input type="checkbox" class="custom-control-input cw-nv-item-visible-check" id="' + visibleId + '" value="1" ' + (visible ? 'checked' : '') + '>'
+                    + '          <label class="custom-control-label cw-nv-item-visible-label" for="' + visibleId + '">Mostrar en web</label>'
+                    + '        </div>'
+                    + '      </div>'
+                    + '    </div>'
+                    + '    <div class="form-row">'
+                    + '      <div class="form-group col-md-3">'
+                    + '        <label class="mb-1">Icono 1 (codigo)</label>'
+                    + '        <input type="text" class="form-control cw-nv-item-meta1-icon" maxlength="120" value="' + escapeHtml(meta1Icon) + '" placeholder="fa fa-user text-primary">'
+                    + '      </div>'
+                    + '      <div class="form-group col-md-3">'
+                    + '        <div class="d-flex justify-content-between">'
+                    + '          <label class="mb-1">Texto 1</label>'
+                    + '          <small class="text-muted cw-char-counter"><span id="' + meta1TextCounterId + '">80</span> restantes</small>'
+                    + '        </div>'
+                    + '        <input type="text" class="form-control cw-nv-item-meta1-text" maxlength="80" data-cw-counter="' + meta1TextCounterId + '" value="' + escapeHtml(meta1Text) + '" placeholder="Autor">'
+                    + '      </div>'
+                    + '      <div class="form-group col-md-3">'
+                    + '        <label class="mb-1">Icono 2 (codigo)</label>'
+                    + '        <input type="text" class="form-control cw-nv-item-meta2-icon" maxlength="120" value="' + escapeHtml(meta2Icon) + '" placeholder="fa fa-comment-alt text-primary">'
+                    + '      </div>'
+                    + '      <div class="form-group col-md-3">'
+                    + '        <div class="d-flex justify-content-between">'
+                    + '          <label class="mb-1">Texto 2</label>'
+                    + '          <small class="text-muted cw-char-counter"><span id="' + meta2TextCounterId + '">80</span> restantes</small>'
+                    + '        </div>'
+                    + '        <input type="text" class="form-control cw-nv-item-meta2-text" maxlength="80" data-cw-counter="' + meta2TextCounterId + '" value="' + escapeHtml(meta2Text) + '" placeholder="Sin comentarios">'
+                    + '      </div>'
+                    + '    </div>'
+                    + '    <div class="form-row">'
+                    + '      <div class="form-group col-md-3">'
+                    + '        <div class="d-flex justify-content-between">'
+                    + '          <label class="mb-1">Texto del badge</label>'
+                    + '          <small class="text-muted cw-char-counter"><span id="' + badgeCounterId + '">50</span> restantes</small>'
+                    + '        </div>'
+                    + '        <input type="text" class="form-control cw-nv-item-badge" maxlength="50" data-cw-counter="' + badgeCounterId + '" value="' + escapeHtml(badgeText) + '" placeholder="Novedad">'
+                    + '      </div>'
+                    + '      <div class="form-group col-md-3">'
+                    + '        <div class="d-flex justify-content-between">'
+                    + '          <label class="mb-1">Texto del boton</label>'
+                    + '          <small class="text-muted cw-char-counter"><span id="' + btnTextCounterId + '">50</span> restantes</small>'
+                    + '        </div>'
+                    + '        <input type="text" class="form-control cw-nv-item-btn-text" maxlength="50" data-cw-counter="' + btnTextCounterId + '" value="' + escapeHtml(buttonText) + '" placeholder="Read More">'
+                    + '      </div>'
+                    + '      <div class="form-group col-md-6">'
+                    + '        <div class="d-flex justify-content-between">'
+                    + '          <label class="mb-1">Enlace del boton</label>'
+                    + '          <small class="text-muted cw-char-counter"><span id="' + btnUrlCounterId + '">255</span> restantes</small>'
+                    + '        </div>'
+                    + '        <input type="text" class="form-control cw-nv-item-btn-url" maxlength="255" data-cw-counter="' + btnUrlCounterId + '" value="' + escapeHtml(buttonUrl) + '" placeholder="# o /ruta o https://">'
+                    + '      </div>'
+                    + '    </div>'
+                    + '    <div class="form-group">'
+                    + '      <div class="d-flex justify-content-between">'
+                    + '        <label class="mb-1">Texto resumen</label>'
+                    + '        <small class="text-muted cw-char-counter"><span id="' + resumeCounterId + '">220</span> restantes</small>'
+                    + '      </div>'
+                    + '      <textarea class="form-control cw-nv-item-resumen" rows="3" maxlength="220" data-cw-counter="' + resumeCounterId + '" placeholder="Resumen corto de la novedad.">' + escapeHtml(resumeText) + '</textarea>'
+                    + '    </div>'
+                    + '    <div class="form-row">'
+                    + '      <div class="form-group col-md-6">'
+                    + '        <label class="mb-1">Imagen</label>'
+                    + '        <input type="file" class="form-control-file cw-nv-item-imagen" accept=".png,.webp,.jpg,.jpeg,image/png,image/webp,image/jpeg">'
+                    + '        <small class="form-text text-muted">Categoria: <strong>img_novedades</strong>.</small>'
+                    + '        <div class="custom-control custom-checkbox mt-2">'
+                    + '          <input type="hidden" class="cw-nv-item-remove-hidden" value="0">'
+                    + '          <input type="checkbox" class="custom-control-input cw-nv-item-remove-check" id="' + removeId + '" value="1">'
+                    + '          <label class="custom-control-label cw-nv-item-remove-label" for="' + removeId + '">Quitar imagen personalizada</label>'
+                    + '        </div>'
+                    + '      </div>'
+                    + '      <div class="form-group col-md-6">'
+                    + '        <label class="d-block mb-1">Vista previa</label>'
+                    + '        <div class="cw-nv-image-preview p-2 border rounded bg-light">'
+                    + '          <img class="cw-nv-item-preview-img img-fluid" src="' + escapeHtml(currentImage) + '" data-current-src="' + escapeHtml(currentImage) + '" data-default-src="' + escapeHtml(defaultImage) + '" alt="Preview novedad">'
+                    + '        </div>'
+                    + '      </div>'
+                    + '    </div>'
+                    + '  </div>'
+                    + '</div>';
+
+                return $(html);
+            }
+
+            function syncNvVisibility($item) {
+                if (!$item || !$item.length) {
+                    return;
+                }
+
+                var checked = $item.find('.cw-nv-item-visible-check').is(':checked');
+                $item.find('.cw-nv-item-visible-hidden').val(checked ? '1' : '0');
+            }
+
+            function countNvVisibleItems() {
+                var count = 0;
+                $('#cw-nv-items .cw-nv-item-visible-check').each(function () {
+                    if ($(this).is(':checked')) {
+                        count += 1;
+                    }
+                });
+                return count;
+            }
+
+            function renumberNvItems() {
+                var $items = $('#cw-nv-items .cw-nv-item');
+                var total = $items.length;
+
+                $items.each(function (idx) {
+                    var index = idx + 1;
+                    var $item = $(this);
+                    var removeId = 'cw_nv_remove_' + index + '_' + Date.now();
+                    var visibleId = 'cw_nv_visible_' + index + '_' + Date.now();
+
+                    $item.attr('data-index', idx);
+                    $item.find('.cw-nv-item-title').text('Novedad ' + index);
+                    $item.find('.cw-nv-item-slide-label').text('Slide ' + index);
+
+                    $item.find('.cw-nv-item-id').attr('name', 'item_id[' + idx + ']');
+                    $item.find('.cw-nv-item-titulo').attr('name', 'item_titulo[' + idx + ']');
+                    $item.find('.cw-nv-item-meta1-icon').attr('name', 'item_meta_1_icono[' + idx + ']');
+                    $item.find('.cw-nv-item-meta1-text').attr('name', 'item_meta_1_texto[' + idx + ']');
+                    $item.find('.cw-nv-item-meta2-icon').attr('name', 'item_meta_2_icono[' + idx + ']');
+                    $item.find('.cw-nv-item-meta2-text').attr('name', 'item_meta_2_texto[' + idx + ']');
+                    $item.find('.cw-nv-item-badge').attr('name', 'item_badge_texto[' + idx + ']');
+                    $item.find('.cw-nv-item-resumen').attr('name', 'item_resumen_texto[' + idx + ']');
+                    $item.find('.cw-nv-item-btn-text').attr('name', 'item_boton_texto[' + idx + ']');
+                    $item.find('.cw-nv-item-btn-url').attr('name', 'item_boton_url[' + idx + ']');
+                    $item.find('.cw-nv-item-imagen').attr('name', 'item_imagen_archivo[' + idx + ']');
+
+                    var $visibleHidden = $item.find('.cw-nv-item-visible-hidden');
+                    var $visibleCheck = $item.find('.cw-nv-item-visible-check');
+                    $visibleHidden.attr('name', 'item_visible[' + idx + ']');
+                    $visibleHidden.val($visibleCheck.is(':checked') ? '1' : '0');
+                    $visibleCheck.attr('id', visibleId);
+                    $item.find('.cw-nv-item-visible-label').attr('for', visibleId);
+
+                    var $removeHidden = $item.find('.cw-nv-item-remove-hidden');
+                    var $removeCheck = $item.find('.cw-nv-item-remove-check');
+                    $removeHidden.attr('name', 'item_eliminar_imagen[' + idx + ']');
+                    $removeHidden.val($removeCheck.is(':checked') ? '1' : '0');
+                    $removeCheck.attr('id', removeId);
+                    $item.find('.cw-nv-item-remove-label').attr('for', removeId);
+                });
+
+                var disableRemove = total <= 1;
+                $items.find('.cw-nv-remove-item')
+                    .prop('disabled', disableRemove)
+                    .toggleClass('disabled', disableRemove);
+
+                $('#cw-nv-add-item').prop('disabled', total >= 9);
+            }
+
+            function initNvItemPreview($item) {
+                if (!$item || !$item.length) {
+                    return;
+                }
+
+                var $imageInput = $item.find('.cw-nv-item-imagen');
+                var $removeCheck = $item.find('.cw-nv-item-remove-check');
+                var $removeHidden = $item.find('.cw-nv-item-remove-hidden');
+                var $image = $item.find('.cw-nv-item-preview-img');
+                var $alert = $('#cw-nv-alert');
+
+                if (!$imageInput.length || !$removeCheck.length || !$removeHidden.length || !$image.length) {
+                    return;
+                }
+
+                var defaultSrc = $.trim(String($image.attr('data-default-src') || $item.data('defaultImage') || ''));
+                var currentSrc = $.trim(String($image.attr('data-current-src') || $image.attr('src') || defaultSrc));
+                if (!currentSrc) {
+                    currentSrc = defaultSrc;
+                }
+
+                var objectPreviewUrl = '';
+
+                function revokeObjectPreview() {
+                    if (objectPreviewUrl && window.URL && typeof window.URL.revokeObjectURL === 'function') {
+                        window.URL.revokeObjectURL(objectPreviewUrl);
+                    }
+                    objectPreviewUrl = '';
+                }
+
+                function showImage(src) {
+                    var target = $.trim(String(src || ''));
+                    if (!target) {
+                        target = defaultSrc;
+                    }
+                    $image.attr('src', target);
+                }
+
+                function showCurrent() {
+                    showImage(currentSrc || defaultSrc);
+                }
+
+                function showDefault() {
+                    showImage(defaultSrc);
+                }
+
+                function previewFile(file) {
+                    if (!file) {
+                        showCurrent();
+                        return;
+                    }
+
+                    var typeOk = /^image\/(png|jpeg|webp)$/i.test(String(file.type || ''));
+                    var nameOk = /\.(png|jpe?g|webp)$/i.test(String(file.name || ''));
+                    if (!typeOk && !nameOk) {
+                        showAlert($alert, 'Formato no permitido para previsualizacion. Usa PNG, WEBP o JPEG.', 'warning');
+                        $imageInput.val('');
+                        showCurrent();
+                        return;
+                    }
+
+                    revokeObjectPreview();
+                    if (window.URL && typeof window.URL.createObjectURL === 'function') {
+                        objectPreviewUrl = window.URL.createObjectURL(file);
+                        showImage(objectPreviewUrl);
+                        return;
+                    }
+
+                    if (window.FileReader) {
+                        var reader = new FileReader();
+                        reader.onload = function (ev) {
+                            showImage(String((ev && ev.target && ev.target.result) || defaultSrc));
+                        };
+                        reader.readAsDataURL(file);
+                        return;
+                    }
+
+                    showCurrent();
+                }
+
+                showCurrent();
+
+                $imageInput.off('change.cwNvPreview').on('change.cwNvPreview', function () {
+                    var file = (this.files && this.files[0]) ? this.files[0] : null;
+                    if (!file) {
+                        if ($removeCheck.is(':checked')) {
+                            showDefault();
+                            return;
+                        }
+                        showCurrent();
+                        return;
+                    }
+
+                    $removeCheck.prop('checked', false);
+                    $removeHidden.val('0');
+                    previewFile(file);
+                });
+
+                $removeCheck.off('change.cwNvPreview').on('change.cwNvPreview', function () {
+                    var checked = $(this).is(':checked');
+                    $removeHidden.val(checked ? '1' : '0');
+
+                    if (checked) {
+                        revokeObjectPreview();
+                        $imageInput.val('');
+                        showDefault();
+                        return;
+                    }
+
+                    var file = ($imageInput[0].files && $imageInput[0].files[0]) ? $imageInput[0].files[0] : null;
+                    if (file) {
+                        previewFile(file);
+                        return;
+                    }
+                    showCurrent();
+                });
+            }
+
+            function refreshNvItems() {
+                renumberNvItems();
+
+                $('#cw-nv-items .cw-nv-item').each(function () {
+                    var $item = $(this);
+
+                    $item.find('[data-cw-counter]').each(function () {
+                        initCharCounter($(this));
+                    });
+
+                    syncNvVisibility($item);
+                    initNvItemPreview($item);
+                });
+            }
+
+            function initNovedadesForm() {
+                var $form = $('#cw-nv-form');
+                if (!$form.length || $form.data('cwReady')) {
+                    return;
+                }
+                $form.data('cwReady', 1);
+
+                $form.find('[data-cw-counter]').each(function () {
+                    initCharCounter($(this));
+                });
+
+                refreshNvItems();
+            }
+
             function processCounterId(prefix) {
                 return 'cw_process_' + String(prefix || 'field') + '_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
             }
@@ -2523,6 +3036,68 @@
                 syncCeSocialVisibility($item);
             });
 
+            $(document).on('click', '#cw-nv-add-item', function () {
+                var $container = $('#cw-nv-items');
+                var count = $container.find('.cw-nv-item').length;
+                if (count >= 9) {
+                    showAlert($('#cw-nv-alert'), 'Solo se permiten hasta 9 novedades.', 'warning');
+                    return;
+                }
+
+                var defaultImage = '';
+                var $sourceImage = $container.find('.cw-nv-item-preview-img').first();
+                if ($sourceImage.length) {
+                    defaultImage = $.trim(String($sourceImage.attr('data-default-src') || ''));
+                }
+                if (!defaultImage) {
+                    defaultImage = '/web/img/blog-1.jpg';
+                }
+
+                var $card = createNvItemCard({
+                    id: 0,
+                    visible: 1,
+                    titulo: '',
+                    meta_1_icono: 'fa fa-user text-primary',
+                    meta_1_texto: '',
+                    meta_2_icono: 'fa fa-comment-alt text-primary',
+                    meta_2_texto: '',
+                    badge_texto: '',
+                    resumen_texto: '',
+                    boton_texto: '',
+                    boton_url: '#',
+                    default_image: defaultImage,
+                    current_image: defaultImage
+                });
+
+                $container.append($card);
+                refreshNvItems();
+            });
+
+            $(document).on('click', '#cw-nv-items .cw-nv-remove-item', function () {
+                var $container = $('#cw-nv-items');
+                var count = $container.find('.cw-nv-item').length;
+                if (count <= 1) {
+                    showAlert($('#cw-nv-alert'), 'Debes mantener al menos 1 novedad.', 'warning');
+                    return;
+                }
+
+                $(this).closest('.cw-nv-item').remove();
+                refreshNvItems();
+            });
+
+            $(document).on('change', '#cw-nv-items .cw-nv-item-visible-check', function () {
+                var $check = $(this);
+                var $item = $check.closest('.cw-nv-item');
+                var checked = $check.is(':checked');
+
+                if (!checked && countNvVisibleItems() < 1) {
+                    $check.prop('checked', true);
+                    showAlert($('#cw-nv-alert'), 'Debes mantener al menos 1 novedad visible.', 'warning');
+                }
+
+                syncNvVisibility($item);
+            });
+
             $(document).on('click', '#cw-process-add-item', function () {
                 var $container = $('#cw-process-items');
                 var count = $container.find('.cw-process-item').length;
@@ -2862,6 +3437,70 @@
                     defaultError: 'No se pudo guardar la configuracion de carrusel de empresas.',
                     onSuccess: function () {
                         loadView('carrusel_empresas');
+                    }
+                });
+            });
+
+            $(document).on('submit', '#cw-testimonios-form', function (e) {
+                e.preventDefault();
+
+                var $form = $(this);
+                refreshTestimoniosItems();
+
+                var formData = new FormData($form[0]);
+
+                submitAjaxForm({
+                    form: $form,
+                    alert: $('#cw-testimonios-alert'),
+                    submit: $form.find('#cw-testimonios-submit'),
+                    ajaxConfig: {
+                        data: formData,
+                        processData: false,
+                        contentType: false
+                    },
+                    defaultButtonText: 'Guardar testimonios',
+                    defaultError: 'No se pudo guardar la configuracion de testimonios.',
+                    onSuccess: function () {
+                        loadView('testimonios');
+                    }
+                });
+            });
+
+            $(document).on('submit', '#cw-nv-form', function (e) {
+                e.preventDefault();
+
+                var $form = $(this);
+                refreshNvItems();
+
+                var count = $('#cw-nv-items .cw-nv-item').length;
+                if (count < 1) {
+                    showAlert($('#cw-nv-alert'), 'Debes registrar al menos 1 novedad.', 'warning');
+                    return;
+                }
+                if (count > 9) {
+                    showAlert($('#cw-nv-alert'), 'Solo se permiten hasta 9 novedades.', 'warning');
+                    return;
+                }
+                if (countNvVisibleItems() < 1) {
+                    showAlert($('#cw-nv-alert'), 'Debes mantener al menos 1 novedad visible.', 'warning');
+                    return;
+                }
+
+                var formData = new FormData($form[0]);
+
+                submitAjaxForm({
+                    form: $form,
+                    alert: $('#cw-nv-alert'),
+                    submit: $form.find('#cw-nv-submit'),
+                    ajaxConfig: {
+                        data: formData,
+                        processData: false,
+                        contentType: false
+                    },
+                    defaultButtonText: 'Guardar novedades',
+                    defaultError: 'No se pudo guardar la configuracion de novedades.',
+                    onSuccess: function () {
+                        loadView('novedades');
                     }
                 });
             });
