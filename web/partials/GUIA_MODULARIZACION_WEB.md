@@ -1,273 +1,226 @@
-﻿# Guia de modularizacion web (control_web + partials)
+# Guia de modularizacion web (control_web + partials)
 
 ## 1) Proposito de esta modularizacion
-El objetivo es mover partes de la web publica (`index.php` en raiz) a modulos configurables desde el sistema interno (`sistema/modules/control_web/`), sin romper el tema ni la base existente.
+El objetivo es modularizar bloques del sitio publico (`index.php` en raiz) para administrarlos desde el sistema interno (`sistema/modules/control_web/`) sin romper el tema ni el fallback visual.
 
-Beneficios:
-- Mantener orden: logica de edicion en `control_web`, render publico en `web/partials`.
-- Permitir cambios dinamicos en BD sin tocar HTML estatico cada vez.
-- Tener defaults seguros cuando no hay datos personalizados.
+Beneficios principales:
+- Orden claro entre capa de administracion y capa publica.
+- Cambios dinamicos en BD sin editar HTML estatico en cada ajuste.
+- Defaults seguros cuando no hay datos personalizados o falla una consulta.
 
 ## 2) Arquitectura actual
 ### 2.1 Flujo general
-1. El sitio publico (`index.php` raiz) incluye partials:
+1. El sitio publico (`index.php` raiz) incluye 9 partials:
    - `web/partials/topbar.php`
    - `web/partials/navbar.php`
+   - `web/partials/formulario_carrusel.php`
    - `web/partials/features.php`
    - `web/partials/about.php`
    - `web/partials/counter.php`
-2. Cada partial consulta su modelo (`*_model.php`), que lee BD y cae a defaults si no hay datos.
-3. El modulo admin `sistema/modules/control_web/index.php` muestra botones (Cabecera, Menu, Caracteristicas, Nosotros, Contadores).
-4. `control_web.js` carga cada subvista por AJAX y envia formularios a `guardar.php` sin recargar pagina.
+   - `web/partials/services.php`
+   - `web/partials/process.php`
+   - `web/partials/banner.php`
+2. Cada partial consulta su `*_model.php` y aplica defaults si no hay datos en BD.
+3. El modulo admin `sistema/modules/control_web/index.php` muestra 9 botones (`data-target`) y expone sus URLs en `window.CONTROL_WEB`.
+4. `control_web.js` carga cada subvista por AJAX (`loadView`) y envia formularios a `guardar.php` sin recargar.
+5. `formulario_carrusel` ademas tiene:
+   - Endpoint publico de envio: `web/partials/formulario_carrusel_submit.php`
+   - Endpoint admin para gestionar mensajes: `sistema/modules/control_web/formulario_carrusel/mensajes.php`
 
 ### 2.2 Carpetas que participan
 - `sistema/modules/control_web/`
-  - UI admin principal, botones, carga dinamica, JS y CSS de gestion.
-  - Submodulos actuales:
-    - `cabecera/`
-    - `menu/`
-    - `caracteristicas/`
-    - `nosotros/`
-    - `contadores/`
+  - Vista principal de control web (`index.php`), JS y CSS.
+  - Submodulos: `cabecera`, `menu`, `caracteristicas`, `nosotros`, `contadores`, `servicios`, `proceso`, `banner`, `formulario_carrusel`.
 - `web/partials/`
-  - Render del frontend publico y modelos de datos.
-  - Aqui viven:
-    - `topbar.php` + `topbar_model.php`
-    - `navbar.php` + `menu_model.php`
-    - `features.php` + `features_model.php`
-    - `about.php` + `about_model.php`
-    - `counter.php` + `counter_model.php`
+  - Render del frontend publico + modelos (`*_model.php`) compartidos con admin.
 
-## 3) Modulos implementados hasta hoy
+### 2.3 Patron de puente (admin -> modelo compartido)
+Cada submodulo admin incluye un `model.php` que hace `require_once` al modelo del partial correspondiente.  
+Ejemplo: `sistema/modules/control_web/servicios/model.php` -> `web/partials/services_model.php`.
+
+## 3) Modularizaciones activas (9)
 1. Cabecera
-- Control admin: `sistema/modules/control_web/cabecera/`
-- Render publico: `web/partials/topbar.php`
+- Admin: `sistema/modules/control_web/cabecera/`
+- Publico: `web/partials/topbar.php` + `topbar_model.php`
 - Tabla: `web_topbar_config`
-- Controla: direccion, telefono, correo, redes (WhatsApp/Facebook/Instagram/YouTube)
+- Controla: direccion, telefono, correo, redes sociales.
 
 2. Menu
-- Control admin: `sistema/modules/control_web/menu/`
-- Render publico: `web/partials/navbar.php`
+- Admin: `sistema/modules/control_web/menu/`
+- Publico: `web/partials/navbar.php` + `menu_model.php`
 - Tabla: `web_menu`
-- Controla: titulo, logo, menu principal/submenus, boton de accion
+- Controla: titulo, logo, menu principal/submenus y boton de accion.
 
 3. Caracteristicas
-- Control admin: `sistema/modules/control_web/caracteristicas/`
-- Render publico: `web/partials/features.php`
+- Admin: `sistema/modules/control_web/caracteristicas/`
+- Publico: `web/partials/features.php` + `features_model.php`
 - Tabla: `web_caracteristicas`
-- Controla: titulo en 2 partes, descripcion, imagen central, 4 tarjetas de caracteristicas
+- Controla: titulo, descripcion, imagen central y tarjetas.
 
-4. Nosotros (About)
-- Control admin: `sistema/modules/control_web/nosotros/`
-- Render publico: `web/partials/about.php`
+4. Nosotros
+- Admin: `sistema/modules/control_web/nosotros/`
+- Publico: `web/partials/about.php` + `about_model.php`
 - Tabla: `web_nosotros`
-- Controla:
-  - Titulo en 2 partes y descripcion principal
-  - 2 tarjetas (Vision/Mision) con icono imagen + titulo + texto
-  - Descripcion complementaria
-  - Caja de experiencia (numero + texto)
-  - Checklist de 4 items
-  - Boton CTA (texto + enlace)
-  - Fundador (nombre, cargo, imagen)
-  - Imagen principal e imagen secundaria del bloque derecho
+- Controla: textos principales, tarjetas, checklist, CTA, fundador e imagenes.
 
-5. Contadores (Fact Counter)
-- Control admin: `sistema/modules/control_web/contadores/`
-- Render publico: `web/partials/counter.php`
+5. Contadores
+- Admin: `sistema/modules/control_web/contadores/`
+- Publico: `web/partials/counter.php` + `counter_model.php`
 - Tabla: `web_contadores`
-- Controla: 4 contadores del bloque (`numero` + `titulo`), manteniendo iconos y estilo del tema
+- Controla: bloques de contadores (`numero` + `titulo`).
+
+6. Servicios
+- Admin: `sistema/modules/control_web/servicios/`
+- Publico: `web/partials/services.php` + `services_model.php`
+- Tabla: `web_servicios`
+- Controla: titulo, descripcion e items de servicios.
+
+7. Proceso
+- Admin: `sistema/modules/control_web/proceso/`
+- Publico: `web/partials/process.php` + `process_model.php`
+- Tabla: `web_proceso`
+- Controla: titulo, descripcion e items del proceso.
+
+8. Banner
+- Admin: `sistema/modules/control_web/banner/`
+- Publico: `web/partials/banner.php` + `banner_model.php`
+- Tabla: `web_banner`
+- Controla: textos, botones e imagen del banner.
+
+9. Formulario y Carrusel
+- Admin: `sistema/modules/control_web/formulario_carrusel/`
+- Publico: `web/partials/formulario_carrusel.php` + `formulario_carrusel_model.php`
+- Submit publico: `web/partials/formulario_carrusel_submit.php`
+- Tablas:
+  - `web_formulario_carrusel_items` (slides del carrusel)
+  - `web_formulario_carrusel_mensajes` (leads del formulario)
+- Controla:
+  - Items del carrusel (1..5, ordenados, con imagen opcional)
+  - Gestion de mensajes (listar, actualizar estado, eliminar)
+- Nota: opciones de servicios/ciudades/horarios del formulario estan definidas en codigo (helpers del modelo), no en tabla de catalogos.
 
 ## 4) Regla de acceso (rol que puede editar)
 Todos los endpoints de `control_web` usan:
 - `acl_require_ids([1]);`
 - `verificarPermiso(['Desarrollo']);`
 
-Esto deja la edicion para perfil de Desarrollo (con la validacion ACL definida por el sistema).
-
-Ademas, el menu lateral registra la opcion Web en:
+El menu lateral registra la opcion Web en:
 - `sistema/includes/menu_matrix.php`
-- item actual: `['path' => 'modules/control_web/', 'icon' => 'fas fa-globe', 'label' => 'Web', 'roles' => [$R['DES']]]`
 
-## 5) Como se crean botones en Control Web
-Archivo base: `sistema/modules/control_web/index.php`
+## 5) Patron tecnico vigente
+### 5.1 Contrato por modulo
+En la practica cada modulo sigue este contrato:
+- `*_defaults()`: estado base seguro.
+- `*_fetch(mysqli $cn)`: lectura desde BD con fallback.
+- `*_upsert(mysqli $cn, array $data)`: persistencia.
+- Helpers de normalizacion/URL/resolucion de imagen segun el caso.
 
-Para agregar un boton nuevo:
-1. Crear boton HTML con `data-target` unico.
-2. Registrar URL en `window.CONTROL_WEB`.
-3. En `control_web.js`, mapear ese `data-target` a la URL.
-4. Crear carpeta del submodulo con `index.php`, `guardar.php`, `model.php`.
+### 5.2 Persistencia
+Hay dos patrones:
 
-Patron actual:
-- Botones: Cabecera, Menu, Caracteristicas, Nosotros, Contadores
-- `control_web.js` usa `loadView(target)` + `$workspace.load(url)`
+1. Fila unica (`id = 1`) con `INSERT ... ON DUPLICATE KEY UPDATE`
+- `web_topbar_config`
+- `web_menu`
+- `web_caracteristicas`
+- `web_nosotros`
+- `web_contadores`
+- `web_servicios`
+- `web_proceso`
+- `web_banner`
 
-## 6) Reglas de negocio y programacion (patron vigente)
-1. Siempre usar defaults
-- Cada modelo en `web/partials/*_model.php` define `*_defaults()`.
-- Si falla query, no hay fila `id=1`, o hay campos vacios, se retorna default.
+2. Multi-fila (caso especial `formulario_carrusel`)
+- `web_formulario_carrusel_items`: hasta 5 filas ordenadas (`orden`), con altas/ediciones/borrados.
+- `web_formulario_carrusel_mensajes`: historial de leads con paginacion y estados.
 
-2. Tabla de configuracion de fila unica
-- Patron actual: `id = 1` con `INSERT ... ON DUPLICATE KEY UPDATE`.
-- Esto simplifica lectura/escritura para configuraciones globales del sitio.
+### 5.3 Validacion y seguridad
+- Doble validacion:
+  - Frontend (maxlength/pattern/required y ayudas visuales).
+  - Backend (`guardar.php` o submit publico) como validacion final obligatoria.
+- Salida escapada con `htmlspecialchars(..., ENT_QUOTES, 'UTF-8')`.
+- Sin confiar en JS para reglas de negocio.
 
-3. Validacion doble
-- Frontend: `maxlength`, `pattern`, `required`, ayudas visuales.
-- Backend (`guardar.php`): validacion final obligatoria.
-- Nunca confiar solo en JS.
+## 6) AJAX y endpoints
+### 6.1 Carga de vistas admin
+- `control_web.js` mapea `target -> url` y usa `$workspace.load(url)`.
+- Targets activos: `cabecera`, `menu`, `caracteristicas`, `nosotros`, `contadores`, `servicios`, `proceso`, `banner`, `formulario_carrusel`.
 
-4. Sin recarga completa
-- Formularios se envian por AJAX desde `control_web.js`.
-- Mensajes inline (success/error) con cierre manual y auto ocultado en 5s.
+### 6.2 Guardado admin
+- Cada formulario envia a su `guardar.php` via AJAX.
+- Respuesta estandar JSON: `{ ok, message, errors? }`.
 
-5. Escapar salida
-- En render publico y admin se usa `htmlspecialchars(..., ENT_QUOTES, 'UTF-8')`.
+### 6.3 Caso formulario_carrusel
+- Publico:
+  - `formulario_carrusel.php` renderiza formulario + carrusel.
+  - `formulario_carrusel_submit.php` valida e inserta lead (`cw_fc_insert_message`).
+- Admin:
+  - `guardar.php` guarda items del carrusel (incluye uploads y limpieza de imagenes antiguas).
+  - `mensajes.php` soporta acciones: `list`, `update_status`, `delete`.
 
-6. Compatibilidad
-- PHP + mysqli, sin dependencias modernas obligatorias.
-
-## 7) Como se crean tablas nuevas
-Ubicacion recomendada para migraciones:
-- `db/migrations/`
-
-Ejemplos reales:
-- `db/migrations/2026-03-08_control_web_topbar.sql`
-- `db/migrations/2026-03-08_control_web_menu.sql`
-- `db/migrations/2026-03-08_control_web_caracteristicas.sql`
-- `db/migrations/2026-03-08_control_web_nosotros.sql`
-- `db/migrations/2026-03-08_control_web_contadores.sql`
-
-Convenciones usadas:
-- Prefijo funcional: `web_...`
-- PK simple: `id TINYINT UNSIGNED` (fila unica id=1)
-- Campo `actualizacion DATETIME ... ON UPDATE CURRENT_TIMESTAMP`
-- JSON para estructuras flexibles (menu/items)
-
-Plantilla sugerida:
-```sql
-CREATE TABLE IF NOT EXISTS web_nuevo_modulo (
-    id TINYINT UNSIGNED NOT NULL,
-    -- campos...
-    actualizacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-INSERT INTO web_nuevo_modulo (id, ...)
-VALUES (1, ...)
-ON DUPLICATE KEY UPDATE id = id;
-```
-
-## 8) Manejo de inputs y validaciones (resumen por tipo)
-### 8.1 Texto
-- Se normaliza con `trim`.
-- Se limita por longitud maxima en backend.
-- En caracteristicas y nosotros se usan contadores de caracteres desde `control_web.js`.
-- En contadores, `numero` se valida como digitos (1 a 8) y `titulo` hasta 80 caracteres.
-
-### 8.2 Email y telefono
-- Email con `FILTER_VALIDATE_EMAIL`.
-- Telefono de cabecera: 9 digitos y empieza con 9 (`/^9\d{8}$/`).
-
-### 8.3 URLs
-- Cabecera valida dominio permitido por red social.
-- Menu valida `#seccion`, `http(s)`, rutas relativas, y bloquea `javascript:`/`data:`.
-- Nosotros reutiliza validacion de enlaces tipo menu para el CTA.
-
-### 8.4 JSON
-- Menu principal/submenu via `menu_items_json`.
-- Se parsea con `json_decode` y se normaliza con `cw_menu_normalize_items`.
-- Caracteristicas usa `items_json` y `cw_features_normalize_items`.
-- Nosotros usa `tarjetas_json` y `checklist_json` con `cw_about_normalize_cards` + `cw_about_normalize_checklist`.
-- Contadores usa `items_json` con `cw_counter_normalize_items`.
-
-## 9) Subida, reemplazo y eliminacion de archivos
+## 7) Subida, reemplazo y eliminacion de archivos
 Se usa:
 - `sistema/modules/consola/gestion_archivos.php`
 
-Funciones clave:
-- `ga_save_upload(...)`: guarda archivo y registra metadata en `mtp_archivos`.
-- `ga_mark_and_delete(...)`: marca estado (`reemplazado`/`borrado`) y elimina archivo fisico.
+Funciones principales:
+- `ga_save_upload(...)`
+- `ga_mark_and_delete(...)`
 
-Estructura de almacenamiento:
-- `almacen/AAAA/MM/DD/<categoria>/archivo.ext`
-
-Categorias usadas hasta hoy:
+Categorias usadas:
 - Menu logo: `logo_web`
-- Imagen de caracteristicas: `img_caracteristica`
-- Imagenes de nosotros (iconos/tarjetas/fundador/columna derecha): `img_nosotros`
-- Contadores no usa subida de archivos (solo campos de texto/numero).
+- Caracteristicas: `img_caracteristica`
+- Nosotros: `img_nosotros`
+- Banner: `img_banner`
+- Formulario/Carrusel: `img_formulario_carrusel`
 
 Reglas vigentes:
 - Maximo 3MB
 - MIME permitido: `image/png`, `image/webp`, `image/jpeg`
-- Al subir nuevo archivo, se elimina el anterior (si existia)
-- Si usuario marca "eliminar", se limpia ruta y vuelve fallback default
+- Al reemplazar archivo, se marca/elimina el anterior
+- Si se marca eliminar, se limpia ruta y se usa fallback default
 
-## 10) Importancia de los defaults
-Nunca debe romperse la web publica si faltan datos personalizados.
+## 8) Migraciones SQL relacionadas
+Ubicacion recomendada:
+- `db/migrations/`
 
-Patron obligatorio:
-- `*_defaults()` define valores base visualmente validos.
-- `*_fetch()` siempre regresa datos completos (merge defaults + BD).
-- El partial renderiza default cuando:
-  - no existe registro
-  - valor esta vacio
-  - archivo custom no existe fisicamente
+Migraciones actuales de control web:
+- `2026-03-08_control_web_topbar.sql`
+- `2026-03-08_control_web_menu.sql`
+- `2026-03-08_control_web_caracteristicas.sql`
+- `2026-03-08_control_web_nosotros.sql`
+- `2026-03-08_control_web_contadores.sql`
+- `2026-03-09_control_web_servicios.sql`
+- `2026-03-09_control_web_proceso.sql`
+- `2026-03-09_control_web_banner.sql`
+- `2026-03-09_control_web_formulario_carrusel.sql`
 
-Esto evita secciones vacias, logos rotos, o HTML incompleto.
+## 9) Playbook para nueva modularizacion
+1. Identificar bloque en `index.php` raiz y extraer a `web/partials/nuevo.php` si aplica.
+2. Crear `web/partials/nuevo_model.php` con `defaults/fetch/upsert` + helpers.
+3. Crear migracion SQL en `db/migrations/`.
+4. Crear submodulo admin:
+   - `sistema/modules/control_web/nuevo/index.php`
+   - `sistema/modules/control_web/nuevo/guardar.php`
+   - `sistema/modules/control_web/nuevo/model.php`
+5. Registrar boton y ruta en `sistema/modules/control_web/index.php`.
+6. Mapear `data-target` en `control_web.js`.
+7. Validar seguridad (`acl_require_ids([1])`, `verificarPermiso(['Desarrollo'])`).
+8. Probar end-to-end (guardado valido, errores, fallback y render publico).
 
-## 11) Playbook para crear una nueva modularizacion
-1. Identificar bloque en `index.php` raiz
-- Si aplica, extraer a `web/partials/nuevo.php` e incluirlo en raiz.
-
-2. Crear modelo en `web/partials/nuevo_model.php`
-- `nuevo_defaults()`
-- `nuevo_fetch(mysqli $cn)`
-- `nuevo_upsert(mysqli $cn, array $data)`
-- helpers de normalizacion/URL/fallback
-
-3. Crear migracion SQL en `db/migrations/`
-- tabla `web_nuevo_modulo`
-- semilla inicial con `id=1`
-
-4. Crear submodulo admin
-- `sistema/modules/control_web/nuevo/index.php` (formulario)
-- `sistema/modules/control_web/nuevo/guardar.php` (validacion + guardado)
-- `sistema/modules/control_web/nuevo/model.php` (require al modelo partial)
-
-5. Conectar en panel `control_web`
-- Boton nuevo en `sistema/modules/control_web/index.php`
-- Ruta nueva en `window.CONTROL_WEB`
-- Mapa `target => url` en `control_web.js`
-
-6. Ajustar estilos si hace falta
-- `sistema/modules/control_web/control_web.css`
-
-7. Validar seguridad
-- `acl_require_ids([1])`
-- `verificarPermiso(['Desarrollo'])`
-
-8. Probar end-to-end
-- Abrir modulo
-- Guardar con datos validos
-- Forzar errores de validacion
-- Confirmar render en web publica
-- Confirmar fallback default si faltan datos
-
-## 12) Checklist rapido antes de cerrar una modularizacion
-- [ ] Hay migracion SQL en `db/migrations/`
-- [ ] Existe `*_defaults()` coherente
-- [ ] Se valida en backend todos los campos
-- [ ] Se escapa salida en vista
-- [ ] No se rompe si BD esta vacia
-- [ ] Upload elimina archivo anterior cuando corresponde
-- [ ] Se mantiene UX sin recargar pagina
-- [ ] Boton y ruta en `control_web` funcionan
-- [ ] Render publico en `index.php` quedo enlazado
+## 10) Checklist de cierre
+- [ ] Existe migracion SQL.
+- [ ] Existe `*_defaults()` coherente.
+- [ ] Backend valida todos los campos.
+- [ ] La salida esta escapada.
+- [ ] No se rompe si BD esta vacia.
+- [ ] Upload reemplaza/elimina correctamente.
+- [ ] Admin funciona sin recarga completa.
+- [ ] Boton y ruta de `control_web` cargan correctamente.
+- [ ] Partial publico quedo enlazado en `index.php`.
 
 ---
-Documento basado en la implementacion actual de:
+Documento actualizado segun implementacion real actual en:
 - `index.php` (raiz)
 - `sistema/modules/control_web/*`
 - `web/partials/*`
 - `sistema/modules/consola/gestion_archivos.php`
 - `db/migrations/2026-03-08_control_web_*.sql`
+- `db/migrations/2026-03-09_control_web_*.sql`

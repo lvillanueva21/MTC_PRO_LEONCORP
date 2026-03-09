@@ -14,6 +14,12 @@
             var $workspace = $('#cw-workspace');
             var $feedback = $('#cw-feedback');
             var $buttons = $('.cw-action-btn');
+            var fcState = {
+                page: 1,
+                pages: 1,
+                apiUrl: '',
+                statusOptions: null
+            };
 
             function escapeHtml(value) {
                 return String(value || '')
@@ -108,7 +114,8 @@
                     contadores: cfg.contadoresUrl,
                     servicios: cfg.serviciosUrl,
                     proceso: cfg.procesoUrl,
-                    banner: cfg.bannerUrl
+                    banner: cfg.bannerUrl,
+                    formulario_carrusel: cfg.formularioCarruselUrl
                 };
                 var url = routes[target] || '';
                 if (!url) {
@@ -162,6 +169,11 @@
 
                     if (target === 'banner') {
                         initBannerForm();
+                        return;
+                    }
+
+                    if (target === 'formulario_carrusel') {
+                        initFormularioCarruselForm();
                         return;
                     }
                 });
@@ -912,6 +924,522 @@
                 refreshProcessItems();
             }
 
+            function fcCounterId(prefix) {
+                return 'cw_fc_' + String(prefix || 'field') + '_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+            }
+
+            function fcStatusOptionsDefault() {
+                return {
+                    en_espera: 'En espera',
+                    contactado: 'Contactado',
+                    venta_cerrada: 'Venta cerrada',
+                    no_cerrada: 'No cerrada',
+                    no_contesto: 'No contesto'
+                };
+            }
+
+            function fcBadgeClass(status) {
+                if (status === 'contactado') { return 'badge-info'; }
+                if (status === 'venta_cerrada') { return 'badge-success'; }
+                if (status === 'no_cerrada') { return 'badge-warning'; }
+                if (status === 'no_contesto') { return 'badge-secondary'; }
+                return 'badge-primary';
+            }
+
+            function createFcItemCard(data) {
+                var d = data || {};
+                var title = $.trim(String(d.titulo || ''));
+                var text = $.trim(String(d.texto || ''));
+                var defaultImage = $.trim(String(d.default_image || ''));
+                var currentImage = $.trim(String(d.current_image || defaultImage));
+                var titleCounterId = fcCounterId('titulo');
+                var textCounterId = fcCounterId('texto');
+                var removeId = fcCounterId('remove');
+
+                var html = ''
+                    + '<div class="card card-outline card-light cw-fc-item mb-3" data-default-image="' + escapeHtml(defaultImage) + '">'
+                    + '  <div class="card-header py-2 d-flex justify-content-between align-items-center">'
+                    + '    <div>'
+                    + '      <strong class="cw-fc-item-title">Elemento</strong>'
+                    + '      <span class="badge badge-light ml-2 cw-fc-item-slide-label">Slide 1</span>'
+                    + '    </div>'
+                    + '    <button type="button" class="btn btn-sm btn-outline-danger cw-fc-remove-item">Quitar</button>'
+                    + '  </div>'
+                    + '  <div class="card-body py-3">'
+                    + '    <input type="hidden" class="cw-fc-item-id" value="0">'
+                    + '    <div class="form-row">'
+                    + '      <div class="form-group col-md-5">'
+                    + '        <div class="d-flex justify-content-between">'
+                    + '          <label class="mb-1">Titulo</label>'
+                    + '          <small class="text-muted cw-char-counter"><span id="' + titleCounterId + '">140</span> restantes</small>'
+                    + '        </div>'
+                    + '        <input type="text" class="form-control cw-fc-item-titulo" maxlength="140" data-cw-counter="' + titleCounterId + '" value="' + escapeHtml(title) + '" placeholder="Titulo del slide">'
+                    + '      </div>'
+                    + '      <div class="form-group col-md-7">'
+                    + '        <div class="d-flex justify-content-between">'
+                    + '          <label class="mb-1">Texto</label>'
+                    + '          <small class="text-muted cw-char-counter"><span id="' + textCounterId + '">260</span> restantes</small>'
+                    + '        </div>'
+                    + '        <textarea class="form-control cw-fc-item-texto" rows="3" maxlength="260" data-cw-counter="' + textCounterId + '" placeholder="Texto de apoyo del slide">' + escapeHtml(text) + '</textarea>'
+                    + '      </div>'
+                    + '    </div>'
+                    + '    <div class="form-row">'
+                    + '      <div class="form-group col-md-6">'
+                    + '        <label class="mb-1">Imagen</label>'
+                    + '        <input type="file" class="form-control-file cw-fc-item-imagen" accept=".png,.webp,.jpg,.jpeg,image/png,image/webp,image/jpeg">'
+                    + '        <small class="form-text text-muted">Categoria: <strong>img_formulario_carrusel</strong>.</small>'
+                    + '        <div class="custom-control custom-checkbox mt-2">'
+                    + '          <input type="hidden" class="cw-fc-item-remove-hidden" value="0">'
+                    + '          <input type="checkbox" class="custom-control-input cw-fc-item-remove-check" id="' + removeId + '" value="1">'
+                    + '          <label class="custom-control-label" for="' + removeId + '">Quitar imagen personalizada</label>'
+                    + '        </div>'
+                    + '      </div>'
+                    + '      <div class="form-group col-md-6">'
+                    + '        <label class="d-block mb-1">Vista previa</label>'
+                    + '        <div class="cw-fc-image-preview p-2 border rounded bg-light">'
+                    + '          <img class="cw-fc-item-preview-img img-fluid" src="' + escapeHtml(currentImage) + '" data-current-src="' + escapeHtml(currentImage) + '" data-default-src="' + escapeHtml(defaultImage) + '" alt="Preview carrusel">'
+                    + '        </div>'
+                    + '      </div>'
+                    + '    </div>'
+                    + '  </div>'
+                    + '</div>';
+
+                return $(html);
+            }
+
+            function renumberFcItems() {
+                var $items = $('#cw-fc-carousel-items .cw-fc-item');
+                var total = $items.length;
+
+                $items.each(function (idx) {
+                    var index = idx + 1;
+                    var $item = $(this);
+                    var removeId = 'cw_fc_remove_' + index + '_' + Date.now();
+
+                    $item.attr('data-index', idx);
+                    $item.find('.cw-fc-item-title').text('Elemento ' + index);
+                    $item.find('.cw-fc-item-slide-label').text('Slide ' + index);
+
+                    $item.find('.cw-fc-item-id').attr('name', 'item_id[' + idx + ']');
+                    $item.find('.cw-fc-item-titulo').attr('name', 'item_titulo[' + idx + ']');
+                    $item.find('.cw-fc-item-texto').attr('name', 'item_texto[' + idx + ']');
+                    $item.find('.cw-fc-item-imagen').attr('name', 'item_imagen_archivo[' + idx + ']');
+
+                    var $removeHidden = $item.find('.cw-fc-item-remove-hidden');
+                    var $removeCheck = $item.find('.cw-fc-item-remove-check');
+                    var $removeLabel = $item.find('.custom-control-label').first();
+
+                    $removeHidden.attr('name', 'item_eliminar_imagen[' + idx + ']');
+                    $removeHidden.val($removeCheck.is(':checked') ? '1' : '0');
+                    $removeCheck.attr('name', 'item_eliminar_imagen[' + idx + ']');
+                    $removeCheck.attr('id', removeId);
+                    $removeLabel.attr('for', removeId);
+                });
+
+                var disableRemove = total <= 1;
+                $items.find('.cw-fc-remove-item')
+                    .prop('disabled', disableRemove)
+                    .toggleClass('disabled', disableRemove);
+
+                $('#cw-fc-carousel-add-item').prop('disabled', total >= 5);
+            }
+
+            function initFcItemPreview($item) {
+                if (!$item || !$item.length) {
+                    return;
+                }
+
+                var $imageInput = $item.find('.cw-fc-item-imagen');
+                var $removeCheck = $item.find('.cw-fc-item-remove-check');
+                var $removeHidden = $item.find('.cw-fc-item-remove-hidden');
+                var $image = $item.find('.cw-fc-item-preview-img');
+                var $alert = $('#cw-fc-carousel-alert');
+
+                if (!$imageInput.length || !$removeCheck.length || !$removeHidden.length || !$image.length) {
+                    return;
+                }
+
+                var defaultSrc = $.trim(String($image.attr('data-default-src') || $item.data('defaultImage') || ''));
+                var currentSrc = $.trim(String($image.attr('data-current-src') || $image.attr('src') || defaultSrc));
+                if (!currentSrc) {
+                    currentSrc = defaultSrc;
+                }
+
+                var objectPreviewUrl = '';
+
+                function revokeObjectPreview() {
+                    if (objectPreviewUrl && window.URL && typeof window.URL.revokeObjectURL === 'function') {
+                        window.URL.revokeObjectURL(objectPreviewUrl);
+                    }
+                    objectPreviewUrl = '';
+                }
+
+                function showImage(src) {
+                    var target = $.trim(String(src || ''));
+                    if (!target) {
+                        target = defaultSrc;
+                    }
+                    $image.attr('src', target);
+                }
+
+                function showCurrent() {
+                    showImage(currentSrc || defaultSrc);
+                }
+
+                function showDefault() {
+                    showImage(defaultSrc);
+                }
+
+                function previewFile(file) {
+                    if (!file) {
+                        showCurrent();
+                        return;
+                    }
+
+                    var typeOk = /^image\/(png|jpeg|webp)$/i.test(String(file.type || ''));
+                    var nameOk = /\.(png|jpe?g|webp)$/i.test(String(file.name || ''));
+                    if (!typeOk && !nameOk) {
+                        showAlert($alert, 'Formato no permitido para previsualizacion. Usa PNG, WEBP o JPEG.', 'warning');
+                        $imageInput.val('');
+                        showCurrent();
+                        return;
+                    }
+
+                    revokeObjectPreview();
+                    if (window.URL && typeof window.URL.createObjectURL === 'function') {
+                        objectPreviewUrl = window.URL.createObjectURL(file);
+                        showImage(objectPreviewUrl);
+                        return;
+                    }
+
+                    if (window.FileReader) {
+                        var reader = new FileReader();
+                        reader.onload = function (ev) {
+                            showImage(String((ev && ev.target && ev.target.result) || defaultSrc));
+                        };
+                        reader.readAsDataURL(file);
+                        return;
+                    }
+
+                    showCurrent();
+                }
+
+                showCurrent();
+
+                $imageInput.off('change.cwFcPreview').on('change.cwFcPreview', function () {
+                    var file = (this.files && this.files[0]) ? this.files[0] : null;
+                    if (!file) {
+                        if ($removeCheck.is(':checked')) {
+                            showDefault();
+                            return;
+                        }
+                        showCurrent();
+                        return;
+                    }
+
+                    $removeCheck.prop('checked', false);
+                    $removeHidden.val('0');
+                    previewFile(file);
+                });
+
+                $removeCheck.off('change.cwFcPreview').on('change.cwFcPreview', function () {
+                    var checked = $(this).is(':checked');
+                    $removeHidden.val(checked ? '1' : '0');
+
+                    if (checked) {
+                        revokeObjectPreview();
+                        $imageInput.val('');
+                        showDefault();
+                        return;
+                    }
+
+                    var file = ($imageInput[0].files && $imageInput[0].files[0]) ? $imageInput[0].files[0] : null;
+                    if (file) {
+                        previewFile(file);
+                        return;
+                    }
+                    showCurrent();
+                });
+            }
+
+            function refreshFcItems() {
+                renumberFcItems();
+
+                $('#cw-fc-carousel-items .cw-fc-item').each(function () {
+                    var $item = $(this);
+
+                    $item.find('[data-cw-counter]').each(function () {
+                        initCharCounter($(this));
+                    });
+
+                    initFcItemPreview($item);
+                });
+            }
+
+            function applyFcSavedItems(items) {
+                if (!Array.isArray(items) || items.length < 1) {
+                    return false;
+                }
+
+                var normalized = items.slice(0, 5);
+                if (normalized.length < 1) {
+                    return false;
+                }
+
+                var $container = $('#cw-fc-carousel-items');
+                if (!$container.length) {
+                    return false;
+                }
+
+                $container.empty();
+                normalized.forEach(function (row) {
+                    var id = parseInt(row && row.id, 10);
+                    if (!isFinite(id) || id < 0) {
+                        id = 0;
+                    }
+
+                    var title = $.trim(String((row && row.titulo) || ''));
+                    var text = $.trim(String((row && row.texto) || ''));
+                    var defaultImage = $.trim(String((row && row.default_image_url) || '/web/img/carousel-1.jpg'));
+                    var currentImage = $.trim(String((row && row.imagen_url) || defaultImage));
+                    if (!currentImage) {
+                        currentImage = defaultImage;
+                    }
+
+                    var $card = createFcItemCard({
+                        titulo: title,
+                        texto: text,
+                        default_image: defaultImage,
+                        current_image: currentImage
+                    });
+
+                    $card.find('.cw-fc-item-id').val(id);
+                    $container.append($card);
+                });
+
+                refreshFcItems();
+                return true;
+            }
+
+            function buildFcPagination(current, pages) {
+                var page = parseInt(current, 10);
+                var totalPages = parseInt(pages, 10);
+                if (!isFinite(page) || page < 1) {
+                    page = 1;
+                }
+                if (!isFinite(totalPages) || totalPages < 1) {
+                    totalPages = 1;
+                }
+
+                if (totalPages <= 1) {
+                    return '';
+                }
+
+                var html = '';
+                var prevDisabled = (page <= 1) ? ' disabled' : '';
+                html += '<li class="page-item' + prevDisabled + '"><a href="#" class="page-link" data-page="' + (page - 1) + '">Anterior</a></li>';
+
+                var start = page - 2;
+                var end = page + 2;
+                if (start < 1) {
+                    start = 1;
+                    end = Math.min(totalPages, 5);
+                }
+                if (end > totalPages) {
+                    end = totalPages;
+                    start = Math.max(1, totalPages - 4);
+                }
+
+                for (var p = start; p <= end; p += 1) {
+                    var active = (p === page) ? ' active' : '';
+                    html += '<li class="page-item' + active + '"><a href="#" class="page-link" data-page="' + p + '">' + p + '</a></li>';
+                }
+
+                var nextDisabled = (page >= totalPages) ? ' disabled' : '';
+                html += '<li class="page-item' + nextDisabled + '"><a href="#" class="page-link" data-page="' + (page + 1) + '">Siguiente</a></li>';
+
+                return html;
+            }
+
+            function renderFcMessages(res) {
+                var rows = (res && Array.isArray(res.rows)) ? res.rows : [];
+                var pagination = (res && res.pagination) ? res.pagination : {};
+                var statusOptions = (res && res.status_options && typeof res.status_options === 'object')
+                    ? res.status_options
+                    : fcStatusOptionsDefault();
+                fcState.statusOptions = statusOptions;
+
+                var page = parseInt(pagination.page, 10);
+                var perPage = parseInt(pagination.per_page, 10);
+                var total = parseInt(pagination.total, 10);
+                var pages = parseInt(pagination.pages, 10);
+                if (!isFinite(page) || page < 1) { page = 1; }
+                if (!isFinite(perPage) || perPage < 1) { perPage = 10; }
+                if (!isFinite(total) || total < 0) { total = 0; }
+                if (!isFinite(pages) || pages < 1) { pages = 1; }
+
+                fcState.page = page;
+                fcState.pages = pages;
+
+                var $body = $('#cw-fc-messages-body');
+                var $summary = $('#cw-fc-messages-summary');
+                var $pager = $('#cw-fc-messages-pagination');
+
+                if (!$body.length || !$summary.length || !$pager.length) {
+                    return;
+                }
+
+                if (rows.length === 0) {
+                    $body.html('<tr><td colspan="8" class="text-center text-muted py-3">No hay mensajes registrados.</td></tr>');
+                    $summary.text('Sin mensajes registrados.');
+                    $pager.html('');
+                    return;
+                }
+
+                var html = '';
+                rows.forEach(function (row) {
+                    var id = parseInt(row.id, 10);
+                    if (!isFinite(id) || id < 1) {
+                        return;
+                    }
+
+                    var type = String(row.tipo_solicitante || '');
+                    var typeLabel = (type === 'empresa') ? 'Empresa' : 'Persona';
+                    var interested = (type === 'empresa')
+                        ? $.trim(String(row.razon_social || ''))
+                        : $.trim(String(row.nombres_apellidos || ''));
+                    if (!interested) {
+                        interested = '-';
+                    }
+
+                    var city = $.trim(String(row.ciudad_nombre || ''));
+                    var school = $.trim(String(row.escuela_nombre || ''));
+                    var citySchool = city;
+                    if (school) {
+                        citySchool = citySchool ? (citySchool + ' / ' + school) : school;
+                    }
+                    if (!citySchool) {
+                        citySchool = '-';
+                    }
+
+                    var status = $.trim(String(row.estado || 'en_espera'));
+                    var statusLabel = $.trim(String(row.estado_label || statusOptions[status] || 'En espera'));
+                    var statusBadge = $.trim(String(row.estado_badge_class || fcBadgeClass(status)));
+                    var dateText = $.trim(String(row.fecha_registro || '-'));
+                    var documentText = $.trim(String(row.documento || ''));
+                    var phone = $.trim(String(row.celular || '-'));
+                    var email = $.trim(String(row.correo || ''));
+                    var schedule = $.trim(String(row.horario_nombre || ''));
+                    var serviceName = $.trim(String(row.servicio_nombre || '-'));
+
+                    var optionsHtml = '';
+                    Object.keys(statusOptions).forEach(function (key) {
+                        var selected = (key === status) ? ' selected' : '';
+                        optionsHtml += '<option value="' + escapeHtml(key) + '"' + selected + '>' + escapeHtml(statusOptions[key]) + '</option>';
+                    });
+
+                    var detailHtml = '';
+                    if (documentText) {
+                        detailHtml += '<div class="small text-muted">Doc: ' + escapeHtml(documentText) + '</div>';
+                    }
+                    if (email) {
+                        detailHtml += '<div class="small text-muted">Correo: ' + escapeHtml(email) + '</div>';
+                    }
+                    if (schedule) {
+                        detailHtml += '<div class="small text-muted">Horario: ' + escapeHtml(schedule) + '</div>';
+                    }
+
+                    html += ''
+                        + '<tr data-id="' + id + '">'
+                        + '  <td>' + escapeHtml(dateText) + '</td>'
+                        + '  <td><span class="badge badge-light border">' + escapeHtml(typeLabel) + '</span></td>'
+                        + '  <td><strong>' + escapeHtml(interested) + '</strong>' + detailHtml + '</td>'
+                        + '  <td>' + escapeHtml(serviceName) + '</td>'
+                        + '  <td>' + escapeHtml(citySchool) + '</td>'
+                        + '  <td>' + escapeHtml(phone) + '</td>'
+                        + '  <td>'
+                        + '    <div class="mb-1"><span class="badge ' + escapeHtml(statusBadge) + '">' + escapeHtml(statusLabel) + '</span></div>'
+                        + '    <select class="form-control form-control-sm cw-fc-status-select" data-id="' + id + '">' + optionsHtml + '</select>'
+                        + '  </td>'
+                        + '  <td>'
+                        + '    <button type="button" class="btn btn-sm btn-outline-primary cw-fc-status-save mb-1 w-100" data-id="' + id + '">Actualizar</button>'
+                        + '    <button type="button" class="btn btn-sm btn-outline-danger cw-fc-delete-message w-100" data-id="' + id + '">Eliminar</button>'
+                        + '  </td>'
+                        + '</tr>';
+                });
+
+                if (!html) {
+                    html = '<tr><td colspan="8" class="text-center text-muted py-3">No hay mensajes registrados.</td></tr>';
+                }
+                $body.html(html);
+
+                if (total > 0) {
+                    var from = ((page - 1) * perPage) + 1;
+                    var to = Math.min(total, from + rows.length - 1);
+                    $summary.text('Mostrando ' + from + ' - ' + to + ' de ' + total + ' mensajes.');
+                } else {
+                    $summary.text('Sin mensajes registrados.');
+                }
+
+                $pager.html(buildFcPagination(page, pages));
+            }
+
+            function loadFcMessages(page) {
+                var targetPage = parseInt(page, 10);
+                if (!isFinite(targetPage) || targetPage < 1) {
+                    targetPage = 1;
+                }
+
+                if (!fcState.apiUrl) {
+                    var apiFromDom = $.trim(String($('#cw-fc-scope').data('cwFcApiUrl') || ''));
+                    fcState.apiUrl = apiFromDom;
+                }
+
+                if (!fcState.apiUrl) {
+                    showAlert($('#cw-fc-messages-alert'), 'No se encontro la ruta para cargar mensajes.', 'danger');
+                    return;
+                }
+
+                $('#cw-fc-messages-body').html('<tr><td colspan="8" class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin mr-1"></i>Cargando mensajes...</td></tr>');
+
+                $.ajax({
+                    url: fcState.apiUrl,
+                    type: 'GET',
+                    dataType: 'json',
+                    data: {
+                        action: 'list',
+                        page: targetPage
+                    }
+                }).done(function (res) {
+                    if (res && res.ok) {
+                        renderFcMessages(res);
+                        return;
+                    }
+
+                    $('#cw-fc-messages-body').html('<tr><td colspan="8" class="text-center text-muted py-3">No se pudo cargar el listado.</td></tr>');
+                    showAlert($('#cw-fc-messages-alert'), escapeHtml((res && res.message) || 'No se pudo cargar el listado de mensajes.'), 'danger');
+                }).fail(function () {
+                    $('#cw-fc-messages-body').html('<tr><td colspan="8" class="text-center text-muted py-3">No se pudo cargar el listado.</td></tr>');
+                    showAlert($('#cw-fc-messages-alert'), 'No se pudo cargar el listado de mensajes.', 'danger');
+                });
+            }
+
+            function initFormularioCarruselForm() {
+                var $scope = $('#cw-fc-scope');
+                if (!$scope.length || $scope.data('cwReady')) {
+                    return;
+                }
+                $scope.data('cwReady', 1);
+
+                fcState.page = 1;
+                fcState.pages = 1;
+                fcState.statusOptions = null;
+                fcState.apiUrl = $.trim(String($scope.data('cwFcApiUrl') || ''));
+
+                refreshFcItems();
+                loadFcMessages(1);
+            }
+
             function initAboutImagePreview($form, config) {
                 var opts = config || {};
                 var key = String(opts.key || '');
@@ -1164,6 +1692,189 @@
 
                 $(this).closest('.cw-process-item').remove();
                 refreshProcessItems();
+            });
+
+            $(document).on('click', '#cw-fc-carousel-add-item', function () {
+                var $container = $('#cw-fc-carousel-items');
+                var count = $container.find('.cw-fc-item').length;
+                if (count >= 5) {
+                    showAlert($('#cw-fc-carousel-alert'), 'Solo se permiten hasta 5 elementos en el carrusel.', 'warning');
+                    return;
+                }
+
+                var defaultImage = '';
+                var $sourceImage = $container.find('.cw-fc-item-preview-img').first();
+                if ($sourceImage.length) {
+                    defaultImage = $.trim(String($sourceImage.attr('data-default-src') || ''));
+                }
+                if (!defaultImage) {
+                    defaultImage = '/web/img/carousel-1.jpg';
+                }
+
+                var $card = createFcItemCard({
+                    titulo: '',
+                    texto: '',
+                    default_image: defaultImage,
+                    current_image: defaultImage
+                });
+                $container.append($card);
+                refreshFcItems();
+            });
+
+            $(document).on('click', '#cw-fc-carousel-items .cw-fc-remove-item', function () {
+                var $container = $('#cw-fc-carousel-items');
+                var count = $container.find('.cw-fc-item').length;
+                if (count <= 1) {
+                    showAlert($('#cw-fc-carousel-alert'), 'Debes mantener al menos 1 elemento en el carrusel.', 'warning');
+                    return;
+                }
+
+                $(this).closest('.cw-fc-item').remove();
+                refreshFcItems();
+            });
+
+            $(document).on('click', '#cw-fc-messages-pagination [data-page]', function (e) {
+                e.preventDefault();
+
+                var $item = $(this).closest('.page-item');
+                if ($item.hasClass('disabled') || $item.hasClass('active')) {
+                    return;
+                }
+
+                var page = parseInt($(this).data('page'), 10);
+                if (!isFinite(page) || page < 1) {
+                    return;
+                }
+
+                loadFcMessages(page);
+            });
+
+            $(document).on('click', '#cw-fc-messages-body .cw-fc-status-save', function () {
+                var $btn = $(this);
+                var id = parseInt($btn.data('id'), 10);
+                if (!isFinite(id) || id < 1) {
+                    showAlert($('#cw-fc-messages-alert'), 'Mensaje invalido.', 'danger');
+                    return;
+                }
+
+                if (!fcState.apiUrl) {
+                    showAlert($('#cw-fc-messages-alert'), 'No se encontro la ruta para actualizar mensajes.', 'danger');
+                    return;
+                }
+
+                var $row = $btn.closest('tr');
+                var status = $.trim(String($row.find('.cw-fc-status-select').val() || ''));
+                if (!status) {
+                    showAlert($('#cw-fc-messages-alert'), 'Selecciona un estado valido.', 'warning');
+                    return;
+                }
+
+                var original = $btn.text();
+                $btn.prop('disabled', true).text('Guardando...');
+
+                $.ajax({
+                    url: fcState.apiUrl,
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        action: 'update_status',
+                        id: id,
+                        estado: status
+                    }
+                }).done(function (res) {
+                    if (res && res.ok) {
+                        showAlert($('#cw-fc-messages-alert'), escapeHtml(res.message || 'Estado actualizado correctamente.'), 'success');
+                        loadFcMessages(fcState.page);
+                        return;
+                    }
+
+                    showAlert($('#cw-fc-messages-alert'), escapeHtml((res && res.message) || 'No se pudo actualizar el estado.'), 'danger');
+                }).fail(function () {
+                    showAlert($('#cw-fc-messages-alert'), 'No se pudo actualizar el estado.', 'danger');
+                }).always(function () {
+                    $btn.prop('disabled', false).text(original);
+                });
+            });
+
+            $(document).on('click', '#cw-fc-messages-body .cw-fc-delete-message', function () {
+                var $btn = $(this);
+                var id = parseInt($btn.data('id'), 10);
+                if (!isFinite(id) || id < 1) {
+                    showAlert($('#cw-fc-messages-alert'), 'Mensaje invalido.', 'danger');
+                    return;
+                }
+
+                if (!fcState.apiUrl) {
+                    showAlert($('#cw-fc-messages-alert'), 'No se encontro la ruta para eliminar mensajes.', 'danger');
+                    return;
+                }
+
+                if (!window.confirm('Se eliminara este mensaje de forma permanente. Continuar?')) {
+                    return;
+                }
+
+                var original = $btn.text();
+                $btn.prop('disabled', true).text('Eliminando...');
+
+                $.ajax({
+                    url: fcState.apiUrl,
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        action: 'delete',
+                        id: id
+                    }
+                }).done(function (res) {
+                    if (res && res.ok) {
+                        showAlert($('#cw-fc-messages-alert'), escapeHtml(res.message || 'Mensaje eliminado correctamente.'), 'success');
+                        loadFcMessages(fcState.page);
+                        return;
+                    }
+
+                    showAlert($('#cw-fc-messages-alert'), escapeHtml((res && res.message) || 'No se pudo eliminar el mensaje.'), 'danger');
+                }).fail(function () {
+                    showAlert($('#cw-fc-messages-alert'), 'No se pudo eliminar el mensaje.', 'danger');
+                }).always(function () {
+                    $btn.prop('disabled', false).text(original);
+                });
+            });
+
+            $(document).on('submit', '#cw-fc-carousel-form', function (e) {
+                e.preventDefault();
+
+                var $form = $(this);
+                refreshFcItems();
+
+                var count = $('#cw-fc-carousel-items .cw-fc-item').length;
+                if (count < 1) {
+                    showAlert($('#cw-fc-carousel-alert'), 'Debes registrar al menos 1 elemento.', 'warning');
+                    return;
+                }
+                if (count > 5) {
+                    showAlert($('#cw-fc-carousel-alert'), 'Solo se permiten hasta 5 elementos.', 'warning');
+                    return;
+                }
+
+                var formData = new FormData($form[0]);
+
+                submitAjaxForm({
+                    form: $form,
+                    alert: $('#cw-fc-carousel-alert'),
+                    submit: $form.find('#cw-fc-carousel-submit'),
+                    ajaxConfig: {
+                        data: formData,
+                        processData: false,
+                        contentType: false
+                    },
+                    defaultButtonText: 'Guardar carrusel',
+                    defaultError: 'No se pudo guardar la configuracion de carrusel.',
+                    onSuccess: function (res) {
+                        var applied = applyFcSavedItems((res && res.items) || []);
+                        if (!applied) {
+                            loadView('formulario_carrusel');
+                        }
+                    }
+                });
             });
 
             $(document).on('submit', '#cw-topbar-form', function (e) {

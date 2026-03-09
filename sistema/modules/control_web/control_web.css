@@ -60,6 +60,10 @@
     background: linear-gradient(135deg, #f85032 0%, #e73827 100%);
 }
 
+.cw-btn-formulario-carrusel {
+    background: linear-gradient(135deg, #0f766e 0%, #22c55e 100%);
+}
+
 .cw-workspace {
     min-height: 360px;
 }
@@ -163,4 +167,26 @@
     display: block;
     max-height: 190px;
     width: auto;
+}
+
+.cw-fc-item .card-header {
+    background: #f8f9fa;
+}
+
+#cw-fc-carousel-form textarea {
+    resize: vertical;
+}
+
+.cw-fc-image-preview {
+    min-height: 92px;
+}
+
+.cw-fc-image-preview img {
+    display: block;
+    max-height: 190px;
+    width: auto;
+}
+
+#cw-fc-messages-body td {
+    vertical-align: top;
 }
