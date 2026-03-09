@@ -52,6 +52,14 @@
     background: linear-gradient(135deg, #f46b45 0%, #eea849 100%);
 }
 
+.cw-btn-proceso {
+    background: linear-gradient(135deg, #355c7d 0%, #6c5b7b 100%);
+}
+
+.cw-btn-banner {
+    background: linear-gradient(135deg, #f85032 0%, #e73827 100%);
+}
+
 .cw-workspace {
     min-height: 360px;
 }
@@ -133,4 +141,26 @@
 
 #cw-services-form textarea {
     resize: vertical;
+}
+
+.cw-process-item .card-header {
+    background: #f8f9fa;
+}
+
+#cw-process-form textarea {
+    resize: vertical;
+}
+
+#cw-banner-form textarea {
+    resize: vertical;
+}
+
+.cw-banner-image-preview {
+    min-height: 92px;
+}
+
+.cw-banner-image-preview img {
+    display: block;
+    max-height: 190px;
+    width: auto;
 }

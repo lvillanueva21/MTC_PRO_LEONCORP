@@ -106,7 +106,9 @@
                     caracteristicas: cfg.caracteristicasUrl,
                     nosotros: cfg.nosotrosUrl,
                     contadores: cfg.contadoresUrl,
-                    servicios: cfg.serviciosUrl
+                    servicios: cfg.serviciosUrl,
+                    proceso: cfg.procesoUrl,
+                    banner: cfg.bannerUrl
                 };
                 var url = routes[target] || '';
                 if (!url) {
@@ -150,6 +152,16 @@
 
                     if (target === 'servicios') {
                         initServicesForm();
+                        return;
+                    }
+
+                    if (target === 'proceso') {
+                        initProcessForm();
+                        return;
+                    }
+
+                    if (target === 'banner') {
+                        initBannerForm();
                         return;
                     }
                 });
@@ -665,6 +677,141 @@
                 initFeaturesImagePreview($form);
             }
 
+            function initBannerImagePreview($form) {
+                var $imageInput = $form.find('#cw_banner_imagen_archivo');
+                var $removeCheck = $form.find('#cw_banner_eliminar_imagen');
+                var $image = $form.find('#cw-banner-preview-img');
+                var $alert = $('#cw-banner-alert');
+
+                if (!$imageInput.length || !$removeCheck.length || !$image.length) {
+                    return;
+                }
+
+                var defaultSrc = $.trim(String($image.attr('data-default-src') || ''));
+                var currentSrc = $.trim(String($image.attr('data-current-src') || $image.attr('src') || defaultSrc));
+                if (!currentSrc) {
+                    currentSrc = defaultSrc;
+                }
+
+                var objectPreviewUrl = '';
+
+                function revokeObjectPreview() {
+                    if (objectPreviewUrl && window.URL && typeof window.URL.revokeObjectURL === 'function') {
+                        window.URL.revokeObjectURL(objectPreviewUrl);
+                    }
+                    objectPreviewUrl = '';
+                }
+
+                function showImage(src) {
+                    var target = $.trim(String(src || ''));
+                    if (!target) {
+                        target = defaultSrc;
+                    }
+                    $image.attr('src', target);
+                }
+
+                function showCurrent() {
+                    showImage(currentSrc || defaultSrc);
+                }
+
+                function showDefault() {
+                    showImage(defaultSrc);
+                }
+
+                function previewFile(file) {
+                    if (!file) {
+                        showCurrent();
+                        return;
+                    }
+
+                    var typeOk = /^image\/(png|jpeg|webp)$/i.test(String(file.type || ''));
+                    var nameOk = /\.(png|jpe?g|webp)$/i.test(String(file.name || ''));
+                    if (!typeOk && !nameOk) {
+                        showAlert($alert, 'Formato no permitido para previsualizacion. Usa PNG, WEBP o JPEG.', 'warning');
+                        $imageInput.val('');
+                        showCurrent();
+                        return;
+                    }
+
+                    revokeObjectPreview();
+                    if (window.URL && typeof window.URL.createObjectURL === 'function') {
+                        objectPreviewUrl = window.URL.createObjectURL(file);
+                        showImage(objectPreviewUrl);
+                        return;
+                    }
+
+                    if (window.FileReader) {
+                        var reader = new FileReader();
+                        reader.onload = function (ev) {
+                            showImage(String((ev && ev.target && ev.target.result) || defaultSrc));
+                        };
+                        reader.readAsDataURL(file);
+                        return;
+                    }
+
+                    showCurrent();
+                }
+
+                showCurrent();
+
+                $imageInput.off('change.cwBannerPreview').on('change.cwBannerPreview', function () {
+                    var file = (this.files && this.files[0]) ? this.files[0] : null;
+                    if (!file) {
+                        if ($removeCheck.is(':checked')) {
+                            showDefault();
+                            return;
+                        }
+                        showCurrent();
+                        return;
+                    }
+
+                    $removeCheck.prop('checked', false);
+                    previewFile(file);
+                });
+
+                $removeCheck.off('change.cwBannerPreview').on('change.cwBannerPreview', function () {
+                    if ($(this).is(':checked')) {
+                        revokeObjectPreview();
+                        $imageInput.val('');
+                        showDefault();
+                        return;
+                    }
+
+                    var file = ($imageInput[0].files && $imageInput[0].files[0]) ? $imageInput[0].files[0] : null;
+                    if (file) {
+                        previewFile(file);
+                        return;
+                    }
+                    showCurrent();
+                });
+
+                $form.data('cwBannerPreview', {
+                    setCurrent: function (src) {
+                        currentSrc = $.trim(String(src || defaultSrc));
+                        if (!currentSrc) {
+                            currentSrc = defaultSrc;
+                        }
+                        $image.attr('data-current-src', currentSrc);
+                        revokeObjectPreview();
+                        showCurrent();
+                    }
+                });
+            }
+
+            function initBannerForm() {
+                var $form = $('#cw-banner-form');
+                if (!$form.length || $form.data('cwReady')) {
+                    return;
+                }
+                $form.data('cwReady', 1);
+
+                $form.find('[data-cw-counter]').each(function () {
+                    initCharCounter($(this));
+                });
+
+                initBannerImagePreview($form);
+            }
+
             function initServicesForm() {
                 var $form = $('#cw-services-form');
                 if (!$form.length || $form.data('cwReady')) {
@@ -675,6 +822,94 @@
                 $form.find('[data-cw-counter]').each(function () {
                     initCharCounter($(this));
                 });
+            }
+
+            function processCounterId(prefix) {
+                return 'cw_process_' + String(prefix || 'field') + '_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+            }
+
+            function formatProcessNumber(index) {
+                var n = parseInt(index, 10);
+                if (!isFinite(n) || n < 0) {
+                    n = 0;
+                }
+                var num = n + 1;
+                return (num < 10 ? '0' : '') + String(num) + '.';
+            }
+
+            function createProcessItemCard(data) {
+                var d = data || {};
+                var titleCounterId = processCounterId('titulo');
+                var textCounterId = processCounterId('texto');
+                var title = $.trim(String(d.titulo || ''));
+                var text = $.trim(String(d.texto || ''));
+
+                var html = ''
+                    + '<div class="card card-outline card-light cw-process-item mb-3">'
+                    + '  <div class="card-header py-2 d-flex justify-content-between align-items-center">'
+                    + '    <div>'
+                    + '      <strong class="cw-process-item-title">Bloque</strong>'
+                    + '      <span class="badge badge-secondary ml-2">Numero <span class="cw-process-number">01.</span></span>'
+                    + '    </div>'
+                    + '    <button type="button" class="btn btn-sm btn-outline-danger cw-process-remove-item">Quitar</button>'
+                    + '  </div>'
+                    + '  <div class="card-body py-3">'
+                    + '    <div class="form-row">'
+                    + '      <div class="form-group col-md-5">'
+                    + '        <div class="d-flex justify-content-between">'
+                    + '          <label class="mb-1">Titulo</label>'
+                    + '          <small class="text-muted cw-char-counter"><span id="' + titleCounterId + '">40</span> restantes</small>'
+                    + '        </div>'
+                    + '        <input type="text" class="form-control cw-process-item-title-input" name="item_titulo[]" maxlength="40" data-cw-counter="' + titleCounterId + '" value="' + escapeHtml(title) + '" placeholder="Step 04">'
+                    + '      </div>'
+                    + '      <div class="form-group col-md-7">'
+                    + '        <div class="d-flex justify-content-between">'
+                    + '          <label class="mb-1">Descripcion</label>'
+                    + '          <small class="text-muted cw-char-counter"><span id="' + textCounterId + '">150</span> restantes</small>'
+                    + '        </div>'
+                    + '        <textarea class="form-control cw-process-item-text-input" name="item_texto[]" rows="3" maxlength="150" data-cw-counter="' + textCounterId + '" placeholder="Short description for this process step.">' + escapeHtml(text) + '</textarea>'
+                    + '      </div>'
+                    + '    </div>'
+                    + '  </div>'
+                    + '</div>';
+
+                return $(html);
+            }
+
+            function refreshProcessItems() {
+                var $items = $('#cw-process-items .cw-process-item');
+                var total = $items.length;
+
+                $items.each(function (idx) {
+                    var $item = $(this);
+                    $item.attr('data-index', idx);
+                    $item.find('.cw-process-item-title').text('Bloque ' + (idx + 1));
+                    var numberText = formatProcessNumber(idx);
+                    $item.find('.cw-process-number').text(numberText);
+                    $item.find('.cw-process-item-title-input').attr('placeholder', 'Step ' + numberText.replace('.', ''));
+                    $item.find('.cw-process-item-text-input').attr('placeholder', 'Short description for this process step.');
+                });
+
+                var disableRemove = total <= 3;
+                $items.find('.cw-process-remove-item')
+                    .prop('disabled', disableRemove)
+                    .toggleClass('disabled', disableRemove);
+
+                $('#cw-process-add-item').prop('disabled', total >= 9);
+            }
+
+            function initProcessForm() {
+                var $form = $('#cw-process-form');
+                if (!$form.length || $form.data('cwReady')) {
+                    return;
+                }
+                $form.data('cwReady', 1);
+
+                $form.find('[data-cw-counter]').each(function () {
+                    initCharCounter($(this));
+                });
+
+                refreshProcessItems();
             }
 
             function initAboutImagePreview($form, config) {
@@ -903,6 +1138,34 @@
                 syncMenuItemsJson();
             });
 
+            $(document).on('click', '#cw-process-add-item', function () {
+                var $container = $('#cw-process-items');
+                var count = $container.find('.cw-process-item').length;
+                if (count >= 9) {
+                    showAlert($('#cw-process-alert'), 'Solo se permiten hasta 9 bloques.', 'warning');
+                    return;
+                }
+
+                var $card = createProcessItemCard({ titulo: '', texto: '' });
+                $container.append($card);
+                $card.find('[data-cw-counter]').each(function () {
+                    initCharCounter($(this));
+                });
+                refreshProcessItems();
+            });
+
+            $(document).on('click', '#cw-process-items .cw-process-remove-item', function () {
+                var $container = $('#cw-process-items');
+                var count = $container.find('.cw-process-item').length;
+                if (count <= 3) {
+                    showAlert($('#cw-process-alert'), 'Debes mantener al menos 3 bloques.', 'warning');
+                    return;
+                }
+
+                $(this).closest('.cw-process-item').remove();
+                refreshProcessItems();
+            });
+
             $(document).on('submit', '#cw-topbar-form', function (e) {
                 e.preventDefault();
 
@@ -948,6 +1211,60 @@
                     },
                     defaultButtonText: 'Guardar servicios',
                     defaultError: 'No se pudo guardar la configuracion de servicios.'
+                });
+            });
+
+            $(document).on('submit', '#cw-banner-form', function (e) {
+                e.preventDefault();
+
+                var $form = $(this);
+                var formData = new FormData($form[0]);
+
+                submitAjaxForm({
+                    form: $form,
+                    alert: $('#cw-banner-alert'),
+                    submit: $form.find('#cw-banner-submit'),
+                    ajaxConfig: {
+                        data: formData,
+                        processData: false,
+                        contentType: false
+                    },
+                    defaultButtonText: 'Guardar banner',
+                    defaultError: 'No se pudo guardar la configuracion de banner.',
+                    onSuccess: function (res) {
+                        var previewApi = $form.data('cwBannerPreview');
+                        if (previewApi && typeof previewApi.setCurrent === 'function') {
+                            previewApi.setCurrent(String((res && res.imagen_url) || ''));
+                        }
+                        $('#cw_banner_imagen_archivo').val('');
+                        $('#cw_banner_eliminar_imagen').prop('checked', false);
+                    }
+                });
+            });
+
+            $(document).on('submit', '#cw-process-form', function (e) {
+                e.preventDefault();
+
+                var $form = $(this);
+                var count = $('#cw-process-items .cw-process-item').length;
+                if (count < 3) {
+                    showAlert($('#cw-process-alert'), 'Debes registrar minimo 3 bloques.', 'warning');
+                    return;
+                }
+                if (count > 9) {
+                    showAlert($('#cw-process-alert'), 'Solo se permiten hasta 9 bloques.', 'warning');
+                    return;
+                }
+
+                submitAjaxForm({
+                    form: $form,
+                    alert: $('#cw-process-alert'),
+                    submit: $form.find('#cw-process-submit'),
+                    ajaxConfig: {
+                        data: $form.serialize()
+                    },
+                    defaultButtonText: 'Guardar proceso',
+                    defaultError: 'No se pudo guardar la configuracion de proceso.'
                 });
             });
 

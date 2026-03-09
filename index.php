@@ -445,38 +445,7 @@
         <!-- Car categories End -->
 
         <!-- Car Steps Start -->
-        <div id="pasos" class="container-fluid steps py-5">
-            <div class="container py-5">
-                <div class="text-center mx-auto pb-5 wow fadeInUp" data-wow-delay="0.1s" style="max-width: 800px;">
-                    <h1 class="display-5 text-capitalize text-white mb-3">Cental<span class="text-primary"> Process</span></h1>
-                    <p class="mb-0 text-white">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Ut amet nemo expedita asperiores commodi accusantium at cum harum, excepturi, quia tempora cupiditate! Adipisci facilis modi quisquam quia distinctio,
-                    </p>
-                </div>
-                <div class="row g-4">
-                    <div class="col-lg-4 wow fadeInUp" data-wow-delay="0.1s">
-                        <div class="steps-item p-4 mb-4">
-                            <h4>Come In Contact</h4>
-                            <p class="mb-0">Lorem ipsum dolor sit amet consectetur adipisicing elit. Ad, dolorem!</p>
-                            <div class="setps-number">01.</div>
-                        </div>
-                    </div>
-                    <div class="col-lg-4 wow fadeInUp" data-wow-delay="0.3s">
-                        <div class="steps-item p-4 mb-4">
-                            <h4>Choose A Car</h4>
-                            <p class="mb-0">Lorem ipsum dolor sit amet consectetur adipisicing elit. Ad, dolorem!</p>
-                            <div class="setps-number">02.</div>
-                        </div>
-                    </div>
-                    <div class="col-lg-4 wow fadeInUp" data-wow-delay="0.5s">
-                        <div class="steps-item p-4 mb-4">
-                            <h4>Enjoy Driving</h4>
-                            <p class="mb-0">Lorem ipsum dolor sit amet consectetur adipisicing elit. Ad, dolorem!</p>
-                            <div class="setps-number">03.</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <?php include __DIR__ . '/web/partials/process.php'; ?>
         <!-- Car Steps End -->
 
         <!-- Blog Start -->
@@ -545,22 +514,7 @@
         <!-- Blog End -->
 
         <!-- Banner Start -->
-        <div id="promocion" class="container-fluid banner pb-5 wow zoomInDown" data-wow-delay="0.1s">
-            <div class="container pb-5">
-                <div class="banner-item rounded">
-                    <img src="/web/img/banner-1.jpg" class="img-fluid rounded w-100" alt="">
-                    <div class="banner-content">
-                        <h2 class="text-primary">Rent Your Car</h2>
-                        <h1 class="text-white">Interested in Renting?</h1>
-                        <p class="text-white">Don't hesitate and send us a message.</p>
-                        <div class="banner-btn">
-                            <a href="#" class="btn btn-secondary rounded-pill py-3 px-4 px-md-5 me-2">WhatchApp</a>
-                            <a href="#" class="btn btn-primary rounded-pill py-3 px-4 px-md-5 ms-2">Contact Us</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <?php include __DIR__ . '/web/partials/banner.php'; ?>
         <!-- Banner End -->
 
         <!-- Team Start -->
