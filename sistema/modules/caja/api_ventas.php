@@ -449,17 +449,23 @@ function voucher_render_pdf(array $data, string $size, string $kind): void {
   $condTel = trim((string)($conductor['telefono'] ?? ''));
   $ticketValue = trim((string)($meta['ticket'] ?? ''));
   $hideConductorSection = voucher_same_person_cliente_conductor($cliente, $conductor);
-  $logoW = ($size === 'a4') ? '18mm' : (($size === 'ticket58') ? '12mm' : '14mm');
+  $isTicketPaper = ($size === 'ticket58' || $size === 'ticket80');
+  $logoW = ($size === 'a4') ? '18mm' : (($size === 'ticket58') ? '11mm' : '13mm');
   $logoCellW = ($size === 'a4') ? '22mm' : '16mm';
-  $useInlineHeader = ($size !== 'ticket58' && $logoData !== '');
+  $useInlineHeader = ($size === 'a4' && $logoData !== '');
   $metaJoin = 'RUC: ' . $empresaRuc . ' | ' . $empresaDir;
   $metaJoinLen = function_exists('mb_strlen') ? mb_strlen($metaJoin, 'UTF-8') : strlen($metaJoin);
   $showOneLineMeta = (
-    $size !== 'ticket58' &&
+    $size === 'a4' &&
     $empresaRuc !== '' &&
     $empresaDir !== '' &&
     $metaJoinLen <= (($size === 'a4') ? 96 : 56)
   );
+  $headWrapBottom = $isTicketPaper ? '0.35mm' : '0.8mm';
+  $headLogoGap = $isTicketPaper ? '0.45mm' : '0.9mm';
+  $headRowGap = $isTicketPaper ? '0.08mm' : '0.2mm';
+  $headTitleGapTop = ($size === 'ticket80') ? '0.30mm' : (($size === 'ticket58') ? '0.20mm' : '0');
+  $tkCenterMargin = $isTicketPaper ? '0.45mm 0 0.65mm 0' : '0.8mm 0 1.0mm 0';
 
   $html = '';
   $html .= '<style>
@@ -479,24 +485,56 @@ function voucher_render_pdf(array $data, string $size, string $kind): void {
       .right { text-align:right; }
       .muted { color:#444; }
       .mono { font-family: courier, monospace; }
-      .head-wrap { margin:0 0 0.8mm 0; }
+      .head-wrap { margin:0 0 ' . $headWrapBottom . ' 0; }
       .head-table { width:100%; border-collapse:collapse; margin:0; }
       .head-table td { border:none; padding:0; vertical-align:top; }
       .logo-img { width:' . $logoW . '; height:auto; }
+      .head-logo-wrap { text-align:center; margin:0 0 ' . $headLogoGap . ' 0; line-height:1; }
+      .head-logo-img { width:' . $logoW . '; height:auto; display:block; margin:0 auto; }
+      .head-center-row { text-align:center; line-height:1.05; margin:' . $headRowGap . ' 0; }
+      .head-title-center { text-align:center; font-size:' . $titleSize . 'pt; font-weight:bold; line-height:1.03; margin:' . $headTitleGapTop . ' 0 0 0; }
       .head-title { font-size:' . $titleSize . 'pt; font-weight:bold; line-height:1.02; margin:0; }
-      .head-company { font-size:' . ($fontBase + 0.9) . 'pt; font-weight:bold; line-height:1.05; margin:0.2mm 0 0 0; }
-      .head-meta { font-size:' . $fontSmall . 'pt; color:#444; line-height:1.08; margin:0.2mm 0 0 0; }
+      .head-company { font-size:' . ($fontBase + 0.9) . 'pt; font-weight:bold; line-height:1.05; margin:' . $headRowGap . ' 0 0 0; }
+      .head-meta { font-size:' . $fontSmall . 'pt; color:#444; line-height:1.08; margin:' . $headRowGap . ' 0 0 0; }
       .tk-row { width:100%; border-collapse:collapse; margin:0.6mm 0 0.9mm 0; }
       .tk-row td { border:none; padding:0; vertical-align:baseline; }
       .tk-k { width:30%; text-align:left; font-size:' . max(6.8, $fontSmall) . 'pt; font-weight:bold; letter-spacing:0.5px; }
       .tk-v { text-align:right; font-size:' . $ticketCodeSize . 'pt; font-weight:bold; letter-spacing:0.7px; line-height:1.0; }
-      .tk-center { text-align:center; margin:0.8mm 0 1.0mm 0; }
+      .tk-center { text-align:center; margin:' . $tkCenterMargin . '; }
       .tk-label-inline { font-size:' . max(6.8, $fontSmall) . 'pt; font-weight:bold; letter-spacing:0.5px; }
       .tk-value-inline { font-size:' . $ticketCodeSize . 'pt; font-weight:bold; letter-spacing:0.7px; line-height:1.0; }
     </style>';
 
   $html .= '<div class="head-wrap">';
-  if ($useInlineHeader) {
+  if ($size === 'ticket80') {
+    if ($logoData !== '') {
+      $html .= '<div class="head-logo-wrap"><img class="head-logo-img" src="' . voucher_h($logoData) . '" alt="logo"></div>';
+    }
+    if ($empresaNombre !== '') {
+      $html .= '<div class="head-center-row head-company">' . voucher_h($empresaNombre) . '</div>';
+    }
+    if ($empresaRuc !== '') {
+      $html .= '<div class="head-center-row head-meta">RUC: ' . voucher_h($empresaRuc) . '</div>';
+    }
+    if ($empresaDir !== '') {
+      $html .= '<div class="head-center-row head-meta">' . voucher_h($empresaDir) . '</div>';
+    }
+    $html .= '<div class="head-title-center">' . voucher_h($title) . '</div>';
+  } elseif ($size === 'ticket58') {
+    if ($logoData !== '') {
+      $html .= '<div class="head-logo-wrap"><img class="head-logo-img" src="' . voucher_h($logoData) . '" alt="logo"></div>';
+    }
+    $html .= '<div class="head-title-center">' . voucher_h($title) . '</div>';
+    if ($empresaNombre !== '') {
+      $html .= '<div class="head-center-row head-company">' . voucher_h($empresaNombre) . '</div>';
+    }
+    if ($empresaRuc !== '') {
+      $html .= '<div class="head-center-row head-meta">RUC: ' . voucher_h($empresaRuc) . '</div>';
+    }
+    if ($empresaDir !== '') {
+      $html .= '<div class="head-center-row head-meta">' . voucher_h($empresaDir) . '</div>';
+    }
+  } elseif ($useInlineHeader) {
     $html .= '<table class="head-table"><tr>';
     $html .= '<td style="width:' . $logoCellW . '; text-align:center; padding-right:1.2mm;"><img class="logo-img" src="' . voucher_h($logoData) . '" alt="logo"></td>';
     $html .= '<td class="left tight">';
@@ -537,7 +575,7 @@ function voucher_render_pdf(array $data, string $size, string $kind): void {
   $html .= '</div>';
 
   if ($ticketValue !== '') {
-    if ($size === 'ticket58') {
+    if ($size === 'ticket58' || $size === 'ticket80') {
       $html .= '<div class="tk-center"><span class="tk-label-inline">TICKET:</span> <span class="tk-value-inline mono">' . voucher_h($ticketValue) . '</span></div>';
     } else {
       $html .= '<table class="tk-row"><tr>';

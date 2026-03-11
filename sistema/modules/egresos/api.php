@@ -812,24 +812,43 @@ try {
 
         require_once __DIR__ . '/../TCPDF/tcpdf.php';
 
-        $pdf = new TCPDF('L', 'mm', 'A5', true, 'UTF-8', false);
+        $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
         $pdf->SetCreator('MTC Pro');
         $pdf->SetAuthor('MTC Pro');
         $pdf->SetTitle('Recibo de egreso ' . $eg['codigo']);
-        $pdf->SetMargins(8, 8, 8);
-        $pdf->SetAutoPageBreak(true, 8);
+        $pdf->SetMargins(3, 3, 3);
+        $pdf->SetAutoPageBreak(true, 3);
         $pdf->setPrintHeader(false);
         $pdf->setPrintFooter(false);
         $pdf->SetFont('dejavusans', '', 10);
         $pdf->AddPage();
 
         $logoAbs = eg_logo_abs_fs($eg['empresa_logo_path'] ?? '');
+        $logoDataUri = '';
         if ($logoAbs && is_file($logoAbs)) {
-            $pdf->Image($logoAbs, 12, 16, 22, 22, '', '', '', true, 300);
+            $logoBin = @file_get_contents($logoAbs);
+            if ($logoBin !== false && $logoBin !== '') {
+                $logoMime = 'image/png';
+                if (function_exists('finfo_open')) {
+                    $fi = @finfo_open(FILEINFO_MIME_TYPE);
+                    if ($fi) {
+                        $detected = @finfo_file($fi, $logoAbs);
+                        if (is_string($detected) && strpos($detected, 'image/') === 0) {
+                            $logoMime = $detected;
+                        }
+                        @finfo_close($fi);
+                    }
+                }
+                $logoDataUri = 'data:' . $logoMime . ';base64,' . base64_encode($logoBin);
+            }
         }
 
+        $referenciaRaw = trim((string)($eg['referencia'] ?? ''));
+        $isReciboInterno = ((string)$eg['tipo_comprobante'] === 'RECIBO')
+            && ($referenciaRaw === '' || strtoupper($referenciaRaw) === 'INTERNO');
+
         $compText = ($eg['tipo_comprobante'] === 'RECIBO')
-            ? ('RECIBO ' . ((string)$eg['referencia'] !== '' ? $eg['referencia'] : 'INTERNO'))
+            ? ('RECIBO ' . ($referenciaRaw !== '' ? $referenciaRaw : 'INTERNO'))
             : ($eg['tipo_comprobante'] . ' ' . trim((string)$eg['serie'] . '-' . (string)$eg['numero'], '-'));
 
         $estadoTxt = ((string)$eg['estado'] === 'ANULADO') ? 'ANULADO' : 'EMITIDO';
@@ -855,76 +874,152 @@ try {
         $responsableEsc = htmlspecialchars($responsable);
         $montoEsc = htmlspecialchars($montoTxt);
 
+        $logoHtml = ($logoDataUri !== '')
+            ? '<img src="' . htmlspecialchars($logoDataUri, ENT_QUOTES, 'UTF-8') . '" class="logo-img" alt="Logo">'
+            : '<div class="logo-empty">SIN LOGO</div>';
+
+        $beneficiarioFirmaEsc = ($beneficiario !== '' ? $beneficiario : 'BENEFICIARIO');
+
+        $firmaResponsableHtml = '
+          <div class="sig-wrap">
+            <div class="sig-space"></div>
+            <div class="sig-line"></div>
+            <div class="sig-note">Espacio para firma</div>
+            <div class="sig-name">' . $responsableEsc . '</div>
+            <div class="sig-role">Responsable</div>
+          </div>';
+
+        if ($isReciboInterno) {
+            $firmaSectionHtml = '
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td width="49%" style="padding-right:2mm;" valign="top">
+            <div class="sig-wrap">
+              <div class="sig-space"></div>
+              <div class="sig-line"></div>
+              <div class="sig-note">Espacio para firma</div>
+              <div class="sig-name">' . $beneficiarioFirmaEsc . '</div>
+              <div class="sig-role">Beneficiario</div>
+            </div>
+          </td>
+          <td width="2%"></td>
+          <td width="49%" style="padding-left:2mm;" valign="top">
+            ' . $firmaResponsableHtml . '
+          </td>
+        </tr>
+      </table>';
+        } else {
+            $firmaSectionHtml = '
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td width="51%"></td>
+          <td width="49%" style="padding-left:2mm;" valign="top">
+            ' . $firmaResponsableHtml . '
+          </td>
+        </tr>
+      </table>';
+        }
+
         $html = '
 <style>
-  .box { border: 1px solid #222; border-radius: 3px; }
-  .titulo { font-size: 16px; font-weight: bold; text-align: center; }
-  .sub { font-size: 10px; text-align: center; color: #444; }
-  .lbl { font-size: 9px; font-weight: bold; color: #111; }
-  .val { font-size: 11px; color: #111; }
-  .small { font-size: 9px; color: #666; }
+  * { font-family: dejavusans, sans-serif; color: #111; }
+  .doc { font-size: 9.4px; }
+  .head-wrap { border: 1px solid #cfcfcf; border-radius: 2mm; overflow: hidden; }
+  .head-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  .head-logo { text-align: center; vertical-align: middle; padding: 0.45mm; }
+  .head-company { text-align: center; vertical-align: middle; padding: 0.7mm 1mm; }
+  .head-money { text-align: center; vertical-align: middle; padding: 0.65mm 0.9mm; }
+  .head-meta { text-align: center; vertical-align: middle; padding: 0.5mm 0.7mm; }
+  .sep-r { border-right: 1px solid #cfcfcf; }
+  .sep-t { border-top: 1px solid #cfcfcf; }
+  .empresa { font-size: 14px; font-weight: bold; text-align: center; letter-spacing: 0.15px; line-height: 1.04; }
+  .subtitulo { font-size: 8.3px; text-align: center; color: #4b5563; margin-top: 0.15mm; }
+  .logo-wrap { width: 16mm; height: 16mm; text-align: center; vertical-align: middle; }
+  .logo-img { width: 15.5mm; height: 15.5mm; }
+  .logo-empty { font-size: 7.2px; color: #6b7280; text-align: center; }
+  .monto-lbl { font-size: 7.5px; color: #374151; text-align: center; font-weight: bold; letter-spacing: 0.25px; }
+  .monto-val { font-size: 16px; font-weight: bold; text-align: center; line-height: 1.0; }
+  .codigo-top { font-size: 7.4px; color: #374151; text-align: center; margin-top: 0.15mm; }
+  .meta-lbl { font-size: 7.1px; color: #4b5563; font-weight: bold; letter-spacing: 0.1px; text-transform: uppercase; }
+  .meta-val { font-size: 9px; color: #111; line-height: 1.1; margin-top: 0.12mm; text-align: center; }
+  .rule { border-top: 1px solid #8f8f8f; }
+  .space-1 { height: 0.35mm; }
+  .space-2 { height: 0.55mm; }
+  .lbl { font-size: 7.7px; color: #4b5563; font-weight: bold; letter-spacing: 0.15px; text-transform: uppercase; }
+  .val { font-size: 10px; color: #111; line-height: 1.1; margin-top: 0.12mm; }
+  .val-strong { font-size: 10px; color: #111; line-height: 1.1; margin-top: 0.12mm; font-weight: bold; }
+  .concepto { font-size: 10px; line-height: 1.16; min-height: 4.5mm; margin-top: 0.2mm; }
+  .sig-wrap { width: 100%; }
+  .sig-space { height: 4.2mm; }
+  .sig-line { border-top: 1px solid #333; }
+  .sig-note { font-size: 7.4px; color: #4b5563; text-align: center; margin-top: 0.3mm; }
+  .sig-name { font-size: 9.8px; font-weight: bold; text-align: center; margin-top: 0.42mm; }
+  .sig-role { font-size: 8.2px; color: #374151; text-align: center; margin-top: 0.15mm; }
 </style>
-<table cellpadding="4" cellspacing="0" border="0" width="100%">
+<table class="doc" width="100%" cellpadding="0" cellspacing="0" border="0">
   <tr>
-    <td class="box" width="100%">
-      <table width="100%" cellpadding="2" cellspacing="0" border="0">
+    <td>
+      <div class="head-wrap">
+        <table class="head-table" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td class="head-logo sep-r" rowspan="2" width="13%" valign="middle">
+              <div class="logo-wrap">' . $logoHtml . '</div>
+            </td>
+            <td class="head-company sep-r" colspan="3" width="61%" valign="middle">
+              <div class="empresa">' . $empresaEsc . '</div>
+              <div class="subtitulo">RECIBO DE EGRESO</div>
+            </td>
+            <td class="head-money" rowspan="2" width="26%" valign="middle">
+              <div class="monto-lbl">MONTO (S/)</div>
+              <div class="monto-val">' . $montoEsc . '</div>
+              <div class="codigo-top">Codigo: ' . $codigo . '</div>
+            </td>
+          </tr>
+          <tr>
+            <td class="head-meta sep-t sep-r" width="20%" valign="middle">
+              <div class="meta-lbl">Fecha y hora</div>
+              <div class="meta-val">' . $fechaEsc . '</div>
+            </td>
+            <td class="head-meta sep-t sep-r" width="24%" valign="middle">
+              <div class="meta-lbl">Comprobante</div>
+              <div class="meta-val">' . $compTextEsc . '</div>
+            </td>
+            <td class="head-meta sep-t sep-r" width="17%" valign="middle">
+              <div class="meta-lbl">Estado</div>
+              <div class="meta-val">' . $estadoEsc . '</div>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="space-1"></div>
+      <div class="rule"></div>
+      <div class="space-1"></div>
+
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
-          <td width="20%"></td>
-          <td width="55%">
-            <div class="titulo">' . $empresaEsc . '</div>
-            <div class="sub">RECIBO DE EGRESO</div>
-          </td>
-          <td width="25%">
-            <table class="box" width="100%" cellpadding="4" cellspacing="0">
-              <tr><td align="center" class="lbl">S/.</td></tr>
-              <tr><td align="center" class="val" style="font-size:20px;font-weight:bold;">' . $montoEsc . '</td></tr>
-            </table>
-          </td>
-        </tr>
-      </table>
-      <table width="100%" cellpadding="4" cellspacing="4" border="0">
-        <tr>
-          <td class="box" width="33%">
-            <div class="lbl">Fecha y hora</div>
-            <div class="val">' . $fechaEsc . '</div>
-          </td>
-          <td class="box" width="34%">
-            <div class="lbl">Comprobante</div>
-            <div class="val">' . $compTextEsc . '</div>
-          </td>
-          <td class="box" width="33%">
-            <div class="lbl">Estado</div>
-            <div class="val">' . $estadoEsc . '</div>
-          </td>
-        </tr>
-        <tr>
-          <td class="box" width="67%">
+          <td width="68%" style="padding-right:1.2mm;" valign="top">
             <div class="lbl">Beneficiario</div>
-            <div class="val">' . ($beneficiario !== '' ? $beneficiario : '---') . '</div>
+            <div class="val-strong">' . ($beneficiario !== '' ? $beneficiario : '---') . '</div>
           </td>
-          <td class="box" width="33%">
+          <td width="32%" valign="top">
             <div class="lbl">Documento</div>
             <div class="val">' . ($documento !== '' ? $documento : '---') . '</div>
           </td>
         </tr>
-        <tr>
-          <td class="box" width="100%" style="height:50px;">
-            <div class="lbl">Concepto</div>
-            <div class="val">' . ($concepto !== '' ? $concepto : '---') . '</div>
-          </td>
-        </tr>
       </table>
-      <table width="100%" cellpadding="2" cellspacing="0" border="0">
-        <tr>
-          <td width="58%"></td>
-          <td width="42%" align="center">
-            <div style="border-top:1px solid #333; margin-top:18px;"></div>
-            <div class="val">Responsable</div>
-            <div class="val" style="font-weight:bold;">' . $responsableEsc . '</div>
-            <div class="small">Codigo: ' . $codigo . '</div>
-          </td>
-        </tr>
-      </table>
+
+      <div class="space-2"></div>
+      <div class="rule"></div>
+      <div class="space-1"></div>
+
+      <div class="lbl">Concepto</div>
+      <div class="concepto">' . ($concepto !== '' ? $concepto : '---') . '</div>
+
+      <div class="space-2"></div>
+      <div class="rule"></div>
+      <div class="space-1"></div>
+      ' . $firmaSectionHtml . '
     </td>
   </tr>
 </table>';

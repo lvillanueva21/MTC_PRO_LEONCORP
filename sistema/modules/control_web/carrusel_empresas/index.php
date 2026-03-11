@@ -39,16 +39,20 @@ if (function_exists('db')) {
 }
 
 $configDefaults = cw_ce_config_defaults();
-$config = is_array($data['config'] ?? null) ? $data['config'] : $configDefaults;
+$config = cw_ce_normalize_config($data['config'] ?? []);
 $items = cw_ce_normalize_items($data['items'] ?? []);
 
 $tituloBase = trim((string)($config['titulo_base'] ?? ''));
 $tituloResaltado = trim((string)($config['titulo_resaltado'] ?? ''));
+$descripcionGeneral = trim((string)($config['descripcion_general'] ?? ''));
 if ($tituloBase === '') {
     $tituloBase = (string)($configDefaults['titulo_base'] ?? 'Customer');
 }
 if ($tituloResaltado === '') {
     $tituloResaltado = (string)($configDefaults['titulo_resaltado'] ?? 'Suport Center');
+}
+if ($descripcionGeneral === '') {
+    $descripcionGeneral = (string)($configDefaults['descripcion_general'] ?? cw_ce_default_general_description());
 }
 
 $guardarUrl = (defined('BASE_URL') ? BASE_URL : '') . '/modules/control_web/carrusel_empresas/guardar.php';
@@ -73,11 +77,11 @@ $socialMeta = [
   <form id="cw-ce-form" action="<?php echo cw_ce_admin_h($guardarUrl); ?>" method="post" enctype="multipart/form-data" novalidate>
     <h5 class="mb-2">1. Encabezado del bloque</h5>
     <p class="text-muted mb-3">
-      Define el titulo principal en dos partes para respetar el estilo del tema (`h1` + `span`).
+      Define el titulo principal en dos partes y la descripcion central del bloque.
     </p>
 
     <div class="form-row">
-      <div class="form-group col-md-6">
+      <div class="form-group col-md-4">
         <div class="d-flex justify-content-between">
           <label for="cw_ce_titulo_base" class="mb-1">Titulo 1</label>
           <small class="text-muted cw-char-counter"><span id="cw_ce_count_titulo_base"><?php echo cw_ce_admin_h((string)cw_ce_admin_remaining($tituloBase, 40)); ?></span> restantes</small>
@@ -93,7 +97,7 @@ $socialMeta = [
           placeholder="Customer"
         >
       </div>
-      <div class="form-group col-md-6">
+      <div class="form-group col-md-4">
         <div class="d-flex justify-content-between">
           <label for="cw_ce_titulo_resaltado" class="mb-1">Titulo 2 (resaltado)</label>
           <small class="text-muted cw-char-counter"><span id="cw_ce_count_titulo_resaltado"><?php echo cw_ce_admin_h((string)cw_ce_admin_remaining($tituloResaltado, 40)); ?></span> restantes</small>
@@ -108,6 +112,21 @@ $socialMeta = [
           value="<?php echo cw_ce_admin_h($tituloResaltado); ?>"
           placeholder="Suport Center"
         >
+      </div>
+      <div class="form-group col-md-4">
+        <div class="d-flex justify-content-between">
+          <label for="cw_ce_descripcion_general" class="mb-1">Descripcion central</label>
+          <small class="text-muted cw-char-counter"><span id="cw_ce_count_descripcion_general"><?php echo cw_ce_admin_h((string)cw_ce_admin_remaining($descripcionGeneral, 260)); ?></span> restantes</small>
+        </div>
+        <textarea
+          class="form-control"
+          id="cw_ce_descripcion_general"
+          name="descripcion_general"
+          rows="3"
+          maxlength="260"
+          data-cw-counter="cw_ce_count_descripcion_general"
+          placeholder="Texto principal del modulo"
+        ><?php echo cw_ce_admin_h($descripcionGeneral); ?></textarea>
       </div>
     </div>
 

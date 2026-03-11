@@ -22,16 +22,20 @@ if (function_exists('db')) {
 }
 
 $configDefaults = cw_ce_config_defaults();
-$config = is_array($data['config'] ?? null) ? $data['config'] : $configDefaults;
+$config = cw_ce_normalize_config($data['config'] ?? []);
 $items = cw_ce_normalize_items($data['items'] ?? []);
 
 $tituloBase = trim((string)($config['titulo_base'] ?? ''));
 $tituloResaltado = trim((string)($config['titulo_resaltado'] ?? ''));
+$descripcionGeneral = trim((string)($config['descripcion_general'] ?? ''));
 if ($tituloBase === '') {
     $tituloBase = (string)($configDefaults['titulo_base'] ?? 'Customer');
 }
 if ($tituloResaltado === '') {
     $tituloResaltado = (string)($configDefaults['titulo_resaltado'] ?? 'Suport Center');
+}
+if ($descripcionGeneral === '') {
+    $descripcionGeneral = (string)($configDefaults['descripcion_general'] ?? cw_ce_default_general_description());
 }
 
 $socialMeta = [
@@ -54,7 +58,7 @@ $socialMeta = [
     <div class="container pb-5">
         <div class="text-center mx-auto pb-5 wow fadeInUp" data-wow-delay="0.1s" style="max-width: 800px;">
             <h1 class="display-5 text-capitalize mb-3"><?php echo cw_ce_h($tituloBase); ?><span class="text-primary"> <?php echo cw_ce_h($tituloResaltado); ?></span></h1>
-            <p class="mb-0">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Ut amet nemo expedita asperiores commodi accusantium at cum harum, excepturi, quia tempora cupiditate! Adipisci facilis modi quisquam quia distinctio,</p>
+            <p class="mb-0"><?php echo cw_ce_h($descripcionGeneral); ?></p>
         </div>
         <div class="team-carousel owl-carousel wow fadeInUp" data-wow-delay="0.1s">
             <?php foreach ($items as $idx => $item): ?>

@@ -60,6 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $tituloBase = trim((string)($_POST['titulo_base'] ?? ''));
 $tituloResaltado = trim((string)($_POST['titulo_resaltado'] ?? ''));
+$descripcionGeneral = trim((string)($_POST['descripcion_general'] ?? ''));
 
 $itemIds = isset($_POST['item_id']) && is_array($_POST['item_id']) ? $_POST['item_id'] : [];
 $itemTitles = isset($_POST['item_titulo']) && is_array($_POST['item_titulo']) ? $_POST['item_titulo'] : [];
@@ -83,6 +84,9 @@ if (cw_ce_admin_strlen($tituloBase) > 40) {
 }
 if (cw_ce_admin_strlen($tituloResaltado) > 40) {
     $errors[] = 'El titulo 2 no puede superar 40 caracteres.';
+}
+if (cw_ce_admin_strlen($descripcionGeneral) > 260) {
+    $errors[] = 'La descripcion central no puede superar 260 caracteres.';
 }
 
 $itemCount = count($keys);
@@ -199,6 +203,7 @@ try {
     if (!cw_ce_upsert_config($cn, [
         'titulo_base' => cw_ce_limit_text($tituloBase, 40),
         'titulo_resaltado' => cw_ce_limit_text($tituloResaltado, 40),
+        'descripcion_general' => cw_ce_limit_text($descripcionGeneral, 260),
     ])) {
         throw new RuntimeException('No se pudo guardar el encabezado del carrusel de empresas.');
     }

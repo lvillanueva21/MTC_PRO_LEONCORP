@@ -20,6 +20,13 @@ if (!function_exists('cw_ce_social_defaults')) {
     }
 }
 
+if (!function_exists('cw_ce_default_general_description')) {
+    function cw_ce_default_general_description(): string
+    {
+        return 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Ut amet nemo expedita asperiores commodi accusantium at cum harum, excepturi, quia tempora cupiditate! Adipisci facilis modi quisquam quia distinctio,';
+    }
+}
+
 if (!function_exists('cw_ce_defaults')) {
     function cw_ce_defaults(): array
     {
@@ -29,6 +36,7 @@ if (!function_exists('cw_ce_defaults')) {
             'config' => [
                 'titulo_base' => 'Customer',
                 'titulo_resaltado' => 'Suport Center',
+                'descripcion_general' => cw_ce_default_general_description(),
             ],
             'items' => [
                 [
@@ -76,6 +84,34 @@ if (!function_exists('cw_ce_config_defaults')) {
     function cw_ce_config_defaults(): array
     {
         return cw_ce_defaults()['config'];
+    }
+}
+
+if (!function_exists('cw_ce_normalize_config')) {
+    function cw_ce_normalize_config($config): array
+    {
+        $defaults = cw_ce_config_defaults();
+        $config = is_array($config) ? $config : [];
+
+        $tituloBase = trim((string)($config['titulo_base'] ?? ''));
+        $tituloResaltado = trim((string)($config['titulo_resaltado'] ?? ''));
+        $descripcionGeneral = trim((string)($config['descripcion_general'] ?? ''));
+
+        if ($tituloBase === '') {
+            $tituloBase = (string)($defaults['titulo_base'] ?? 'Customer');
+        }
+        if ($tituloResaltado === '') {
+            $tituloResaltado = (string)($defaults['titulo_resaltado'] ?? 'Suport Center');
+        }
+        if ($descripcionGeneral === '') {
+            $descripcionGeneral = (string)($defaults['descripcion_general'] ?? cw_ce_default_general_description());
+        }
+
+        return [
+            'titulo_base' => cw_ce_limit_text($tituloBase, 40),
+            'titulo_resaltado' => cw_ce_limit_text($tituloResaltado, 40),
+            'descripcion_general' => cw_ce_limit_text($descripcionGeneral, 260),
+        ];
     }
 }
 
@@ -397,14 +433,21 @@ if (!function_exists('cw_ce_fetch_config')) {
         $defaults = cw_ce_config_defaults();
 
         try {
-            $sql = 'SELECT titulo_base, titulo_resaltado
+            $sql = 'SELECT titulo_base, titulo_resaltado, descripcion_general
                     FROM web_carrusel_empresas_config
                     WHERE id = 1
                     LIMIT 1';
 
             $rs = mysqli_query($cn, $sql);
             if (!$rs) {
-                return $defaults;
+                $legacySql = 'SELECT titulo_base, titulo_resaltado
+                              FROM web_carrusel_empresas_config
+                              WHERE id = 1
+                              LIMIT 1';
+                $rs = mysqli_query($cn, $legacySql);
+                if (!$rs) {
+                    return $defaults;
+                }
             }
 
             $row = mysqli_fetch_assoc($rs);
@@ -417,34 +460,28 @@ if (!function_exists('cw_ce_fetch_config')) {
             return $defaults;
         }
 
-        $tituloBase = trim((string)($row['titulo_base'] ?? ''));
-        $tituloResaltado = trim((string)($row['titulo_resaltado'] ?? ''));
-
-        if ($tituloBase === '') {
-            $tituloBase = (string)($defaults['titulo_base'] ?? 'Customer');
-        }
-        if ($tituloResaltado === '') {
-            $tituloResaltado = (string)($defaults['titulo_resaltado'] ?? 'Suport Center');
+        if (!array_key_exists('descripcion_general', $row)) {
+            $row['descripcion_general'] = (string)($defaults['descripcion_general'] ?? cw_ce_default_general_description());
         }
 
-        return [
-            'titulo_base' => cw_ce_limit_text($tituloBase, 40),
-            'titulo_resaltado' => cw_ce_limit_text($tituloResaltado, 40),
-        ];
+        return cw_ce_normalize_config($row);
     }
 }
 
 if (!function_exists('cw_ce_upsert_config')) {
     function cw_ce_upsert_config(mysqli $cn, array $config): bool
     {
+        $payload = cw_ce_normalize_config($config);
+
         try {
             $sql = 'INSERT INTO web_carrusel_empresas_config
-                    (id, titulo_base, titulo_resaltado, actualizacion)
+                    (id, titulo_base, titulo_resaltado, descripcion_general, actualizacion)
                     VALUES
-                    (1, ?, ?, NOW())
+                    (1, ?, ?, ?, NOW())
                     ON DUPLICATE KEY UPDATE
                         titulo_base = VALUES(titulo_base),
                         titulo_resaltado = VALUES(titulo_resaltado),
+                        descripcion_general = VALUES(descripcion_general),
                         actualizacion = NOW()';
 
             $st = mysqli_prepare($cn, $sql);
@@ -452,27 +489,46 @@ if (!function_exists('cw_ce_upsert_config')) {
                 return false;
             }
 
-            $defaults = cw_ce_config_defaults();
-            $tituloBase = cw_ce_limit_text(trim((string)($config['titulo_base'] ?? '')), 40);
-            $tituloResaltado = cw_ce_limit_text(trim((string)($config['titulo_resaltado'] ?? '')), 40);
-
-            if ($tituloBase === '') {
-                $tituloBase = (string)($defaults['titulo_base'] ?? 'Customer');
-            }
-            if ($tituloResaltado === '') {
-                $tituloResaltado = (string)($defaults['titulo_resaltado'] ?? 'Suport Center');
-            }
-
             mysqli_stmt_bind_param(
                 $st,
-                'ss',
-                $tituloBase,
-                $tituloResaltado
+                'sss',
+                $payload['titulo_base'],
+                $payload['titulo_resaltado'],
+                $payload['descripcion_general']
             );
 
             $ok = mysqli_stmt_execute($st);
             mysqli_stmt_close($st);
-            return (bool)$ok;
+
+            if ($ok) {
+                return true;
+            }
+        } catch (Throwable $e) {
+        }
+
+        try {
+            $legacySql = 'INSERT INTO web_carrusel_empresas_config
+                          (id, titulo_base, titulo_resaltado, actualizacion)
+                          VALUES
+                          (1, ?, ?, NOW())
+                          ON DUPLICATE KEY UPDATE
+                              titulo_base = VALUES(titulo_base),
+                              titulo_resaltado = VALUES(titulo_resaltado),
+                              actualizacion = NOW()';
+            $legacySt = mysqli_prepare($cn, $legacySql);
+            if (!$legacySt) {
+                return false;
+            }
+
+            mysqli_stmt_bind_param(
+                $legacySt,
+                'ss',
+                $payload['titulo_base'],
+                $payload['titulo_resaltado']
+            );
+            $legacyOk = mysqli_stmt_execute($legacySt);
+            mysqli_stmt_close($legacySt);
+            return (bool)$legacyOk;
         } catch (Throwable $e) {
             return false;
         }
