@@ -409,7 +409,7 @@ include __DIR__ . '/../../includes/header.php';
 
                             <!-- Acciones -->
               <div class="pm-actions mt-3">
-                <button class="pm-chip pm-chip-red pm-stub" type="button">
+                <button class="pm-chip pm-chip-red pm-stub d-none" type="button">
                   <i class="fas fa-users"></i><span>Hay más de un conductor</span>
                 </button>
 
@@ -421,7 +421,7 @@ include __DIR__ . '/../../includes/header.php';
                   <i class="fas fa-id-card"></i><span>Guardar más información del conductor</span>
                 </button>
 
-                <button class="pm-chip pm-chip-dark pm-stub" type="button">
+                <button class="pm-chip pm-chip-dark pm-stub d-none" type="button">
                   <i class="fas fa-question-circle"></i><span>Aún no se conoce al conductor</span>
                 </button>
               </div>
