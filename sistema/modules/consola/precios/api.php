@@ -85,7 +85,7 @@ try {
       if ($estado==='1'||$estado==='0'){ $where[]="s.activo=?"; $types.='i'; $pars[]=(int)$estado; }
       $W = $where ? 'WHERE '.implode(' AND ',$where) : '';
 
-      $sql = "SELECT s.id, s.nombre, s.activo
+      $sql = "SELECT s.id, s.nombre, s.activo, s.imagen_path, s.actualizado
               FROM mod_servicios s
               $W
               ORDER BY s.nombre";

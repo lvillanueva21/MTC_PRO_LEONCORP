@@ -1,0 +1,50 @@
+/* /modules/interfaces_control/assets/interfaces_control.css */
+.ic-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 1rem;
+}
+
+.ic-pane {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.ic-pane .ic-pane-head {
+  border-bottom: 1px solid #e5e7eb;
+  padding: .75rem 1rem;
+  font-weight: 700;
+}
+
+.ic-pane .ic-pane-body {
+  padding: 1rem;
+}
+
+.ic-user-select {
+  width: 100%;
+}
+
+.ic-iface-list {
+  max-height: 420px;
+  overflow-y: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: .5rem .75rem;
+}
+
+.ic-iface-item {
+  padding: .35rem 0;
+  border-bottom: 1px dashed #e5e7eb;
+}
+
+.ic-iface-item:last-child {
+  border-bottom: 0;
+}
+
+@media (max-width: 991.98px) {
+  .ic-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

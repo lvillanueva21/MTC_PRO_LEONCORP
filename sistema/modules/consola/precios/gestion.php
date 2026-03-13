@@ -24,6 +24,35 @@
 
   /* Tabla compacta */
   .table td, .table th { vertical-align: middle; }
+  .px-srv-name{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    min-width:0;
+  }
+  .px-srv-thumb{
+    width:28px;
+    height:28px;
+    border-radius:6px;
+    border:1px solid #e5e7eb;
+    object-fit:cover;
+    flex:0 0 28px;
+    background:#fff;
+  }
+  .px-srv-thumb-empty{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    color:#9ca3af;
+    background:#f3f4f6;
+    font-size:11px;
+  }
+  .px-srv-main{ min-width:0; flex:1 1 auto; }
+  .px-srv-text{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
 </style>
 
 <div class="px-wrap">

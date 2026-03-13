@@ -18,9 +18,37 @@ export function init(slot, apiUrl) {
 
   async function j(url, opts={}) {
     const r = await fetch(url, { credentials:'same-origin', ...opts });
-    const d = await r.json().catch(()=>({ok:false,msg:'Respuesta inválida'}));
+    const d = await r.json().catch(()=>({ok:false,msg:'Respuesta invalida'}));
     if (!r.ok || !d.ok) throw new Error(d.msg || `HTTP ${r.status}`);
     return d;
+  }
+
+  const baseApiUrl = (() => {
+    try { return new URL(apiUrl, window.location.href); }
+    catch (_) { return null; }
+  })();
+
+  function appBaseUrl() {
+    if (!baseApiUrl) return '';
+    const idx = baseApiUrl.pathname.indexOf('/modules/');
+    const basePath = idx >= 0 ? baseApiUrl.pathname.slice(0, idx) : '';
+    return `${baseApiUrl.origin}${basePath}`;
+  }
+
+  function toPublicImageUrl(path, cacheBuster = '') {
+    const p = (path || '').trim();
+    if (!p) return '';
+    if (/^https?:\/\//i.test(p)) {
+      if (!cacheBuster) return p;
+      const sepAbs = p.indexOf('?') >= 0 ? '&' : '?';
+      return `${p}${sepAbs}_v=${encodeURIComponent(cacheBuster)}`;
+    }
+    const clean = p.replace(/^\/+/, '');
+    const base = appBaseUrl();
+    const sep = clean.indexOf('?') >= 0 ? '&' : '?';
+    const v = cacheBuster ? `${sep}_v=${encodeURIComponent(cacheBuster)}` : '';
+    if (!base) return `/${clean}${v}`;
+    return `${base}/${clean}${v}`;
   }
 
   // ---------- Estado ----------
@@ -59,16 +87,28 @@ export function init(slot, apiUrl) {
 
   const start = (S.page - 1) * S.per_page;
   const rows = S.rows.slice(start, start + S.per_page);
+  const thumbHtml = (r) => {
+    const path = (r && r.imagen_path) ? String(r.imagen_path).trim() : '';
+    if (!path) return `<span class="px-srv-thumb px-srv-thumb-empty" title="Sin imagen">SIN</span>`;
+    const v = (r && r.actualizado) ? String(r.actualizado) : String(r.id || Date.now());
+    const src = toPublicImageUrl(path, v);
+    return `<img class="px-srv-thumb" src="${esc(src)}" alt="Imagen de ${esc(r.nombre || 'servicio')}" loading="lazy">`;
+  };
 
   tb.innerHTML = rows.map((r, i) => `
     <tr>
       <td>${start + i + 1}</td>
       <td>
-        ${esc(r.nombre)}
-        <div class="mt-1">
-          <span class="badge ${r.activo ? 'badge-success bg-success' : 'badge-secondary bg-secondary'}">
-            ${r.activo ? 'Activo' : 'Inactivo'}
-          </span>
+        <div class="px-srv-name">
+          ${thumbHtml(r)}
+          <div class="px-srv-main">
+            <div class="px-srv-text">${esc(r.nombre)}</div>
+            <div class="mt-1">
+              <span class="badge ${r.activo ? 'badge-success bg-success' : 'badge-secondary bg-secondary'}">
+                ${r.activo ? 'Activo' : 'Inactivo'}
+              </span>
+            </div>
+          </div>
         </div>
       </td>
       <td class="text-end">

@@ -1,7 +1,14 @@
 <?php
 // modules/consola/servicios/api.php
+require_once __DIR__ . '/../../../includes/acl.php';
+require_once __DIR__ . '/../../../includes/permisos.php';
 require_once __DIR__ . '/../../../includes/conexion.php';
 header('Content-Type: application/json; charset=utf-8');
+
+if (!defined('SRV_API_EXTERNAL_GATE')) {
+  acl_require_ids(array(1, 6));
+  verificarPermiso(array('Desarrollo', 'Gerente'));
+}
 
 $mysqli = db();
 $mysqli->set_charset('utf8mb4');
@@ -14,6 +21,28 @@ function jerror($code, $msg, $extra = []) {
   exit;
 }
 function jok($arr = []) { echo json_encode(['ok'=>true] + $arr); exit; }
+
+function imagen_upload_error_msg($code) {
+  switch ((int)$code) {
+    case UPLOAD_ERR_INI_SIZE:
+    case UPLOAD_ERR_FORM_SIZE:
+      return 'La imagen excede el tamano permitido (maximo 5MB).';
+    case UPLOAD_ERR_PARTIAL:
+      return 'La imagen se subio de forma incompleta. Intenta nuevamente.';
+    case UPLOAD_ERR_NO_FILE:
+      return 'No se recibio archivo de imagen.';
+    case UPLOAD_ERR_NO_TMP_DIR:
+      return 'Falta la carpeta temporal del servidor.';
+    case UPLOAD_ERR_CANT_WRITE:
+      return 'No se pudo escribir la imagen en disco.';
+    case UPLOAD_ERR_EXTENSION:
+      return 'La subida de imagen fue bloqueada por una extension del servidor.';
+    case UPLOAD_ERR_OK:
+      return '';
+    default:
+      return 'Error al subir la imagen.';
+  }
+}
 
 function slugify($s) {
   $s = trim($s);
@@ -63,25 +92,37 @@ try {
     // 2) Imagen opcional
     $ruta = null;
     if (!empty($_FILES['imagen']) && $_FILES['imagen']['error'] !== UPLOAD_ERR_NO_FILE) {
-      if ($_FILES['imagen']['error'] !== UPLOAD_ERR_OK) jerror(400, 'Error al subir la imagen');
+      if ($_FILES['imagen']['error'] !== UPLOAD_ERR_OK) jerror(400, imagen_upload_error_msg($_FILES['imagen']['error']));
       if ($_FILES['imagen']['size'] > 5 * 1024 * 1024) jerror(400, 'La imagen excede 5MB');
 
       $tmp  = $_FILES['imagen']['tmp_name'];
       $fi   = new finfo(FILEINFO_MIME_TYPE);
       $mime = $fi->file($tmp);
-      $exts = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'];
-      if (!isset($exts[$mime])) jerror(400, 'Formato no permitido (PNG/JPG/WebP)');
+      $exts = [
+        'image/jpeg'    => 'jpg',
+        'image/pjpeg'   => 'jpg',
+        'image/png'     => 'png',
+        'image/x-png'   => 'png',
+        'image/webp'    => 'webp',
+        'image/gif'     => 'gif',
+        'image/bmp'     => 'bmp',
+        'image/x-ms-bmp'=> 'bmp',
+        'image/avif'    => 'avif',
+      ];
+      if (!isset($exts[$mime])) jerror(400, 'Formato no permitido (PNG/JPG/WebP/GIF/BMP/AVIF)');
       $ext  = $exts[$mime];
 
       $slug  = slugify($nombre);
-      $stamp = date('Ymd');
+      $stamp = date('YmdHis');
       $sidP  = str_pad((string)$sid, 6, '0', STR_PAD_LEFT);
       $file  = "{$stamp}-{$slug}-srv{$sidP}.{$ext}";
+      $destAbs = $dirAbs . '/' . $file;
 
-      // Solo 1 imagen por servicio
-      foreach (glob($dirAbs."/*-srv{$sidP}.*") as $old) { @unlink($old); }
-
-      if (!move_uploaded_file($tmp, $dirAbs . '/' . $file)) jerror(500, 'No se pudo guardar la imagen');
+      if (!move_uploaded_file($tmp, $destAbs)) jerror(500, 'No se pudo guardar la imagen');
+      // Solo 1 imagen por servicio (limpieza post-escritura)
+      foreach (glob($dirAbs . "/*-srv{$sidP}.*") as $old) {
+        if (basename($old) !== $file) @unlink($old);
+      }
       $ruta = $dirRel . '/' . $file;
 
       $up = $mysqli->prepare("UPDATE mod_servicios SET imagen_path=? WHERE id=?");
@@ -218,26 +259,38 @@ case 'update': {
 
   // 2) Si suben nueva imagen => reemplazar física y en DB
   if (!empty($_FILES['imagen']) && $_FILES['imagen']['error'] !== UPLOAD_ERR_NO_FILE) {
-    if ($_FILES['imagen']['error'] !== UPLOAD_ERR_OK) jerror(400, 'Error al subir la imagen');
+    if ($_FILES['imagen']['error'] !== UPLOAD_ERR_OK) jerror(400, imagen_upload_error_msg($_FILES['imagen']['error']));
     if ($_FILES['imagen']['size'] > 5 * 1024 * 1024) jerror(400, 'La imagen excede 5MB');
 
     $tmp  = $_FILES['imagen']['tmp_name'];
     $fi   = new finfo(FILEINFO_MIME_TYPE);
     $mime = $fi->file($tmp);
-    $exts = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'];
-    if (!isset($exts[$mime])) jerror(400, 'Formato no permitido (PNG/JPG/WebP)');
+    $exts = [
+      'image/jpeg'    => 'jpg',
+      'image/pjpeg'   => 'jpg',
+      'image/png'     => 'png',
+      'image/x-png'   => 'png',
+      'image/webp'    => 'webp',
+      'image/gif'     => 'gif',
+      'image/bmp'     => 'bmp',
+      'image/x-ms-bmp'=> 'bmp',
+      'image/avif'    => 'avif',
+    ];
+    if (!isset($exts[$mime])) jerror(400, 'Formato no permitido (PNG/JPG/WebP/GIF/BMP/AVIF)');
     $ext  = $exts[$mime];
 
-    // Borrar cualquier imagen previa del servicio
+    // Nuevo nombre de archivo (usa fecha+hora+slug+srvID)
     $sidP = str_pad((string)$id, 6, '0', STR_PAD_LEFT);
-    foreach (glob($dirAbs."/*-srv{$sidP}.*") as $old) { @unlink($old); }
-
-    // Nuevo nombre de archivo (usa fecha+slug+srvID)
     $slug  = slugify($nombre);
-    $stamp = date('Ymd');
+    $stamp = date('YmdHis');
     $file  = "{$stamp}-{$slug}-srv{$sidP}.{$ext}";
+    $destAbs = $dirAbs . '/' . $file;
 
-    if (!move_uploaded_file($tmp, $dirAbs . '/' . $file)) jerror(500, 'No se pudo guardar la imagen');
+    if (!move_uploaded_file($tmp, $destAbs)) jerror(500, 'No se pudo guardar la imagen');
+    // Borrar imagen previa solo despues de guardar la nueva
+    foreach (glob($dirAbs . "/*-srv{$sidP}.*") as $old) {
+      if (basename($old) !== $file) @unlink($old);
+    }
     $ruta = $dirRel . '/' . $file;
 
     $up = $mysqli->prepare("UPDATE mod_servicios SET imagen_path=? WHERE id=?");
@@ -295,6 +348,7 @@ case 'empresas_srv': {
 
   $empresa_id = (int)($_GET['empresa_id'] ?? 0); // 0=todas
   $estado     = $_GET['estado'] ?? '';           // '' | '1' | '0'
+  $q          = trim($_GET['q'] ?? '');
   $page       = max(1, (int)($_GET['page'] ?? 1));
   $per_page   = min(50, max(1, (int)($_GET['per_page'] ?? 5)));
   $offset     = ($page - 1) * $per_page;
@@ -307,6 +361,7 @@ case 'empresas_srv': {
   if ($empresa_id > 0) { $where[] = 'e.id = ?'; $params[] = $empresa_id; $types .= 'i'; }
   if ($estado === '1') { $where[] = 'mes.id IS NOT NULL'; }
   if ($estado === '0') { $where[] = 'mes.id IS NULL'; }
+  if ($q !== '') { $where[] = 'e.nombre LIKE ? COLLATE utf8mb4_spanish_ci'; $params[] = "%{$q}%"; $types .= 's'; }
   $W = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
 
   // total

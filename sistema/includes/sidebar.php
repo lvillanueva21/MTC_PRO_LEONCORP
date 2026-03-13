@@ -205,6 +205,25 @@ $CANON_BASE   = '/' . ($idx === false ? '' : implode('/', array_slice($parts, 0,
               // 6) Render
               $render($MM['common'] ?? []);
               $render($MM['items']  ?? []);
+
+              // 7) Interfaces dinamicas para rol Control (id=2)
+              if ((int)$rolActivoId === 2) {
+                $dynamicControlItems = [];
+                $scannerFile = dirname(__DIR__) . '/modules/interfaces_control/_scanner.php';
+                $aclFile     = dirname(__DIR__) . '/modules/interfaces_control/_control_acl.php';
+                if (is_file($scannerFile) && is_file($aclFile)) {
+                  require_once $scannerFile;
+                  require_once $aclFile;
+                  try {
+                    $dynamicControlItems = ic_build_control_menu_items(db(), (int)($u['id'] ?? 0));
+                  } catch (Throwable $e) {
+                    $dynamicControlItems = [];
+                  }
+                }
+                if (!empty($dynamicControlItems)) {
+                  $render($dynamicControlItems);
+                }
+              }
             ?>
           </ul>
         </nav>

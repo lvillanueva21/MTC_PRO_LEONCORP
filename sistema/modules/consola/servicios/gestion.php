@@ -70,6 +70,30 @@
   gap:8px;
   min-width:0;                    /* permite elipsis del texto */
 }
+.name-main{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+  flex:1 1 auto;
+}
+.srv-thumb{
+  width:28px;
+  height:28px;
+  border-radius:6px;
+  border:1px solid #e5e7eb;
+  object-fit:cover;
+  flex:0 0 28px;
+  background:#fff;
+}
+.srv-thumb-empty{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  color:#9ca3af;
+  background:#f3f4f6;
+  font-size:11px;
+}
 .name-cell .name-text{
   overflow:hidden;
   text-overflow:ellipsis;
@@ -104,6 +128,90 @@
 @media (prefers-reduced-motion: reduce) {
   .e-srv-text.animate { animation: none; }
 }
+
+/* Preview de imagen en crear/editar */
+.srv-preview-grid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:8px;
+  margin-top:8px;
+}
+.srv-preview-card{
+  border:1px dashed #d1d5db;
+  border-radius:8px;
+  padding:8px;
+  background:#f8fafc;
+}
+.srv-preview-title{
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.03em;
+  color:#6b7280;
+  margin-bottom:6px;
+}
+.srv-preview-frame{
+  position:relative;
+  width:100%;
+  padding-top:56%;
+  border-radius:6px;
+  overflow:hidden;
+  background:#e5e7eb;
+}
+.srv-preview-frame img{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:none;
+}
+.srv-preview-empty{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  font-size:12px;
+  color:#6b7280;
+  padding:6px;
+}
+.srv-preview-meta{
+  font-size:11px;
+  color:#6b7280;
+  margin-top:6px;
+  min-height:16px;
+  word-break:break-word;
+}
+
+.srv-upload-wrap{
+  margin-top:8px;
+  border:1px solid #e5e7eb;
+  border-radius:8px;
+  padding:8px;
+  background:#f8fafc;
+}
+.srv-upload-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:6px;
+  font-size:12px;
+}
+.srv-upload-pct{
+  font-weight:600;
+}
+.srv-upload-note{
+  font-size:12px;
+  color:#6b7280;
+  margin-top:6px;
+}
+
+@media (max-width: 767.98px){
+  .srv-preview-grid{
+    grid-template-columns:1fr;
+  }
+}
 </style>
 
 <div class="srv-wrap">
@@ -134,7 +242,37 @@
       <div class="col-12 col-lg-3 d-flex flex-column">
         <label class="form-label mb-1">Imagen</label>
         <input class="form-control" type="file" id="s-imagen" name="imagen" accept="image/*">
-        <div class="help mt-1">PNG/JPG/WebP (≤5MB)</div>
+        <input type="hidden" id="s-imagen-actual" value="">
+        <div class="srv-preview-grid">
+          <div class="srv-preview-card">
+            <div class="srv-preview-title">Imagen actual</div>
+            <div class="srv-preview-frame">
+              <img id="s-prev-current-img" alt="Imagen actual del servicio">
+              <div id="s-prev-current-empty" class="srv-preview-empty">Sin imagen actual</div>
+            </div>
+            <div id="s-prev-current-meta" class="srv-preview-meta"></div>
+          </div>
+          <div class="srv-preview-card">
+            <div class="srv-preview-title">Nueva imagen</div>
+            <div class="srv-preview-frame">
+              <img id="s-prev-new-img" alt="Vista previa de nueva imagen">
+              <div id="s-prev-new-empty" class="srv-preview-empty">Aún no seleccionada</div>
+            </div>
+            <div id="s-prev-new-meta" class="srv-preview-meta">Selecciona un archivo para previsualizar.</div>
+            <button type="button" class="btn btn-outline-secondary btn-sm mt-2 d-none" id="s-clear-image">Quitar selección</button>
+          </div>
+        </div>
+        <div id="s-upload-wrap" class="srv-upload-wrap d-none" aria-live="polite">
+          <div class="srv-upload-head">
+            <span id="s-upload-label">Subiendo imagen...</span>
+            <span id="s-upload-pct" class="srv-upload-pct">0%</span>
+          </div>
+          <div class="progress" style="height:8px;">
+            <div id="s-upload-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width:0%;" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+          </div>
+          <div id="s-upload-note" class="srv-upload-note">No cierres esta pantalla mientras se sube el archivo.</div>
+        </div>
+        <div class="help mt-1">PNG/JPG/WebP/GIF/BMP/AVIF (≤5MB)</div>
       </div>
       <!-- Botón -->
       <div class="col-12 col-lg-2 d-flex flex-column">
@@ -142,10 +280,15 @@
         <button class="btn btn-primary w-100" type="button" id="s-crear">Crear</button>
       </div>
     </form>
-    <div id="s-alert" class="alert alert-danger d-none mt-2"></div>
+    <div id="s-alert" class="alert alert-danger alert-dismissible d-none mt-2" role="alert">
+      <button type="button" class="close srv-alert-close" aria-label="Cerrar">
+        <span aria-hidden="true">&times;</span>
+      </button>
+      <span class="msg"></span>
+    </div>
     <!-- Éxito con ✕ -->
     <div id="s-ok" class="alert alert-success alert-dismissible d-none mt-2" role="alert">
-      <button type="button" class="close s-ok-close" aria-label="Cerrar">
+      <button type="button" class="close s-ok-close srv-alert-close" aria-label="Cerrar">
         <span aria-hidden="true">&times;</span>
       </button>
       <span class="msg"></span>
@@ -164,19 +307,23 @@
       <!-- Panel funcional -->
       <div id="emp-panel" class="d-none">
 <div class="row g-2 filters-row">
-  <div class="col-12 col-lg-4 d-flex flex-column">
+  <div class="col-12 col-lg-3 d-flex flex-column">
     <label class="form-label mb-1">Servicio actual</label>
     <div class="form-control e-srv-marquee bg-light">
       <span id="e-srv-actual" class="e-srv-text"></span>
     </div>
   </div>
-  <div class="col-12 col-lg-4 d-flex flex-column">
+  <div class="col-12 col-lg-3 d-flex flex-column">
     <label class="form-label mb-1">Empresa</label>
     <select id="e-empresa" class="form-select">
       <option value="0">Todas</option>
     </select>
   </div>
-  <div class="col-12 col-lg-4 d-flex flex-column">
+  <div class="col-12 col-lg-3 d-flex flex-column">
+    <label class="form-label mb-1">Buscar empresa</label>
+    <input type="text" id="e-q" class="form-control" placeholder="Escribe nombre ...">
+  </div>
+  <div class="col-12 col-lg-3 d-flex flex-column">
     <label class="form-label mb-1">Estado</label>
     <select id="e-estado" class="form-select">
       <option value="">Todos</option>
@@ -185,7 +332,12 @@
     </select>
   </div>
 </div>
-        <div id="e-alert" class="alert alert-danger d-none mt-2"></div>
+        <div id="e-alert" class="alert alert-danger alert-dismissible d-none mt-2" role="alert">
+          <button type="button" class="close srv-alert-close" aria-label="Cerrar">
+            <span aria-hidden="true">&times;</span>
+          </button>
+          <span class="msg"></span>
+        </div>
         <div class="table-responsive mt-2">
           <table class="table table-sm align-middle" id="e-table">
             <thead>
@@ -227,7 +379,12 @@
           </select>
         </div>
       </form>
-      <div id="l-alert" class="alert alert-danger d-none mt-2"></div>
+      <div id="l-alert" class="alert alert-danger alert-dismissible d-none mt-2" role="alert">
+        <button type="button" class="close srv-alert-close" aria-label="Cerrar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+        <span class="msg"></span>
+      </div>
       <div class="table-responsive mt-2">
         <table class="table table-sm align-middle" id="srv-lista">
           <thead>

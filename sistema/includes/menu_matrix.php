@@ -39,6 +39,7 @@ return [
         // ---------- Desarrollo (1) y Gerente (6) ----------
         // 👉 Cambio: Concedemos acceso a Consola a GERENTE también.
         ['path' => '/modules/consola/', 'icon' => 'fas fa-cog', 'label' => 'Consola', 'roles' => [$R['DES'], $R['GER']]],
+        ['path' => 'modules/interfaces_control/', 'icon' => 'fas fa-user-shield', 'label' => 'Int. Control', 'roles' => [$R['DES']]],
 
         // Módulos de Desarrollo
         ['path' => '/modules/usuarios/', 'icon' => 'fas fa-user-cog', 'label' => 'Usuarios', 'roles' => [$R['DES']]],
@@ -47,13 +48,12 @@ return [
         ['path' => '/modules/inventario/', 'icon' => 'fas fa-boxes', 'label' => 'Inventario', 'roles' => [$R['DES'], $R['ADM'], $R['GER']]],
 
 // Desarrollo (sin restricción por usuario)
-['path' => '/modules/inventario_mtc/', 'icon' => 'fas fa-boxes', 'label' => 'Inventario MTC', 'roles' => [$R['DES'], $R['CON'], $R['GER']]],
+['path' => '/modules/inventario_mtc/', 'icon' => 'fas fa-boxes', 'label' => 'Inventario MTC', 'roles' => [$R['DES'], $R['GER']]],
 ['path' => '/modules/camaras/', 'icon' => 'fas fa-video', 'label' => 'Cámaras', 'roles' => [$R['DES']]],
 
         ['path' => 'modules/control_web/', 'icon' => 'fas fa-globe', 'label' => 'Web', 'roles' => [$R['DES']]],
 
         // ---------- Control (2) ----------
-        ['path' => '/modules/reportes/', 'icon' => 'fas fa-clipboard-check', 'label' => 'Reportes', 'roles' => [$R['CON']]],
         // ['path'=>'/modules/certificados/','icon'=>'fas fa-file-signature','label'=>'Certificados','roles'=>[$R['CON']]],
 
         // ---------- Recepción (3) ----------
