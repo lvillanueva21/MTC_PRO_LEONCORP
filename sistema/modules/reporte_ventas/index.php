@@ -42,6 +42,8 @@ function rel(string $path) {
   return $APP_ROOT_REL . ltrim($path, '/');
 }
 
+$cajaAbonoBaseUrl = rel('modules/caja/index.php');
+
 /* ========= Lógica del módulo ========= */
 require_once __DIR__ . '/funciones.php';
 
@@ -493,7 +495,9 @@ include __DIR__ . '/../../includes/header.php';
           </div>
 
           <div class="table-responsive">
-            <table class="table table-sm align-middle mb-0" id="tblVentas">
+            <table class="table table-sm align-middle mb-0"
+                   id="tblVentas"
+                   data-abonar-url-base="<?= h($cajaAbonoBaseUrl) ?>">
               <thead class="table-light">
                 <tr>
                   <th style="width:60px">#</th>
@@ -542,6 +546,7 @@ include __DIR__ . '/../../includes/header.php';
                     $saldoFmt = fmt_money($saldoNum);
                     $estadoV  = (string)($r['estado'] ?? '');
                     $ventaId  = (int)$r['id'];
+                    $canAbonar = ($estadoV !== 'ANULADA') && ($saldoNum > 0.000001);
 
                     if ($estadoV === 'ANULADA') {
                       $badge = '<span class="badge badge-danger"><i class="fas fa-times-circle mr-1"></i>Anulada</span>';
@@ -602,12 +607,14 @@ include __DIR__ . '/../../includes/header.php';
                                   data-ticket="<?= h($ticket) ?>">
                             <i class="fas fa-search mr-1"></i>Detalle
                           </button>
-                          <button type="button"
-                                  class="btn btn-outline-primary js-abonar"
-                                  data-id="<?= $ventaId ?>"
-                                  data-ticket="<?= h($ticket) ?>">
-                            <i class="fas fa-wallet mr-1"></i>Abonar
-                          </button>
+                          <?php if ($canAbonar): ?>
+                            <button type="button"
+                                    class="btn btn-outline-primary js-abonar"
+                                    data-id="<?= $ventaId ?>"
+                                    data-ticket="<?= h($ticket) ?>">
+                              <i class="fas fa-wallet mr-1"></i>Abonar
+                            </button>
+                          <?php endif; ?>
                         </div>
                       </td>
                     </tr>

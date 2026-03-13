@@ -1,6 +1,23 @@
 // /modules/caja/ventas_pendientes.js
 (() => {
   const VP_API = `${BASE_URL}/modules/caja/api_ventas.php`;
+  const AUTO_ABONAR_VENTA_ID = (() => {
+    try {
+      const id = parseInt(new URLSearchParams(window.location.search).get('abonar_venta') || '0', 10);
+      return Number.isFinite(id) && id > 0 ? id : 0;
+    } catch (_) {
+      return 0;
+    }
+  })();
+  if (AUTO_ABONAR_VENTA_ID > 0) {
+    try {
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('abonar_venta');
+      const cleanQs = cleanUrl.searchParams.toString();
+      const cleanPath = `${cleanUrl.pathname}${cleanQs ? '?' + cleanQs : ''}${cleanUrl.hash || ''}`;
+      window.history.replaceState({}, document.title, cleanPath);
+    } catch (_) {}
+  }
 
   // ----- Helpers de fetch -----
     async function vpGET(params) {
@@ -982,4 +999,7 @@ async function openAbonar(ventaId){
   STATE.page = 1;
   vpSetScopeUI();
   doSearch();
+  if (AUTO_ABONAR_VENTA_ID > 0) {
+    setTimeout(() => openAbonar(AUTO_ABONAR_VENTA_ID), 50);
+  }
 })();
