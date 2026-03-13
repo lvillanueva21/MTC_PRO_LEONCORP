@@ -373,6 +373,19 @@ include __DIR__ . '/../../includes/header.php';
                   <label class="form-label small mb-1">Documento*</label>
                   <input id="pmDocNum" class="form-control form-control-sm" maxlength="20">
                 </div>
+                <div class="col-12">
+                  <div class="pm-doc-lookup-wrap">
+                    <button type="button" class="btn btn-sm pm-btn-lookup pm-btn-reniec" id="pmLookupReniec">
+                      <i class="fas fa-id-card mr-1"></i>RENIEC
+                    </button>
+                    <button type="button" class="btn btn-sm pm-btn-lookup pm-btn-sunat d-none" id="pmLookupSunat">
+                      <i class="fas fa-building mr-1"></i>SUNAT
+                    </button>
+                    <div id="pmLookupHint" class="small text-muted">
+                      Completa el documento y usa RENIEC o SUNAT para autocompletar.
+                    </div>
+                  </div>
+                </div>
                 <!-- Campo visible solo cuando es RUC -->
                 <div class="col-12 pm-ruc d-none">
                   <label class="form-label small mb-1">Razón social*</label>
@@ -639,6 +652,7 @@ include __DIR__ . '/../../includes/header.php';
 <script>
 // ===== Utilidades =====
 const BASE_URL = '<?= BASE_URL ?>';
+const API_HUB_ENDPOINT = `${BASE_URL}/modules/api_hub/api.php`;
 const qs  = (s,ctx=document)=>ctx.querySelector(s);
 const qsa = (s,ctx=document)=>Array.from(ctx.querySelectorAll(s));
 const esc = s => (s??'').toString().replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -688,6 +702,27 @@ async function apiGET(params, {signal} = {}){
   const r = await fetch(url, { credentials: 'same-origin', signal });
   const j = await r.json();
   if (!j.ok) throw new Error(j.error || 'Error');
+  return j;
+}
+
+async function apiHubLookup(action, numero){
+  const fd = new FormData();
+  fd.append('action', action);
+  fd.append('numero', String(numero || '').trim());
+  const r = await fetch(API_HUB_ENDPOINT, {
+    method: 'POST',
+    credentials: 'same-origin',
+    body: fd
+  });
+
+  let j = null;
+  try{
+    j = await r.json();
+  }catch(_){
+    throw new Error('No se pudo procesar la respuesta del servicio.');
+  }
+
+  if (!j.ok) throw new Error(j.error || 'No se pudo completar la consulta.');
   return j;
 }
 
@@ -1590,6 +1625,90 @@ function showDriverBox(v){
   }
 }
 
+function pmLookupDocType(){
+  return (qs('#pmDocTipo')?.value || '').trim().toUpperCase();
+}
+function setLookupButtonsBusy(isBusy){
+  const reniec = qs('#pmLookupReniec');
+  const sunat  = qs('#pmLookupSunat');
+  if (reniec) reniec.disabled = !!isBusy;
+  if (sunat)  sunat.disabled  = !!isBusy;
+}
+function syncLookupButtons(){
+  const t = pmLookupDocType();
+  const reniec = qs('#pmLookupReniec');
+  const sunat  = qs('#pmLookupSunat');
+  const hint   = qs('#pmLookupHint');
+  if (reniec) reniec.classList.toggle('d-none', t !== 'DNI');
+  if (sunat)  sunat.classList.toggle('d-none', t !== 'RUC');
+
+  if (hint){
+    if (t === 'DNI') hint.textContent = 'Consulta DNI en RENIEC para autocompletar nombres y apellidos.';
+    else if (t === 'RUC') hint.textContent = 'Consulta RUC en SUNAT para autocompletar la razón social.';
+    else hint.textContent = 'Selecciona DNI o RUC para usar consulta automática.';
+  }
+}
+
+async function doLookupReniec(){
+  clearInlineAlert('payModal');
+  const docTipo = pmLookupDocType();
+  const dni = (qs('#pmDocNum')?.value || '').trim();
+  if (docTipo !== 'DNI'){
+    showInlineAlert('payModal','warning','Para usar RENIEC selecciona tipo de documento DNI.');
+    return;
+  }
+  if (!/^\d{8}$/.test(dni)){
+    showInlineAlert('payModal','danger','El DNI debe tener 8 dígitos.');
+    return;
+  }
+
+  try{
+    setLookupButtonsBusy(true);
+    const j = await apiHubLookup('consultar_dni', dni);
+    const d = j.data || {};
+    const nombres = String(d.nombres || '').trim();
+    const apellidos = [d.apellido_paterno || '', d.apellido_materno || ''].join(' ').replace(/\s+/g,' ').trim();
+    if (nombres) qs('#pmNombres').value = nombres;
+    if (apellidos) qs('#pmApellidos').value = apellidos;
+    showInlineAlert('payModal','success','Datos obtenidos desde RENIEC.');
+  }catch(err){
+    showInlineAlert('payModal','danger', esc(err.message || 'No se pudo consultar RENIEC.'));
+  }finally{
+    setLookupButtonsBusy(false);
+  }
+}
+
+async function doLookupSunat(){
+  clearInlineAlert('payModal');
+  const docTipo = pmLookupDocType();
+  const ruc = (qs('#pmDocNum')?.value || '').trim();
+  if (docTipo !== 'RUC'){
+    showInlineAlert('payModal','warning','Para usar SUNAT selecciona tipo de documento RUC.');
+    return;
+  }
+  if (!/^\d{11}$/.test(ruc)){
+    showInlineAlert('payModal','danger','El RUC debe tener 11 dígitos.');
+    return;
+  }
+
+  try{
+    setLookupButtonsBusy(true);
+    const j = await apiHubLookup('consultar_ruc', ruc);
+    const d = j.data || {};
+    const razon = String(d.razon_social || '').trim();
+    if (!razon){
+      showInlineAlert('payModal','danger','No se encontró razón social para ese RUC.');
+      return;
+    }
+    qs('#pmRazon').value = razon;
+    showInlineAlert('payModal','success','Datos obtenidos desde SUNAT.');
+  }catch(err){
+    showInlineAlert('payModal','danger', esc(err.message || 'No se pudo consultar SUNAT.'));
+  }finally{
+    setLookupButtonsBusy(false);
+  }
+}
+
 function resetPayModal(){
   PM.abonos = [];
   qs('#pmDocTipo').value = 'DNI';
@@ -1607,6 +1726,7 @@ function resetPayModal(){
   showConductorExtraBox(false);
   showDriverBox(false);
   clearConductorExtraForm();
+  setLookupButtonsBusy(false);
   toggleDocUI(); // ajustar UI inicial
 }
 
@@ -1616,6 +1736,7 @@ function toggleDocUI(){
   qsa('.pm-ctr').forEach(el=> el.classList.toggle('d-none', !isRUC)); // NUEVO: doc contratante
   qs('#lblNombres').innerHTML   = isRUC ? 'Nombres* <span class="text-muted small">(contratante)</span>' : 'Nombres*';
   qs('#lblApellidos').innerHTML = isRUC ? 'Apellidos* <span class="text-muted small">(contratante)</span>' : 'Apellidos*';
+  syncLookupButtons();
 }
 
 async function openPayModal(){
@@ -1677,6 +1798,14 @@ document.addEventListener('input', (e)=>{
 });
 
 document.addEventListener('click',(e)=>{
+  if (e.target.closest('#pmLookupReniec')){
+    doLookupReniec();
+    return;
+  }
+  if (e.target.closest('#pmLookupSunat')){
+    doLookupSunat();
+    return;
+  }
   if (e.target.closest('#pmClientMore') || e.target.closest('#pmDriverMore')){
     openConductorExtraBox();
     return;

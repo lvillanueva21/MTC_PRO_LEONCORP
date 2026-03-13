@@ -13,5 +13,15 @@ return [
         'env'      => 'prod',
         'base_url' => 'https://leoncorp.pe/sistema/',
         'timezone' => 'America/Lima'
+    ],
+    'api_hub' => [
+        'apisperu' => [
+            // Se recomienda cargar el token desde variable de entorno del servidor.
+            // Si prefieres fijarlo aquí, reemplaza '' por tu token.
+            'token'                   => getenv('MTC_APISPERU_TOKEN') ?: '',
+            'base_url'                => 'https://dniruc.apisperu.com/api/v1',
+            'timeout_seconds'         => 12,
+            'connect_timeout_seconds' => 6
+        ]
     ]
 ];
