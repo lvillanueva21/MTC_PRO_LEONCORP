@@ -113,6 +113,7 @@ return [
                 ['path' => 'modules/aula_virtual/', 'icon' => 'fas fa-book-open', 'label' => 'Cursos', 'roles' => $RAV_NO_ADM],
             ],
         ],
+        ['path' => 'modules/api_hub/', 'icon' => 'fas fa-network-wired', 'label' => 'ApiHub', 'roles' => [$R['DES']]],
 
         // ==== PLANTILLAS (copia/pega y descomenta) ====
         // ['path'=>'/modules/finanzas/','icon'=>'fas fa-coins','label'=>'Finanzas','roles'=>[$R['ADM']]], // Administración

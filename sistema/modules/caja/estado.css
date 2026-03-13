@@ -369,3 +369,41 @@
   box-shadow: none;
 }
 
+/* Botones de consulta rapida RENIEC / SUNAT */
+.pm-doc-lookup-wrap{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
+}
+#pmLookupHint{
+  flex:1 1 100%;
+}
+.pm-btn-lookup{
+  border-radius:10px;
+  font-weight:700;
+  border-width:1px;
+}
+.pm-btn-reniec{
+  background:#0057a8;
+  border-color:#004486;
+  color:#fff;
+}
+.pm-btn-reniec:hover,
+.pm-btn-reniec:focus{
+  background:#004486;
+  border-color:#00356a;
+  color:#fff;
+}
+.pm-btn-sunat{
+  background:#d71920;
+  border-color:#b91117;
+  color:#fff;
+}
+.pm-btn-sunat:hover,
+.pm-btn-sunat:focus{
+  background:#b91117;
+  border-color:#980f14;
+  color:#fff;
+}
+
