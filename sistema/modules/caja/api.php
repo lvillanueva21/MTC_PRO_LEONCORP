@@ -2,7 +2,7 @@
 // /modules/caja/api.php
 // POLÍTICA: Recepción/Administración NUNCA reabre cajas (ni mensual ni diaria).
 // Esta versión incluye validaciones adicionales de servidor (servicios válidos por empresa,
-// medios de pago válidos y referencias obligatorias, manejo de sobrepago con "devuelto",
+// medios de pago válidos y referencias obligatorias, control de sobrepago,
 // y saneo/seguridad general).
 
 header('Content-Type: application/json; charset=utf-8');
@@ -554,6 +554,7 @@ try {
               s.nombre,
               s.descripcion,
               s.imagen_path,
+              p.id                      AS precio_id,
               COALESCE(p.precio, 0.00)  AS precio,
               p.nota                    AS nota,
               p.rol                     AS rol,
@@ -561,7 +562,7 @@ try {
             FROM mod_servicios s
             JOIN mod_empresa_servicio mes ON mes.servicio_id=s.id
             LEFT JOIN (
-              SELECT mp.empresa_id, mp.servicio_id, mp.precio, mp.nota, mp.rol
+              SELECT mp.id, mp.empresa_id, mp.servicio_id, mp.precio, mp.nota, mp.rol
               FROM mod_precios mp
               WHERE mp.es_principal=1 AND mp.activo=1
             ) p ON p.empresa_id=mes.empresa_id AND p.servicio_id=s.id
@@ -963,22 +964,67 @@ $ct_doc_num   = trim($_POST['contratante_doc_numero'] ?? '');
     if (!is_array($items) || !count($items)) json_err('Items de venta vacíos.');
     if (count($items) > 200) json_err('Demasiados ítems en la venta.');
     if (!is_array($abonos)) $abonos = [];
+    if (!count($abonos)) json_err('Debes registrar al menos un abono para completar la venta.');
 
     // Servicios válidos + totales
     $svcIds = [];
+    $itemsNorm = [];
     foreach($items as $i=>$it){
       $sid = (int)($it['servicio_id'] ?? 0);
       $cant = (float)($it['cantidad'] ?? 0);
       $pre  = (float)($it['precio_unitario'] ?? 0);
-      if ($sid<=0 || $cant<=0 || $pre<0) json_err("Ítem inválido en posición ".($i+1));
+      if ($sid<=0 || $cant<=0 || $pre<0) json_err("Item invalido en posicion ".($i+1));
+
+      $precioOrigen = strtoupper(trim((string)($it['precio_origen'] ?? 'LISTA')));
+      if (!in_array($precioOrigen, ['LISTA','TEMPORAL'], true)) {
+        json_err("Origen de precio invalido en item ".($i+1));
+      }
+
+      $precioListaId = null;
+      if (array_key_exists('precio_lista_id', $it) && $it['precio_lista_id'] !== '' && $it['precio_lista_id'] !== null) {
+        $precioListaId = (int)$it['precio_lista_id'];
+        if ($precioListaId <= 0) $precioListaId = null;
+      }
+
+      $precioListaBase = null;
+      if (array_key_exists('precio_lista_base', $it) && $it['precio_lista_base'] !== '' && $it['precio_lista_base'] !== null) {
+        $precioListaBase = money2($it['precio_lista_base']);
+        if ($precioListaBase < 0) json_err("Precio base de lista invalido en item ".($i+1));
+      } elseif ($precioOrigen === 'LISTA') {
+        // Compatibilidad con payload antiguo sin metadata.
+        $precioListaBase = money2($pre);
+      }
+
+      $precioTemporalMotivo = trim((string)($it['precio_temporal_motivo'] ?? ''));
+      if ($precioOrigen === 'TEMPORAL') {
+        if ($precioTemporalMotivo === '') json_err("El motivo del precio temporal es obligatorio en item ".($i+1));
+        $lenMotivo = function_exists('mb_strlen')
+          ? mb_strlen($precioTemporalMotivo, 'UTF-8')
+          : strlen($precioTemporalMotivo);
+        if ($lenMotivo > 255) json_err("El motivo del precio temporal excede 255 caracteres en item ".($i+1));
+        $precioListaId = null;
+        $precioListaBase = null;
+      } else {
+        $precioTemporalMotivo = '';
+      }
+
       $svcIds[] = $sid;
+      $itemsNorm[] = [
+        'servicio_id'            => $sid,
+        'cantidad'               => $cant,
+        'precio_unitario'        => $pre,
+        'precio_origen'          => $precioOrigen,
+        'precio_lista_id'        => $precioListaId,
+        'precio_lista_base'      => $precioListaBase,
+        'precio_temporal_motivo' => $precioTemporalMotivo
+      ];
     }
     $svcIds = array_values(array_unique($svcIds));
     $mapSvc = map_servicios_validos($db, $empId, $svcIds);
-    if (count($mapSvc) !== count($svcIds)) json_err('Hay servicios no válidos o no vinculados a la empresa.');
+    if (count($mapSvc) !== count($svcIds)) json_err('Hay servicios no validos o no vinculados a la empresa.');
 
     $total = 0.00;
-    foreach($items as $it){
+    foreach($itemsNorm as $it){
       $cant = max(0, (float)$it['cantidad']);
       $pre  = max(0, (float)$it['precio_unitario']);
       $total += $cant*$pre;
@@ -988,6 +1034,7 @@ $ct_doc_num   = trim($_POST['contratante_doc_numero'] ?? '');
     // Medios de pago
         // Medios de pago
     $mediosMap = map_medios_pago_activos($db);
+    $sumaAbonos = 0.00;
     foreach($abonos as $j=>$ab){
       $mid   = (int)($ab['medio_id'] ?? 0);
       $monto = money2($ab['monto'] ?? 0);
@@ -1005,6 +1052,10 @@ $ct_doc_num   = trim($_POST['contratante_doc_numero'] ?? '');
         $nombreMedio = (string)$mediosMap[$mid]['nombre'];
         json_err("El medio de pago {$nombreMedio} requiere una referencia en el abono #".($j+1));
       }
+      $sumaAbonos = money2($sumaAbonos + $monto);
+    }
+    if ($sumaAbonos > $total + 1e-6) {
+      json_err('El total de abonos excede el total de la venta.');
     }
 
     // 5) Validaciones de conductor (si es otra persona)
@@ -1156,18 +1207,68 @@ $ct_doc_num   = trim($_POST['contratante_doc_numero'] ?? '');
       $insV->execute();
       $venta_id = (int)$db->insert_id;
 
-      // 9) Detalles
-      $insD  = $db->prepare("INSERT INTO pos_venta_detalles(venta_id, servicio_id, servicio_nombre, descripcion, cantidad, precio_unitario, descuento, total_linea)
-                             VALUES (?,?,?,?,?,?,0.00,?)");
-      foreach($items as $it){
+      // 9) Detalles (trazabilidad de precio temporal por item)
+      $insD  = $db->prepare("INSERT INTO pos_venta_detalles(
+                               venta_id, servicio_id, servicio_nombre, descripcion, cantidad, precio_unitario, descuento, total_linea,
+                               precio_origen, precio_lista_id, precio_lista_base, precio_temporal_actor_id, precio_temporal_motivo, precio_temporal_en
+                             ) VALUES (?,?,?,?,?,?,0.00,?,?,?,?,?,?,?)");
+      $tienePrecioTemporal = false;
+      $precioTemporalItemsAud = [];
+      foreach($itemsNorm as $it){
         $sid = (int)$it['servicio_id'];
         $cant = max(0, (float)$it['cantidad']);
         $pre  = max(0, (float)$it['precio_unitario']);
         $line = money2($cant*$pre);
-        $null = null;
         $name = $mapSvc[$sid] ?? ('Servicio '.$sid);
-        $insD->bind_param('iissddd', $venta_id, $sid, $name, $null, $cant, $pre, $line);
+        $null = null;
+
+        $precioOrigen = (string)$it['precio_origen'];
+        $precioListaId = $it['precio_lista_id'];
+        $precioListaBase = $it['precio_lista_base'];
+        $precioTempMotivo = (string)$it['precio_temporal_motivo'];
+
+        $precioListaIdDb = ($precioOrigen === 'LISTA' && $precioListaId !== null) ? (string)$precioListaId : null;
+        $precioListaBaseDb = ($precioOrigen === 'LISTA' && $precioListaBase !== null)
+          ? number_format((float)$precioListaBase, 2, '.', '')
+          : null;
+        $precioTempActorIdDb = ($precioOrigen === 'TEMPORAL') ? (string)$uid : null;
+        $precioTempMotivoDb = ($precioOrigen === 'TEMPORAL') ? $precioTempMotivo : null;
+        $precioTempEnDb = ($precioOrigen === 'TEMPORAL') ? date('Y-m-d H:i:s') : null;
+
+        if ($precioOrigen === 'TEMPORAL') {
+          $tienePrecioTemporal = true;
+          $precioTemporalItemsAud[] = [
+            'servicio_id'     => $sid,
+            'servicio_nombre' => $name,
+            'cantidad'        => (float)$cant,
+            'precio_unitario' => (float)$pre,
+            'motivo'          => $precioTempMotivoDb,
+            'fecha'           => $precioTempEnDb
+          ];
+        }
+
+        $insD->bind_param(
+          'iissdddssssss',
+          $venta_id,
+          $sid,
+          $name,
+          $null,
+          $cant,
+          $pre,
+          $line,
+          $precioOrigen,
+          $precioListaIdDb,
+          $precioListaBaseDb,
+          $precioTempActorIdDb,
+          $precioTempMotivoDb,
+          $precioTempEnDb
+        );
         $insD->execute();
+      }
+      if ($tienePrecioTemporal) {
+        $upTemp = $db->prepare("UPDATE pos_ventas SET tiene_precio_temporal=1 WHERE id=? LIMIT 1");
+        $upTemp->bind_param('i', $venta_id);
+        $upTemp->execute();
       }
 
       // 10) Conductor principal
@@ -1182,7 +1283,7 @@ $ct_doc_num   = trim($_POST['contratante_doc_numero'] ?? '');
       }
       $insC->execute();
 
-      // 11) Abonos (+ sobrepago -> devuelto)
+      // 11) Abonos (sobrepago bloqueado en validación previa)
       $total_pagado = 0.00;
       $total_abonos = 0.00;
       $total_devuelto = 0.00;
@@ -1229,6 +1330,9 @@ $ct_doc_num   = trim($_POST['contratante_doc_numero'] ?? '');
       $upV->execute();
 
       // 12) Auditoría
+      $actorUsuario = (string)($u['usuario'] ?? '');
+      $actorNombre  = trim(($u['nombres'] ?? '').' '.($u['apellidos'] ?? '')) ?: null;
+      $ip = $_SERVER['REMOTE_ADDR'] ?? null;
       $audData = json_encode([
         'cliente' => [
           'id'           => $cliente_id,
@@ -1270,13 +1374,19 @@ $ct_doc_num   = trim($_POST['contratante_doc_numero'] ?? '');
           'total'          => (float)$total,
           'pagado'         => (float)$total_pagado,
           'saldo'          => (float)$saldo
+        ],
+        'precio_temporal' => [
+          'aplica' => $tienePrecioTemporal,
+          'actor'  => $tienePrecioTemporal ? [
+            'id'      => $uid,
+            'usuario' => $actorUsuario,
+            'nombre'  => $actorNombre
+          ] : null,
+          'items'  => $precioTemporalItemsAud
         ]
       ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
       $aud = $db->prepare("INSERT INTO pos_auditoria(id_empresa, tabla, registro_id, evento, datos, actor_id, actor_usuario, actor_nombre, ip, creado_en)
                            VALUES (?, 'pos_ventas', ?, 'VENTA_CREADA', ?, ?, ?, ?, ?, NOW())");
-      $actorUsuario = (string)($u['usuario'] ?? '');
-      $actorNombre  = trim(($u['nombres'] ?? '').' '.($u['apellidos'] ?? '')) ?: null;
-      $ip = $_SERVER['REMOTE_ADDR'] ?? null;
       $aud->bind_param('iisisss', $empId, $venta_id, $audData, $uid, $actorUsuario, $actorNombre, $ip);
       $aud->execute();
 

@@ -312,8 +312,9 @@ include __DIR__ . '/../../includes/header.php';
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
-      <div class="modal-body" id="pxBody">
-        <!-- Contenido dinámico -->
+      <div class="modal-body">
+        <div id="pxModalAlert" class="modal-inline-alert"></div>
+        <div id="pxBody"><!-- Contenido dinámico --></div>
       </div>
       <div class="modal-footer py-2">
         <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cerrar</button>
@@ -727,12 +728,18 @@ function clearInlineAlert(modalId){
 }
 
 // Simplificación de errores del backend a mensajes amigables
+function isRefRequiredError(msg){
+  const s = String(msg||'').toLowerCase();
+  return s.includes('referencia obligatoria') || s.includes('requiere una referencia');
+}
 function mapApiError(msg){
   const s = String(msg||'').toLowerCase();
   if (s.includes('no hay caja diaria abierta')) return 'Debes abrir la caja diaria de hoy para registrar pagos.';
   if (s.includes('medio de pago inválido')) return 'Selecciona un medio de pago válido.';
   if (s.includes('monto inválido')) return 'Ingresa un monto mayor a 0.00.';
-  if (s.includes('referencia obligatoria')) return 'Este medio exige referencia. Complétala para continuar.';
+  if (s.includes('al menos un abono')) return 'Debes registrar al menos un abono para completar la venta.';
+  if (isRefRequiredError(s)) return 'Este medio exige referencia. Complétala para continuar.';
+  if (s.includes('excede el total')) return 'El total de abonos supera el total de la venta. Ajusta los montos.';
   if (s.includes('excede el saldo')) return 'El monto ingresado supera el saldo. Ingresa un monto menor o igual al saldo.';
   if (s.includes('venta no encontrada')) return 'No se encontró la venta.';
   if (s.includes('la venta está anulada') || s.includes('la venta ya está anulada')) return 'La venta está anulada. No es posible registrar más operaciones.';
@@ -897,8 +904,42 @@ const STATE = {
   total:0, pages:1,
   tags:[],
   rows:[],
-  picked:{} // { [servicioId]: {precio, nota, rol} }
+  picked:{} // { [servicioId]: {precio, nota, rol, precio_origen, precio_lista_id, precio_lista_base, precio_temporal_motivo} }
 };
+
+function toPositiveInt(v){
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+function normalizePickForService(row, current){
+  const base = current || {};
+  const origen = (String(base.precio_origen || '').toUpperCase() === 'TEMPORAL') ? 'TEMPORAL' : 'LISTA';
+  const rowPrice = Number(row?.precio || 0);
+  const precio = Number(base.precio ?? rowPrice ?? 0);
+  const precioListaId = toPositiveInt(base.precio_lista_id ?? row?.precio_id ?? null);
+  const precioListaBaseRaw = base.precio_lista_base ?? rowPrice ?? precio;
+  const precioListaBase = Number(precioListaBaseRaw);
+  return {
+    precio: Number.isFinite(precio) ? precio : 0,
+    nota: String(base.nota ?? row?.nota ?? ''),
+    rol: String(base.rol ?? row?.rol ?? ''),
+    precio_origen: origen,
+    precio_lista_id: (origen === 'LISTA') ? precioListaId : null,
+    precio_lista_base: (origen === 'LISTA' && Number.isFinite(precioListaBase)) ? precioListaBase : null,
+    precio_temporal_motivo: (origen === 'TEMPORAL') ? String(base.precio_temporal_motivo || '') : ''
+  };
+}
+function ensurePicksForRows(rows){
+  (rows || []).forEach(s => {
+    const id = String(s.id);
+    STATE.picked[id] = normalizePickForService(s, STATE.picked[id]);
+  });
+}
+function pickFromStateOrRow(row){
+  const id = String(row.id);
+  if (!STATE.picked[id]) STATE.picked[id] = normalizePickForService(row, null);
+  return STATE.picked[id];
+}
 
 
 
@@ -944,8 +985,10 @@ function paintGrid(){
   }
 
   grid.innerHTML = STATE.rows.map(r=>{
-    const pick = STATE.picked[r.id] || { precio:r.precio, nota:r.nota, rol:r.rol };
-    const nota = pick.nota ? esc(pick.nota) : 'Sin nota';
+    const pick = pickFromStateOrRow(r);
+    const nota = (pick.precio_origen === 'TEMPORAL')
+      ? `Temporal: ${esc(pick.precio_temporal_motivo || 'Sin motivo')}`
+      : `Nota: ${pick.nota ? esc(pick.nota) : 'Sin nota'}`;
     const img  = r.imagen_path ? `${BASE_URL}/${esc(r.imagen_path)}` : SVC_IMG_PLACEHOLDER;
     const desc = esc(r.descripcion || '');
     return `
@@ -960,7 +1003,7 @@ function paintGrid(){
             <div class="d-flex align-items-center justify-content-between">
               <div class="svc-price">${money(pick.precio)}</div>
             </div>
-            <div><span class="svc-note">Nota: ${nota}</span></div>
+            <div><span class="svc-note">${nota}</span></div>
             <div class="svc-actions mt-2 d-flex gap-2">
               <button class="btn btn-sm btn-outline-secondary btn-detalle"
                       data-id="${r.id}" data-nom="${esc(r.nombre)}"
@@ -1004,7 +1047,7 @@ async function loadServicios(){
     STATE.rows  = cached.rows.slice();
     STATE.total = cached.total;
     // Asegura picked para filas nuevas
-    STATE.rows.forEach(s => { if(!STATE.picked[s.id]) STATE.picked[s.id] = {precio:s.precio, nota:s.nota, rol:s.rol}; });
+    ensurePicksForRows(STATE.rows);
     paintGrid();
     return;
   }
@@ -1021,7 +1064,7 @@ async function loadServicios(){
 
     STATE.rows  = j.data || [];
     STATE.total = Number(j.total || 0);
-    STATE.rows.forEach(s => { if(!STATE.picked[s.id]) STATE.picked[s.id] = {precio:s.precio, nota:s.nota, rol:s.rol}; });
+    ensurePicksForRows(STATE.rows);
 
     // Guardar en cache (copia superficial)
     SVC_CACHE[key] = { rows: STATE.rows.slice(), total: STATE.total };
@@ -1041,7 +1084,7 @@ const PM = {
   abonos: [],                 // [{id, medio_id, medio, requiere_ref, monto, ref, obs, ts}]
   total: 0,                   // total carrito
   saldo: 0,                   // total - sum(abonos)
-  ventaItems: []              // snapshot de carrito [{servicio_id, nombre, qty, precio}]
+  ventaItems: []              // snapshot de carrito con metadata de precio por item
 };
 const CONDUCTOR_CANALES = ['WHATSAPP', 'LLAMADA', 'SMS', 'PRESENCIAL', 'OTRO'];
 const PM_EXTRA = {
@@ -1237,12 +1280,17 @@ function computePMFromCart(){
   // snapshot de carrito (ahora con miniaturas)
   PM.ventaItems = Object.keys(CART.items).map(id=>{
     const it = CART.items[id];
+    const origen = String(it.precio_origen || 'LISTA').toUpperCase() === 'TEMPORAL' ? 'TEMPORAL' : 'LISTA';
     return {
       servicio_id: parseInt(id,10),
       nombre: it.nom,
       qty: it.qty,
       precio: Number(it.precio||0),
-      img: it.img || ''
+      img: it.img || '',
+      precio_origen: origen,
+      precio_lista_id: origen === 'LISTA' ? (toPositiveInt(it.precio_lista_id) || null) : null,
+      precio_lista_base: origen === 'LISTA' ? Number(it.precio_lista_base ?? it.precio ?? 0) : null,
+      precio_temporal_motivo: origen === 'TEMPORAL' ? String(it.precio_temporal_motivo || '') : ''
     };
   });
   PM.total = PM.ventaItems.reduce((a,x)=>a + x.qty*x.precio, 0);
@@ -1736,9 +1784,17 @@ document.addEventListener('click',(e)=>{
           if (!nombres || !apellidos){ showInlineAlert('payModal','danger','Completa nombres y apellidos.'); return; }
         }
         if (!PM.ventaItems.length){ showInlineAlert('payModal','danger','No hay ítems para vender.'); return; }
+        if (!PM.abonos.length){
+          showInlineAlert('payModal','danger','Debes registrar al menos un abono para completar la venta.');
+          return;
+        }
 
         // Validación final de sobrepago en creación de venta
         const abonado = PM.abonos.reduce((s,x)=>s+x.monto,0);
+        if (!(abonado > 0)){
+          showInlineAlert('payModal','danger','Debes registrar al menos un abono para completar la venta.');
+          return;
+        }
         if (abonado > PM.total + 1e-6){
           showInlineAlert('payModal','danger','El total de abonos supera el total de la venta. Ajusta los montos.');
           return;
@@ -1792,7 +1848,15 @@ document.addEventListener('click',(e)=>{
           conductor_extra_categoria_auto_id: extraVisible ? extra.categoria_auto_id : '',
           conductor_extra_categoria_moto_id: extraVisible ? extra.categoria_moto_id : '',
           conductor_extra_nota: extraVisible ? extra.nota : '',
-          items_json: JSON.stringify(PM.ventaItems.map(x=>({ servicio_id:x.servicio_id, cantidad:x.qty, precio_unitario:x.precio })) ),
+          items_json: JSON.stringify(PM.ventaItems.map(x=>({
+            servicio_id: x.servicio_id,
+            cantidad: x.qty,
+            precio_unitario: x.precio,
+            precio_origen: x.precio_origen || 'LISTA',
+            precio_lista_id: x.precio_lista_id ?? null,
+            precio_lista_base: x.precio_lista_base ?? null,
+            precio_temporal_motivo: x.precio_temporal_motivo || ''
+          })) ),
           abonos_json: JSON.stringify(PM.abonos.map(a=>({ medio_id:a.medio_id, monto:a.monto, referencia:a.ref, observacion:a.obs })) )
         };
 
@@ -1842,8 +1906,17 @@ document.addEventListener('click',(e)=>{
 
 // ===== Modal de Precios =====
 let MOD = { id:0, nom:'', desc:'', img:'' };
+function syncPrecioTemporalInputs(){
+  const tempRadio = qs('#pxTempRadio', qs('#pxBody'));
+  const enabled = !!(tempRadio && tempRadio.checked);
+  const monto = qs('#pxTempMonto', qs('#pxBody'));
+  const motivo = qs('#pxTempMotivo', qs('#pxBody'));
+  if (monto) monto.disabled = !enabled;
+  if (motivo) motivo.disabled = !enabled;
+}
 function openPreciosModal(svc){
   MOD = svc;
+  clearInlineAlert('pxModal');
   qs('#pxModalTitle').textContent = 'Detalle de servicios';
   qs('#pxBody').innerHTML = `<div class="text-muted">Cargando…</div>`;
   if (window.jQuery) jQuery('#pxModal').modal('show');
@@ -1851,7 +1924,12 @@ function openPreciosModal(svc){
   apiGET({action:'svc_precios', servicio_id: svc.id})
     .then(j=>{
       const precios = j.data || [];
-      const sel     = STATE.picked[svc.id] || {};
+      const rowRef  = STATE.rows.find(x => Number(x.id) === Number(svc.id)) || {id: svc.id, precio: 0, nota: '', rol: '', precio_id: null};
+      const sel     = normalizePickForService(rowRef, STATE.picked[String(svc.id)]);
+      STATE.picked[String(svc.id)] = sel;
+      const isTempSel = sel.precio_origen === 'TEMPORAL';
+      const tempMonto = isTempSel ? Number(sel.precio || 0).toFixed(2) : '';
+      const tempMotivo = isTempSel ? esc(sel.precio_temporal_motivo || '') : '';
       const html = `
         <div class="row g-3">
           <div class="col-12 col-md-5">
@@ -1866,7 +1944,11 @@ function openPreciosModal(svc){
               (precios.length
                 ? precios.map((p,idx)=>{
                     const id = `pp_${svc.id}_${idx}`;
-                    const isSel = (Number(sel.precio)===Number(p.precio) && (sel.rol||'')===p.rol) ? 'checked' : (p.es_principal? 'checked':'' );
+                    const sid = toPositiveInt(sel.precio_lista_id);
+                    const pid = toPositiveInt(p.id);
+                    const byId = (sid && pid) ? sid === pid : false;
+                    const byValue = Number(sel.precio)===Number(p.precio) && String(sel.rol||'')===String(p.rol||'');
+                    const isSel = (!isTempSel && (byId || byValue)) ? 'checked' : ((!isTempSel && p.es_principal) ? 'checked':'' );
                     const label = p.es_principal ? 'Principal' : `Opción ${p.rol}`;
                     const nota  = p.nota ? esc(p.nota) : 'Sin nota';
                     return `
@@ -1878,27 +1960,92 @@ function openPreciosModal(svc){
                         <div class="d-flex align-items-center" style="gap:12px;">
                           <div class="fw-bold">${money(p.precio)}</div>
                           <input type="radio" name="svcPricePick" id="${id}"
-                                 data-precio="${p.precio}" data-rol="${p.rol}" data-nota="${esc(p.nota||'')}" ${isSel}>
+                                 data-origen="LISTA" data-precio="${p.precio}" data-precio-id="${p.id||''}"
+                                 data-precio-base="${p.precio}" data-rol="${p.rol}" data-nota="${esc(p.nota||'')}" ${isSel}>
                         </div>
                       </label>`;
                   }).join('')
                 : '<div class="text-danger small">No hay precios activos configurados.</div>'
               )
             }
+            <label for="pxTempRadio" class="d-block border rounded p-2 mt-3">
+              <div class="d-flex align-items-center justify-content-between" style="gap:12px;">
+                <div class="fw-bold">Precio temporal</div>
+                <input type="radio" name="svcPricePick" id="pxTempRadio" data-origen="TEMPORAL" ${isTempSel ? 'checked' : ''}>
+              </div>
+              <div class="row g-2 mt-1">
+                <div class="col-12 col-md-4">
+                  <label class="small mb-1">Monto*</label>
+                  <input type="number" class="form-control form-control-sm" id="pxTempMonto" min="0" step="0.01" value="${tempMonto}">
+                </div>
+                <div class="col-12 col-md-8">
+                  <label class="small mb-1">Motivo*</label>
+                  <input type="text" class="form-control form-control-sm" id="pxTempMotivo" maxlength="255" value="${tempMotivo}">
+                </div>
+              </div>
+              <div class="alert alert-warning py-1 px-2 small mt-2 mb-0">
+                Temporal: no se guarda en catálogo y se perderá al recargar.
+              </div>
+            </label>
             <div class="small text-muted mt-2">* Solo se muestran precios activos.</div>
           </div>
         </div>`;
       qs('#pxBody').innerHTML = html;
+      syncPrecioTemporalInputs();
     })
     .catch(e=>{ qs('#pxBody').innerHTML = `<div class="text-danger">${esc(e.message)}</div>`; });
 }
+qs('#pxBody').addEventListener('change', (e)=>{
+  if (e.target && e.target.name === 'svcPricePick') syncPrecioTemporalInputs();
+});
 qs('#pxGuardar').addEventListener('click', ()=>{
+  clearInlineAlert('pxModal');
   const r = qs('input[name="svcPricePick"]:checked', qs('#pxBody'));
-  if(!r){ if (window.jQuery) jQuery('#pxModal').modal('hide'); return; }
-  const precio = Number(r.dataset.precio||0);
-  const nota   = r.dataset.nota||'';
-  const rol    = r.dataset.rol||'';
-  STATE.picked[MOD.id] = {precio, nota, rol};
+  if(!r){ showInlineAlert('pxModal','danger','Selecciona un precio.'); return; }
+
+  const origen = String(r.dataset.origen || 'LISTA').toUpperCase();
+  let pick = null;
+  if (origen === 'TEMPORAL'){
+    const montoRaw = Number(qs('#pxTempMonto', qs('#pxBody'))?.value || 0);
+    const motivo = (qs('#pxTempMotivo', qs('#pxBody'))?.value || '').trim();
+    if (!Number.isFinite(montoRaw) || montoRaw < 0){
+      showInlineAlert('pxModal','danger','Ingresa un monto temporal válido.');
+      return;
+    }
+    if (!motivo){
+      showInlineAlert('pxModal','danger','El motivo del precio temporal es obligatorio.');
+      return;
+    }
+    if (motivo.length > 255){
+      showInlineAlert('pxModal','danger','El motivo no puede superar 255 caracteres.');
+      return;
+    }
+    pick = {
+      precio: montoRaw,
+      nota: 'Precio temporal',
+      rol: 'TEMPORAL',
+      precio_origen: 'TEMPORAL',
+      precio_lista_id: null,
+      precio_lista_base: null,
+      precio_temporal_motivo: motivo
+    };
+  } else {
+    const precio = Number(r.dataset.precio||0);
+    const nota   = r.dataset.nota||'';
+    const rol    = r.dataset.rol||'';
+    const listaId = toPositiveInt(r.dataset.precioId || null);
+    const base = Number(r.dataset.precioBase ?? precio);
+    pick = {
+      precio,
+      nota,
+      rol,
+      precio_origen: 'LISTA',
+      precio_lista_id: listaId,
+      precio_lista_base: Number.isFinite(base) ? base : precio,
+      precio_temporal_motivo: ''
+    };
+  }
+  STATE.picked[String(MOD.id)] = pick;
 
   // reflejar en card
   const card = qs(`.btn-detalle[data-id="${MOD.id}"]`)?.closest('.svc-card');
@@ -1906,26 +2053,50 @@ qs('#pxGuardar').addEventListener('click', ()=>{
     const priceEl = card.querySelector('.svc-price');
     const noteEl  = card.querySelector('.svc-note');
     const addBtn  = card.querySelector(`.btn-add[data-id="${MOD.id}"]`);
-    if(priceEl) priceEl.textContent = money(precio);
-    if(noteEl)  noteEl.textContent  = 'Nota: ' + (nota||'Sin nota');
-    if(addBtn)  addBtn.dataset.precio = String(precio); // para añadir veloz
+    if(priceEl) priceEl.textContent = money(pick.precio);
+    if(noteEl){
+      noteEl.textContent = (pick.precio_origen === 'TEMPORAL')
+        ? ('Temporal: ' + pick.precio_temporal_motivo)
+        : ('Nota: ' + (pick.nota||'Sin nota'));
+    }
+    if(addBtn)  addBtn.dataset.precio = String(pick.precio); // para añadir veloz
   }
 
-  // si ya está en carrito, actualizar su precio
-  if (CART.items[MOD.id]) { CART.items[MOD.id].precio = precio; renderCart(); }
+  // si ya está en carrito, actualizar su precio y metadatos
+  if (CART.items[MOD.id]) {
+    CART.items[MOD.id].precio = Number(pick.precio||0);
+    CART.items[MOD.id].precio_origen = pick.precio_origen;
+    CART.items[MOD.id].precio_lista_id = pick.precio_lista_id;
+    CART.items[MOD.id].precio_lista_base = pick.precio_lista_base;
+    CART.items[MOD.id].precio_temporal_motivo = pick.precio_temporal_motivo;
+    renderCart();
+  }
 
   if (window.jQuery) jQuery('#pxModal').modal('hide');
 });
 
 // ===== Carrito (rápido y local) =====
 const CART = {
-  items: Object.create(null) // id -> {id, nom, img, precio, qty}
+  items: Object.create(null) // id -> {id, nom, img, precio, qty, precio_origen, precio_lista_id, precio_lista_base, precio_temporal_motivo}
 };
-function cartAdd({id, nom, img, precio}){
+function cartAdd({id, nom, img, precio, meta={}}){
   id = String(id);
   const it = CART.items[id];
   if (it){ it.qty += 1; }
-  else { CART.items[id] = {id, nom, img, precio: Number(precio||0), qty:1}; }
+  else {
+    const origen = String(meta.precio_origen || 'LISTA').toUpperCase() === 'TEMPORAL' ? 'TEMPORAL' : 'LISTA';
+    CART.items[id] = {
+      id,
+      nom,
+      img,
+      precio: Number(precio||0),
+      qty: 1,
+      precio_origen: origen,
+      precio_lista_id: origen === 'LISTA' ? (toPositiveInt(meta.precio_lista_id) || null) : null,
+      precio_lista_base: origen === 'LISTA' ? Number(meta.precio_lista_base ?? precio ?? 0) : null,
+      precio_temporal_motivo: origen === 'TEMPORAL' ? String(meta.precio_temporal_motivo || '') : ''
+    };
+  }
   renderCart();
 }
 function cartPlus(id){ id=String(id); const it=CART.items[id]; if(!it) return; it.qty+=1; renderCart(); }
@@ -2006,8 +2177,20 @@ document.addEventListener('click',(e)=>{
     const id  = add.dataset.id;
     const nom = add.dataset.nom || (qs(`.btn-detalle[data-id="${id}"]`)?.dataset.nom||'Servicio');
     const img = add.dataset.img || '';
-    const precio = Number(add.dataset.precio ?? (STATE.picked[id]?.precio ?? 0));
-    cartAdd({id, nom, img, precio});
+    const pick = STATE.picked[String(id)] || normalizePickForService({id, precio: add.dataset.precio ?? 0, nota:'', rol:'', precio_id:null}, null);
+    const precio = Number(add.dataset.precio ?? (pick.precio ?? 0));
+    cartAdd({
+      id,
+      nom,
+      img,
+      precio,
+      meta: {
+        precio_origen: pick.precio_origen || 'LISTA',
+        precio_lista_id: pick.precio_lista_id ?? null,
+        precio_lista_base: pick.precio_lista_base ?? precio,
+        precio_temporal_motivo: pick.precio_temporal_motivo || ''
+      }
+    });
     return;
   }
 

@@ -59,6 +59,12 @@ export function init(slot, apiUrl) {
   const uploadLabelEl = () => $('#s-upload-label');
   const uploadNoteEl = () => $('#s-upload-note');
   const imageInputEl = () => $('#s-imagen');
+  const cancelEditBtnEl = () => $('#s-cancel-edit');
+  const confirmModalEl = () => $('#srv-confirm-modal');
+  const confirmTitleEl = () => $('#srv-confirm-title');
+  const confirmMessageEl = () => $('#srv-confirm-message');
+  const confirmOkBtnEl = () => $('#srv-confirm-ok');
+  const confirmCancelBtnEl = () => $('#srv-confirm-cancel');
   const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
   const ALLOWED_IMAGE_TYPES = [
     'image/jpeg', 'image/pjpeg',
@@ -68,8 +74,23 @@ export function init(slot, apiUrl) {
     'image/bmp', 'image/x-ms-bmp',
     'image/avif'
   ];
+  let uploadHideTimer = 0;
+
+  function clearUploadHideTimer() {
+    if (!uploadHideTimer) return;
+    clearTimeout(uploadHideTimer);
+    uploadHideTimer = 0;
+  }
+
+  function scheduleHideUploadProgress(ms = 1800) {
+    clearUploadHideTimer();
+    uploadHideTimer = setTimeout(() => {
+      hideUploadProgress();
+    }, Math.max(0, Number(ms) || 0));
+  }
 
   function hideUploadProgress() {
+    clearUploadHideTimer();
     const wrap = uploadWrapEl();
     const bar = uploadBarEl();
     const pct = uploadPctEl();
@@ -88,6 +109,7 @@ export function init(slot, apiUrl) {
   }
 
   function startUploadProgress(file) {
+    clearUploadHideTimer();
     const wrap = uploadWrapEl();
     const bar = uploadBarEl();
     const pct = uploadPctEl();
@@ -117,6 +139,7 @@ export function init(slot, apiUrl) {
   }
 
   function finishUploadProgress(ok, noteMsg) {
+    clearUploadHideTimer();
     const bar = uploadBarEl();
     const label = uploadLabelEl();
     const note = uploadNoteEl();
@@ -127,6 +150,80 @@ export function init(slot, apiUrl) {
     }
     if (label) label.textContent = ok ? 'Imagen subida correctamente.' : 'No se pudo subir la imagen.';
     if (note && noteMsg) note.textContent = noteMsg;
+  }
+
+  function stripHtmlForConfirm(text) {
+    return String(text || '')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  async function openActionConfirm(opts = {}) {
+    const title = String(opts.title || 'Confirmar accion');
+    const messageHtml = String(opts.messageHtml || '');
+    const messagePlain = String(opts.message || stripHtmlForConfirm(messageHtml) || 'Confirma esta accion.');
+    const confirmText = String(opts.confirmText || 'Confirmar');
+    const confirmClass = String(opts.confirmClass || 'btn-primary');
+
+    const modal = confirmModalEl();
+    const okBtn = confirmOkBtnEl();
+    const cancelBtn = confirmCancelBtnEl();
+
+    if (!modal || !(window.jQuery && jQuery.fn && jQuery.fn.modal)) {
+      return window.confirm(`${title}\n\n${messagePlain}`);
+    }
+
+    const titleEl = confirmTitleEl();
+    const messageEl = confirmMessageEl();
+    if (titleEl) titleEl.textContent = title;
+    if (messageEl) messageEl.innerHTML = messageHtml;
+
+    if (okBtn) {
+      okBtn.textContent = confirmText;
+      okBtn.className = 'btn btn-sm';
+      okBtn.classList.add(confirmClass);
+    }
+
+    return new Promise((resolve) => {
+      const $modal = jQuery(modal);
+      let settled = false;
+
+      const settle = (value) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(value);
+      };
+
+      const onOk = (ev) => {
+        ev.preventDefault();
+        settle(true);
+        $modal.modal('hide');
+      };
+
+      const onCancel = (ev) => {
+        ev?.preventDefault?.();
+        settle(false);
+        $modal.modal('hide');
+      };
+
+      const onHidden = () => {
+        settle(false);
+      };
+
+      const cleanup = () => {
+        okBtn?.removeEventListener('click', onOk);
+        cancelBtn?.removeEventListener('click', onCancel);
+        $modal.off('hidden.bs.modal.srvConfirm', onHidden);
+      };
+
+      okBtn?.addEventListener('click', onOk);
+      cancelBtn?.addEventListener('click', onCancel);
+      $modal.off('hidden.bs.modal.srvConfirm');
+      $modal.on('hidden.bs.modal.srvConfirm', onHidden);
+      $modal.modal('show');
+    });
   }
 
   function mapFriendlyUploadError(msg) {
@@ -390,6 +487,14 @@ export function init(slot, apiUrl) {
     $('#s-imagen')?.focus();
   });
 
+  // Salir de modo edición para volver a crear servicios nuevos
+  slot.addEventListener('click', (e) => {
+    const btn = e.target?.closest('#s-cancel-edit');
+    if (!btn) return;
+    hide($('#s-alert')); hide($('#s-ok'));
+    leaveEditMode({ clearForm: true, focusName: true });
+  });
+
   // crear servicio
   slot.addEventListener('click', async (e) => {
     const btn = e.target?.closest('#s-crear'); if (!btn) return;
@@ -415,10 +520,9 @@ if (L.editId > 0) {
   fd.append('id', String(L.editId));
 } else {
   fd.append('action','create');
-}
+    }
 
     btn.disabled = true;
-    const old = btn.textContent;
     btn.textContent = (L.editId > 0 ? 'Guardando...' : 'Creando...');
     if (file) startUploadProgress(file);
     else hideUploadProgress();
@@ -432,6 +536,7 @@ const sid = (j && j.id) ? j.id : L.editId;   // por si el backend no devuelve id
 if (file) {
   updateUploadProgress(100);
   finishUploadProgress(true, 'Archivo subido y guardado correctamente.');
+  scheduleHideUploadProgress(1800);
 }
 const msgOk = `Servicio "${nombre}" ${esUpdate ? 'actualizado' : 'creado'} con éxito.${file ? ' Imagen subida correctamente.' : ''} Id: ${sid}.`;
 show(okEl, msgOk);
@@ -446,9 +551,7 @@ L.openId = 0;
 
 // Si estábamos editando, salir de modo edición
 if (L.editId > 0) {
-  L.editId = 0;
-  const btnSave = slot.querySelector('#s-crear');
-  if (btnSave) btnSave.textContent = 'Crear';
+  leaveEditMode();
 }
 
 // refrescar la lista
@@ -462,7 +565,7 @@ await cargarLista();
     }
     finally{
       btn.disabled = false;
-      btn.textContent = old;
+      setEditModeUi(L.editId > 0);
     }
   });
 
@@ -475,6 +578,30 @@ await cargarLista();
 
   // ---------- Listado (DIV 3) ----------
   const L = { empresa:0, q:'', estado:'', page:1, per_page:5, openId:0, rows:[], editId:0 };
+
+  function setEditModeUi(isEdit) {
+    const btnSave = slot.querySelector('#s-crear');
+    const btnCancel = cancelEditBtnEl();
+    if (btnSave) btnSave.textContent = isEdit ? 'Guardar cambios' : 'Crear';
+    btnCancel?.classList.toggle('d-none', !isEdit);
+  }
+
+  function resetCreateForm() {
+    formEl()?.reset?.();
+    writeTags([]);
+    const inp = inputEl();
+    if (inp) inp.value = '';
+    setCurrentImagePreview('');
+    setNewImagePreviewFromFile(null);
+    hideUploadProgress();
+  }
+
+  function leaveEditMode({ clearForm = false, focusName = false } = {}) {
+    L.editId = 0;
+    setEditModeUi(false);
+    if (clearForm) resetCreateForm();
+    if (focusName) slot.querySelector('#s-nombre')?.focus();
+  }
 
   async function cargarEmpresas(){
     try{
@@ -611,8 +738,7 @@ slot.addEventListener('click', (e)=>{
 
   // Marcar modo edición
   L.editId = id;
-  const btnSave = slot.querySelector('#s-crear');
-  if (btnSave) btnSave.textContent = 'Guardar cambios';
+  setEditModeUi(true);
 
   // Llevar foco al nombre
   nombre?.focus();
@@ -704,11 +830,20 @@ slot.addEventListener('click', async (e)=>{
   const empresa_id = parseInt(btn.dataset.empresa, 10);
   const asignado   = parseInt(btn.dataset.asignado, 10) === 1;
   const assign     = asignado ? 0 : 1; // 1 asignar, 0 quitar
-  const nombreSrv  = E.servicioNombre;
+  const nombreSrv  = E.servicioNombre || 'Servicio';
+  const nombreEmp  = (btn.dataset.empresaNombre || '').trim() || 'esta empresa';
 
   if (!empresa_id) return;
 
-  if (!confirm(`${assign? 'Asignar':'Quitar'} "${nombreSrv}" ${assign?'a':'de'} esta empresa?`)) return;
+  const accionTxt = assign ? 'Asignar' : 'Quitar';
+  const confirmado = await openActionConfirm({
+    title: `${accionTxt} servicio`,
+    messageHtml: `Se va a <strong>${accionTxt.toLowerCase()}</strong> el servicio <strong>${esc(nombreSrv)}</strong> ${assign ? 'a' : 'de'} la empresa <strong>${esc(nombreEmp)}</strong>.`,
+    message: `Se va a ${accionTxt.toLowerCase()} el servicio "${nombreSrv}" ${assign ? 'a' : 'de'} la empresa "${nombreEmp}".`,
+    confirmText: accionTxt,
+    confirmClass: assign ? 'btn-success' : 'btn-danger'
+  });
+  if (!confirmado) return;
 
   btn.disabled = true;
   try{
@@ -761,7 +896,7 @@ function e_pintarTabla(rows, total){
 </td>
       <td class="text-end">
         <button class="btn btn-sm ${r.asignado?'btn-danger':'btn-success'} e-toggle"
-                data-empresa="${r.id}" data-asignado="${r.asignado?1:0}">
+                data-empresa="${r.id}" data-asignado="${r.asignado?1:0}" data-empresa-nombre="${esc(r.nombre)}">
           ${r.asignado ? 'Quitar' : 'Asignar'}
         </button>
       </td>
@@ -844,8 +979,7 @@ if (label) {
     L.empresa=0; L.q=''; L.estado=''; L.page=1; L.openId=0;
     await cargarEmpresas();
     await cargarLista();
-    L.editId = 0;
-const btnSave = slot.querySelector('#s-crear'); if (btnSave) btnSave.textContent = 'Crear';
+    leaveEditMode();
 // reset panel izquierdo
 E.servicioId = 0; E.servicioNombre = ''; E.empresa_id = 0; E.estado = ''; E.q = ''; E.page = 1;
 const eQ = slot.querySelector('#e-q'); if (eQ) eQ.value = '';

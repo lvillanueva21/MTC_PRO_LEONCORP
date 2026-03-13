@@ -151,6 +151,16 @@
   grid-auto-rows: 1fr;         /* todas las filas con misma altura (igual a la más alta) */
 }
 
+/* Desktop ancho: deja los dos chips activos en extremos opuestos */
+@media (min-width: 1200px){
+  #pmBtnDriver{
+    grid-column: 1 / 2;
+  }
+  #pmClientMore{
+    grid-column: 4 / 5;
+  }
+}
+
 @media (max-width: 1199.98px){
   .pm-actions{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

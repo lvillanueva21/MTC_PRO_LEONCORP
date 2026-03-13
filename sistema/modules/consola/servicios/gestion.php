@@ -212,6 +212,26 @@
     grid-template-columns:1fr;
   }
 }
+
+.srv-confirm-icon{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#ecfeff;
+  color:#0f766e;
+  flex:0 0 42px;
+  font-size:18px;
+}
+.srv-confirm-text{
+  color:#374151;
+  line-height:1.4;
+}
+.srv-confirm-text strong{
+  color:#111827;
+}
 </style>
 
 <div class="srv-wrap">
@@ -277,7 +297,10 @@
       <!-- Botón -->
       <div class="col-12 col-lg-2 d-flex flex-column">
         <label class="form-label mb-1 invisible">Acción</label>
-        <button class="btn btn-primary w-100" type="button" id="s-crear">Crear</button>
+        <div class="d-grid gap-2">
+          <button class="btn btn-primary w-100" type="button" id="s-crear">Crear</button>
+          <button class="btn btn-outline-secondary w-100 d-none" type="button" id="s-cancel-edit">Cancelar edición</button>
+        </div>
       </div>
     </form>
     <div id="s-alert" class="alert alert-danger alert-dismissible d-none mt-2" role="alert">
@@ -403,4 +426,27 @@
     </div>
   </div>
 </div>
+</div>
+
+<div class="modal fade" id="srv-confirm-modal" tabindex="-1" role="dialog" aria-labelledby="srv-confirm-title" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h5 class="modal-title" id="srv-confirm-title">Confirmar accion</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="d-flex align-items-start" style="gap:10px;">
+          <div class="srv-confirm-icon"><i class="fas fa-exclamation-circle"></i></div>
+          <div id="srv-confirm-message" class="srv-confirm-text">Confirma esta accion.</div>
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-secondary btn-sm" id="srv-confirm-cancel" data-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-sm" id="srv-confirm-ok">Confirmar</button>
+      </div>
+    </div>
+  </div>
 </div>

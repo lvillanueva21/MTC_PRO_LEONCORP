@@ -43,12 +43,16 @@ function vpClearInlineAlert(modalId){
   const holder = document.querySelector(`#${modalId} .modal-inline-alert`) || document.querySelector(`#${modalId.replace('#','')}Alert`);
   if(holder) holder.innerHTML = '';
 }
+function vpIsRefRequiredError(msg){
+  const s = String(msg||'').toLowerCase();
+  return s.includes('referencia obligatoria') || s.includes('requiere una referencia');
+}
 function vpMapApiError(msg){
   const s = String(msg||'').toLowerCase();
   if (s.includes('no hay caja diaria abierta')) return 'Debes abrir la caja diaria de hoy para registrar pagos.';
   if (s.includes('medio de pago inválido')) return 'Selecciona un medio de pago válido.';
   if (s.includes('monto inválido')) return 'Ingresa un monto mayor a 0.00.';
-  if (s.includes('referencia obligatoria')) return 'Este medio exige referencia. Complétala para continuar.';
+  if (vpIsRefRequiredError(s)) return 'Este medio exige referencia. Complétala para continuar.';
   if (s.includes('excede el saldo')) return 'El monto ingresado supera el saldo. Ingresa un monto menor o igual al saldo.';
   if (s.includes('venta no encontrada')) return 'No se encontró la venta.';
   if (s.includes('anulada')) return 'La venta está anulada. No es posible registrar más operaciones.';
@@ -893,7 +897,7 @@ async function openAbonar(ventaId){
         }
       } catch(e){
         const raw = String(e.message||'');
-        if (raw.toLowerCase().includes('referencia obligatoria')) {
+        if (vpIsRefRequiredError(raw)) {
           const req = vpMedioRequiereRef();
           const msg = req ? 'Este medio exige referencia. Complétala para continuar.' : 'Para Efectivo no se requiere referencia. Vuelve a intentarlo.';
           vpShowInlineAlert('vpAbonoModal','danger', msg);
