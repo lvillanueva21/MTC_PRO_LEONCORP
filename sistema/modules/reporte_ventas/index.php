@@ -42,8 +42,6 @@ function rel(string $path) {
   return $APP_ROOT_REL . ltrim($path, '/');
 }
 
-$cajaAbonoBaseUrl = rel('modules/caja/index.php');
-
 /* ========= Lógica del módulo ========= */
 require_once __DIR__ . '/funciones.php';
 
@@ -496,8 +494,7 @@ include __DIR__ . '/../../includes/header.php';
 
           <div class="table-responsive">
             <table class="table table-sm align-middle mb-0"
-                   id="tblVentas"
-                   data-abonar-url-base="<?= h($cajaAbonoBaseUrl) ?>">
+                   id="tblVentas">
               <thead class="table-light">
                 <tr>
                   <th style="width:60px">#</th>
