@@ -684,3 +684,146 @@
     width: 30px;
   }
 }
+
+/* ===== Medios de pago (caja abierta) ===== */
+.dash-admin .adm-pay-card {
+  border: 0;
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(14, 57, 88, .1);
+  background:
+    radial-gradient(110% 120% at 0% 0%, rgba(191, 219, 254, .33) 0%, rgba(191, 219, 254, 0) 52%),
+    linear-gradient(140deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.dash-admin .adm-pay-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.dash-admin .adm-pay-kicker {
+  font-size: .67rem;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  font-weight: 800;
+  color: #0f5f85;
+  margin-bottom: 4px;
+}
+
+.dash-admin .adm-pay-meta {
+  font-size: .74rem;
+  color: #556474;
+  line-height: 1.3;
+}
+
+.dash-admin .adm-pay-badge {
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: .66rem;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.dash-admin .adm-pay-badge.is-open {
+  color: #0f6a3b;
+  background: #dcfce7;
+}
+
+.dash-admin .adm-pay-badge.is-closed {
+  color: #8a142d;
+  background: #ffe1e6;
+}
+
+.dash-admin .adm-pay-empty {
+  border: 1px dashed #d8e1ea;
+  border-radius: 10px;
+  background: #f8fbff;
+  color: #516477;
+  font-size: .82rem;
+  padding: 10px;
+}
+
+.dash-admin .adm-pay-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.dash-admin .adm-pay-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px;
+  background: #fff;
+}
+
+.dash-admin .adm-pay-item-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.dash-admin .adm-pay-icon {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 7px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  flex: 0 0 auto;
+}
+
+.dash-admin .adm-pay-label {
+  font-size: .82rem;
+  font-weight: 800;
+  color: #0f2742;
+  line-height: 1.2;
+}
+
+.dash-admin .adm-pay-main {
+  font-size: 1.08rem;
+  font-weight: 900;
+  color: #0f2742;
+  line-height: 1.12;
+}
+
+.dash-admin .adm-pay-sub {
+  margin-top: 2px;
+  font-size: .71rem;
+  color: #64748b;
+}
+
+.dash-admin .adm-pay-out {
+  margin-top: 6px;
+  font-size: .76rem;
+  font-weight: 800;
+  color: #b91c1c;
+}
+
+.dash-admin .adm-pay-avail {
+  margin-top: 3px;
+  font-size: .74rem;
+  color: #556474;
+}
+
+.dash-admin .adm-pay-warning {
+  margin-top: 9px;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: .74rem;
+  color: #9f1239;
+  background: #fff1f2;
+  border: 1px dashed #fda4af;
+}
+
+@media (max-width: 575.98px) {
+  .dash-admin .adm-pay-grid {
+    grid-template-columns: 1fr;
+  }
+}
