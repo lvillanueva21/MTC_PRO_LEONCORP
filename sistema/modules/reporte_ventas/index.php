@@ -21,6 +21,39 @@ $u = currentUser();
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 $db = db();
 $db->set_charset('utf8mb4');
+$usrNom = trim(($u['nombres'] ?? '') . ' ' . ($u['apellidos'] ?? '')) ?: ($u['usuario'] ?? 'Usuario');
+$empNom = (string)($u['empresa']['nombre'] ?? '—');
+$empresaId = (int)($u['empresa']['id'] ?? 0);
+$empLogoRel = '';
+
+try {
+  $logoFromSession = isset($u['empresa']['logo_path']) ? trim((string)$u['empresa']['logo_path']) : '';
+  if ($logoFromSession === '' && $empresaId > 0) {
+    $stLogo = $db->prepare("SELECT logo_path FROM mtp_empresas WHERE id=? LIMIT 1");
+    $stLogo->bind_param('i', $empresaId);
+    $stLogo->execute();
+    if ($rLogo = $stLogo->get_result()->fetch_assoc()) {
+      $logoFromSession = trim((string)($rLogo['logo_path'] ?? ''));
+    }
+    $stLogo->close();
+  }
+
+  if ($logoFromSession !== '') {
+    $rel = '../../' . ltrim($logoFromSession, '/');
+    if (is_file(__DIR__ . '/../../' . ltrim($logoFromSession, '/'))) {
+      $empLogoRel = $rel;
+    }
+  }
+
+  if ($empLogoRel === '') {
+    $fallback = '../../dist/img/AdminLTELogo.png';
+    if (is_file(__DIR__ . '/../../dist/img/AdminLTELogo.png')) {
+      $empLogoRel = $fallback;
+    }
+  }
+} catch (Throwable $e) {
+  // Silencioso.
+}
 
 /* ========= Helpers ========= */
 function h($s) {
@@ -170,6 +203,21 @@ $qsBase = $tmp;
 
 include __DIR__ . '/../../includes/header.php';
 ?>
+<style id="voucher-logo-fix">
+  #voucherBody .v-head{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:6px;
+  }
+  #voucherBody .v-logo{
+    width:64px;
+    height:64px;
+    object-fit:contain;
+    border-radius:50%;
+    border:1px solid #e5e7eb;
+  }
+</style>
 <div class="content-wrapper">
   <!-- Header de la página -->
   <div class="content-header">
@@ -849,8 +897,66 @@ include __DIR__ . '/../../includes/header.php';
   </section>
 </div>
 
+<!-- ==== Modal: Voucher / Recibo de venta ==== -->
+<div class="modal fade" id="voucherModal" tabindex="-1" role="dialog" aria-labelledby="voucherModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-md modal-dialog-centered modal-dialog-scrollable" role="document">
+    <div class="modal-content">
+      <div class="modal-header py-2 bg-dark text-white">
+        <h5 class="modal-title" id="voucherModalTitle"><i class="fas fa-receipt mr-2"></i>Voucher de venta</h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="voucherBody"><!-- render dinámico --></div>
+      </div>
+      <div class="modal-footer py-2 flex-wrap">
+        <div class="mr-auto d-flex align-items-center" style="gap:8px;">
+          <label for="voucherSize" class="small mb-0">Tamaño</label>
+          <select id="voucherSize" class="form-select form-select-sm" style="min-width:160px">
+            <option value="a4">A4 (210 × 297 mm)</option>
+            <option value="ticket80" selected>Ticket 80 mm</option>
+            <option value="ticket58">Ticket 58 mm</option>
+          </select>
+        </div>
+        <div class="d-flex" style="gap:8px;">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-dismiss="modal">Cerrar</button>
+          <button type="button" class="btn btn-primary btn-sm" id="voucherPrint"><i class="fas fa-print mr-1"></i>Imprimir</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==== Modal de mensajes (igual a caja) ==== -->
+<div class="modal fade" id="msgModal" tabindex="-1" role="dialog" aria-labelledby="msgModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h5 class="modal-title" id="msgModalTitle">Mensaje</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" id="msgModalBody">—</div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-primary btn-sm" data-dismiss="modal">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+window.RV_CTX = {
+  baseUrl: <?= json_encode(BASE_URL, JSON_UNESCAPED_UNICODE) ?>,
+  empresaNombre: <?= json_encode($empNom, JSON_UNESCAPED_UNICODE) ?>,
+  usuarioNombre: <?= json_encode($usrNom, JSON_UNESCAPED_UNICODE) ?>,
+  empresaLogo: <?= json_encode($empLogoRel, JSON_UNESCAPED_UNICODE) ?>
+};
+</script>
+
 <?php if (is_file(__DIR__ . '/index.js')): ?>
-  <script type="module" src="<?= h(rel('modules/' . basename(__DIR__) . '/index.js?v=2')) ?>"></script>
+  <script type="module" src="<?= h(rel('modules/' . basename(__DIR__) . '/index.js?v=3')) ?>"></script>
 <?php endif; ?>
 
 <?php if (is_file(__DIR__ . '/style.css')): ?>

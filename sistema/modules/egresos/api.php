@@ -7,6 +7,7 @@ header('X-Content-Type-Options: nosniff');
 require_once __DIR__ . '/../../includes/acl.php';
 require_once __DIR__ . '/../../includes/permisos.php';
 require_once __DIR__ . '/../../includes/conexion.php';
+require_once __DIR__ . '/finanzas_medios.php';
 
 /**
  * Log de guardia temprana para 403 (antes de entrar a la logica JSON del modulo).
@@ -177,7 +178,9 @@ function eg_table_exists(mysqli $db, string $name): bool
 
 function eg_schema_ready(mysqli $db): bool
 {
-    return eg_table_exists($db, 'egr_egresos') && eg_table_exists($db, 'egr_correlativos');
+    return eg_table_exists($db, 'egr_egresos')
+        && eg_table_exists($db, 'egr_correlativos')
+        && eg_table_exists($db, 'egr_egreso_fuentes');
 }
 
 function eg_parse_datetime_input(string $raw): ?string
@@ -217,6 +220,79 @@ function eg_safe_text(?string $value, int $max = 255): ?string
         return mb_substr($value, 0, $max, 'UTF-8');
     }
     return substr($value, 0, $max);
+}
+
+function eg_default_fuentes_rows(): array
+{
+    return array_values(fin_canonical_rows());
+}
+
+function eg_map_fuentes_by_key(array $rows): array
+{
+    $out = [];
+    foreach ($rows as $row) {
+        $key = fin_source_key_from_input((string)($row['key'] ?? ''));
+        if ($key === '') {
+            continue;
+        }
+        $out[$key] = $row;
+    }
+    return $out;
+}
+
+function eg_catalogo_fuentes_medios(mysqli $db): array
+{
+    $out = [];
+    foreach (fin_catalogo_medios_pago($db) as $m) {
+        $key = fin_source_key_from_input((string)($m['key'] ?? $m['nombre'] ?? ''));
+        if ($key === '') {
+            continue;
+        }
+        if (!isset($out[$key])) {
+            $out[$key] = [
+                'medio_id' => (int)($m['id'] ?? 0),
+                'medio_nombre' => (string)($m['nombre'] ?? ''),
+            ];
+        }
+    }
+    return $out;
+}
+
+function eg_parse_fuentes_payload($raw): array
+{
+    $payload = $raw;
+    if (!is_array($payload)) {
+        $rawStr = trim((string)$raw);
+        if ($rawStr === '') {
+            return ['error' => '', 'items' => []];
+        }
+        $decoded = json_decode($rawStr, true);
+        if (!is_array($decoded)) {
+            return ['error' => 'La distribucion por fuente tiene formato invalido.', 'items' => []];
+        }
+        $payload = $decoded;
+    }
+
+    $out = [];
+    foreach ($payload as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+        $rawKey = (string)($item['key'] ?? $item['fuente_key'] ?? $item['fuente'] ?? '');
+        $key = fin_source_key_from_input($rawKey);
+        if ($key === '') {
+            continue;
+        }
+        $monto = round((float)($item['monto'] ?? 0), 2);
+        if ($monto <= 0) {
+            continue;
+        }
+        if (!isset($out[$key])) {
+            $out[$key] = 0.0;
+        }
+        $out[$key] = round((float)$out[$key] + $monto, 2);
+    }
+    return ['error' => '', 'items' => $out];
 }
 
 function eg_caja_context(mysqli $db, int $empId): array
@@ -364,12 +440,28 @@ function eg_saldo_diaria(mysqli $db, int $empId, int $cajaDiariaId): array
     $devoluciones = (float)($r['devoluciones'] ?? 0);
     $egresos = (float)($r['egresos'] ?? 0);
     $saldo = $ingresos - $devoluciones - $egresos;
+    $porMedio = fin_disponible_por_fuente_diaria($db, $empId, $cajaDiariaId);
+    $egresosFuentes = (float)($porMedio['totales']['egresos_activos'] ?? 0);
+    $egresosNoDistrib = $egresos - $egresosFuentes;
+    if (abs($egresosNoDistrib) < 0.005) {
+        $egresosNoDistrib = 0.0;
+    }
 
     return [
         'ingresos' => round($ingresos, 2),
         'devoluciones' => round($devoluciones, 2),
         'egresos' => round($egresos, 2),
+        'egresos_por_fuente' => round($egresosFuentes, 2),
+        'egresos_no_distribuidos' => round($egresosNoDistrib, 2),
         'saldo_disponible' => round($saldo, 2),
+        'por_medio' => $porMedio['rows'] ?? [],
+        'por_medio_totales' => $porMedio['totales'] ?? [
+            'ingresos' => 0.0,
+            'devoluciones' => 0.0,
+            'monto_neto' => 0.0,
+            'egresos_activos' => 0.0,
+            'saldo_disponible' => 0.0,
+        ],
     ];
 }
 
@@ -483,15 +575,56 @@ function eg_select_one(mysqli $db, int $empId, int $id): ?array
     return $row ?: null;
 }
 
+function eg_select_fuentes(mysqli $db, int $empId, int $egresoId): array
+{
+    if (!eg_table_exists($db, 'egr_egreso_fuentes')) {
+        return [];
+    }
+
+    $sql = "SELECT
+              f.fuente_key AS `key`,
+              f.medio_id,
+              mp.nombre AS medio,
+              f.monto
+            FROM egr_egreso_fuentes f
+            LEFT JOIN pos_medios_pago mp ON mp.id = f.medio_id
+            WHERE f.id_empresa=? AND f.id_egreso=?
+            ORDER BY FIELD(f.fuente_key, 'EFECTIVO', 'YAPE', 'PLIN', 'TRANSFERENCIA'), f.id ASC";
+    $st = $db->prepare($sql);
+    $st->bind_param('ii', $empId, $egresoId);
+    $st->execute();
+    $rows = $st->get_result()->fetch_all(MYSQLI_ASSOC) ?: [];
+    $st->close();
+
+    foreach ($rows as $i => $row) {
+        $key = fin_source_key_from_input((string)($row['key'] ?? ''));
+        $rows[$i]['key'] = $key;
+        $rows[$i]['label'] = (string)(fin_canonical_rows()[$key]['label'] ?? $key);
+        $rows[$i]['monto'] = round((float)($row['monto'] ?? 0), 2);
+    }
+    return $rows;
+}
+
 try {
     if ($accion === 'estado') {
         $schemaOk = eg_schema_ready($db);
         $ctx = eg_caja_context($db, $empId);
+        $zeroRows = eg_default_fuentes_rows();
         $saldo = [
             'ingresos' => 0.0,
             'devoluciones' => 0.0,
             'egresos' => 0.0,
+            'egresos_por_fuente' => 0.0,
+            'egresos_no_distribuidos' => 0.0,
             'saldo_disponible' => 0.0,
+            'por_medio' => $zeroRows,
+            'por_medio_totales' => [
+                'ingresos' => 0.0,
+                'devoluciones' => 0.0,
+                'monto_neto' => 0.0,
+                'egresos_activos' => 0.0,
+                'saldo_disponible' => 0.0,
+            ],
         ];
         if ($schemaOk && (int)$ctx['diaria']['id'] > 0) {
             $saldo = eg_saldo_diaria($db, $empId, (int)$ctx['diaria']['id']);
@@ -499,14 +632,14 @@ try {
 
         eg_json_ok([
             'schema_ok' => $schemaOk,
-            'schema_message' => $schemaOk ? '' : 'Falta ejecutar la migracion SQL de egresos (tablas egr_*).',
+            'schema_message' => $schemaOk ? '' : 'Falta ejecutar la migracion SQL de egresos (tablas egr_* y egr_egreso_fuentes).',
             'caja' => $ctx,
             'saldo' => $saldo,
         ]);
     }
 
     if (!eg_schema_ready($db)) {
-        eg_json_err_code(500, 'La base de datos aun no tiene las tablas de egresos (egr_*). Ejecuta primero la migracion.');
+        eg_json_err_code(500, 'La base de datos aun no tiene las tablas de egresos (egr_* y egr_egreso_fuentes). Ejecuta primero la migracion.');
     }
 
     if ($accion === 'listar') {
@@ -603,6 +736,7 @@ try {
             eg_json_err_code(404, 'Egreso no encontrado.');
         }
         $row['empresa_logo_web'] = eg_logo_rel_web($row['empresa_logo_path'] ?? '');
+        $row['fuentes'] = eg_select_fuentes($db, $empId, $id);
         eg_json_ok(['row' => $row]);
     }
 
@@ -625,6 +759,7 @@ try {
         $documento = eg_safe_text($_POST['documento'] ?? '', 20);
         $concepto = eg_safe_text($_POST['concepto'] ?? '', 1000);
         $observaciones = eg_safe_text($_POST['observaciones'] ?? '', 255);
+        $fuentesRaw = $_POST['fuentes_json'] ?? ($_POST['fuentes'] ?? '');
 
         if ($tipo === 'FACTURA' || $tipo === 'BOLETA') {
             if ($serie === null || $numero === null) {
@@ -643,6 +778,35 @@ try {
         }
         if ($concepto === null) {
             eg_json_err('El concepto del egreso es obligatorio.');
+        }
+
+        $parsedFuentes = eg_parse_fuentes_payload($fuentesRaw);
+        if ($parsedFuentes['error'] !== '') {
+            eg_json_err((string)$parsedFuentes['error']);
+        }
+        $fuentesMap = $parsedFuentes['items'] ?? [];
+        if (!is_array($fuentesMap) || count($fuentesMap) === 0) {
+            eg_json_err('La distribucion por fuente es obligatoria. Selecciona al menos una fuente.');
+        }
+
+        $totalFuentes = 0.0;
+        foreach ($fuentesMap as $k => $m) {
+            $key = fin_source_key_from_input((string)$k);
+            if ($key === '') {
+                eg_json_err('Hay una fuente invalida en la distribucion.');
+            }
+            $montoFuente = round((float)$m, 2);
+            if ($montoFuente <= 0) {
+                eg_json_err('Cada fuente asignada debe tener monto mayor a cero.');
+            }
+            $fuentesMap[$key] = $montoFuente;
+            if ($key !== (string)$k) {
+                unset($fuentesMap[$k]);
+            }
+            $totalFuentes += $montoFuente;
+        }
+        if (abs(round($totalFuentes, 2) - $monto) > 0.009) {
+            eg_json_err('La suma de fuentes no coincide con el monto del egreso.');
         }
 
         $db->begin_transaction();
@@ -686,6 +850,30 @@ try {
                 ]);
             }
 
+            $fuentesDisponibles = eg_map_fuentes_by_key($saldo['por_medio'] ?? []);
+            foreach ($fuentesMap as $key => $montoFuente) {
+                $disp = round((float)($fuentesDisponibles[$key]['saldo_disponible'] ?? 0), 2);
+                if ($disp + 0.0001 < $montoFuente) {
+                    $db->rollback();
+                    eg_json_err_code(409, 'El monto solicitado supera el disponible en la fuente ' . $key . '.', [
+                        'saldo' => $saldo,
+                        'fuente_error' => [
+                            'key' => $key,
+                            'monto_solicitado' => round((float)$montoFuente, 2),
+                            'disponible' => round($disp, 2),
+                        ],
+                    ]);
+                }
+            }
+
+            $catalogoFuentes = eg_catalogo_fuentes_medios($db);
+            foreach (array_keys($fuentesMap) as $key) {
+                if (!isset($catalogoFuentes[$key]) || (int)($catalogoFuentes[$key]['medio_id'] ?? 0) <= 0) {
+                    $db->rollback();
+                    eg_json_err_code(409, 'No existe configuracion de medio de pago para la fuente ' . $key . '.');
+                }
+            }
+
             $correlativo = eg_next_correlativo($db, $empId);
             $codigo = eg_codigo($empId, $correlativo);
 
@@ -722,14 +910,38 @@ try {
             $egresoId = (int)$db->insert_id;
             $ins->close();
 
+            $insF = $db->prepare("INSERT INTO egr_egreso_fuentes(
+                                    id_egreso, id_empresa, id_caja_diaria, fuente_key, medio_id, monto
+                                  ) VALUES (?, ?, ?, ?, ?, ?)");
+            foreach ($fuentesMap as $key => $montoFuente) {
+                $medioId = (int)$catalogoFuentes[$key]['medio_id'];
+                $montoRow = round((float)$montoFuente, 2);
+                $insF->bind_param(
+                    'iiisid',
+                    $egresoId,
+                    $empId,
+                    $cajaDiariaId,
+                    $key,
+                    $medioId,
+                    $montoRow
+                );
+                $insF->execute();
+            }
+            $insF->close();
+
             $db->commit();
 
             $row = eg_select_one($db, $empId, $egresoId);
+            $fuentes = eg_select_fuentes($db, $empId, $egresoId);
+            if ($row) {
+                $row['fuentes'] = $fuentes;
+            }
             eg_json_ok([
                 'msg' => 'Egreso registrado correctamente.',
                 'id' => $egresoId,
                 'codigo' => $codigo,
                 'row' => $row,
+                'fuentes' => $fuentes,
             ]);
         } catch (Throwable $e) {
             $db->rollback();
@@ -772,6 +984,8 @@ try {
                 eg_json_err_code(409, 'El egreso ya estaba anulado.');
             }
 
+            $fuentes = eg_select_fuentes($db, $empId, $id);
+
             $up = $db->prepare("UPDATE egr_egresos
                                 SET estado='ANULADO', anulado_por=?, anulado_en=NOW(), anulado_motivo=?, actualizado=NOW()
                                 WHERE id_empresa=? AND id=? LIMIT 1");
@@ -780,7 +994,12 @@ try {
             $up->close();
 
             $db->commit();
-            eg_json_ok(['msg' => 'Egreso anulado.', 'id' => $id, 'codigo' => (string)$row['codigo']]);
+            eg_json_ok([
+                'msg' => 'Egreso anulado. Los montos fueron liberados en las mismas fuentes.',
+                'id' => $id,
+                'codigo' => (string)$row['codigo'],
+                'fuentes' => $fuentes,
+            ]);
         } catch (Throwable $e) {
             $db->rollback();
             $ref = eg_log_exception('egresos.anular', $e, [
@@ -809,6 +1028,7 @@ try {
             echo 'Egreso no encontrado.';
             exit;
         }
+        $egFuentes = eg_select_fuentes($db, $empId, $id);
 
         require_once __DIR__ . '/../TCPDF/tcpdf.php';
 
@@ -879,6 +1099,34 @@ try {
             : '<div class="logo-empty">SIN LOGO</div>';
 
         $beneficiarioFirmaEsc = ($beneficiario !== '' ? $beneficiario : 'BENEFICIARIO');
+
+        $fuentesRowsHtml = '';
+        foreach ($egFuentes as $f) {
+            $fLabel = htmlspecialchars((string)($f['label'] ?? $f['key'] ?? ''));
+            $fMonto = htmlspecialchars(eg_fmt_money((float)($f['monto'] ?? 0)));
+            $fuentesRowsHtml .= '<tr>
+              <td style="padding:0.7mm 1mm;">' . $fLabel . '</td>
+              <td style="padding:0.7mm 1mm; text-align:right; font-weight:bold;">' . $fMonto . '</td>
+            </tr>';
+        }
+        if ($fuentesRowsHtml === '') {
+            $fuentesRowsHtml = '<tr><td colspan="2" style="padding:0.7mm 1mm;">Sin distribucion registrada</td></tr>';
+        }
+
+        $fuentesSectionHtml = '
+      <div class="space-2"></div>
+      <div class="rule"></div>
+      <div class="space-1"></div>
+      <div class="lbl">Fuentes de salida</div>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size:9px;">
+        <thead>
+          <tr>
+            <th align="left" style="padding:0.7mm 1mm; border-bottom:1px solid #b7b7b7;">Fuente</th>
+            <th align="right" style="padding:0.7mm 1mm; border-bottom:1px solid #b7b7b7;">Monto</th>
+          </tr>
+        </thead>
+        <tbody>' . $fuentesRowsHtml . '</tbody>
+      </table>';
 
         $firmaResponsableHtml = '
           <div class="sig-wrap">
@@ -1015,7 +1263,7 @@ try {
 
       <div class="lbl">Concepto</div>
       <div class="concepto">' . ($concepto !== '' ? $concepto : '---') . '</div>
-
+      ' . $fuentesSectionHtml . '
       <div class="space-2"></div>
       <div class="rule"></div>
       <div class="space-1"></div>
