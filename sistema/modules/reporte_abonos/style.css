@@ -37,3 +37,77 @@
 .text-xs {
   font-size: 0.75rem;
 }
+
+/* Voucher preview (same visual language as reporte_ventas/caja) */
+.voucher {
+  font-size: 0.92rem;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.voucher .v-box {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 10px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  margin-bottom: 8px;
+}
+
+.voucher .v-title {
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: 0.95rem;
+  margin-bottom: 6px;
+}
+
+.voucher .v-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 12px;
+}
+
+.voucher .t {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.voucher table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.voucher th,
+.voucher td {
+  padding: 6px 8px;
+  border-bottom: 1px dashed #e5e7eb;
+}
+
+.voucher .v-total {
+  font-weight: 900;
+  font-size: 1.1rem;
+  text-align: right;
+}
+
+#voucherBody .v-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+#voucherBody .v-logo {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  border-radius: 50%;
+  border: 1px solid #e5e7eb;
+}
+
+@media (max-width: 575.98px) {
+  .voucher .v-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -227,8 +227,8 @@ include __DIR__ . '/../../includes/header.php';
         <select id="vpEstado" class="form-control form-control-sm">
           <option value="pending" selected>Pendientes</option>
           <option value="paid">Pagadas</option>
-          <option value="void">Anuladas</option>
-          <option value="refund">Con devolucion</option>
+          <option value="refund_partial">Devolucion parcial</option>
+          <option value="refund_total">Devolucion total</option>
           <option value="all">Todas</option>
         </select>
       </div>
@@ -1016,6 +1016,7 @@ function paintGrid(){
   if (!STATE.rows.length) {
     grid.innerHTML = `<div class="col-12 text-muted">Sin resultados</div>`;
     qs('#pager').innerHTML = '';
+    grid.style.minHeight = '';
     return;
   }
 
@@ -1057,6 +1058,7 @@ function paintGrid(){
   }).join('');
 
   paintPager();
+  grid.style.minHeight = '';
 
   // Aplicar estado de venta (deshabilitar .btn-add si corresponde)
   setSellUI(CAN_SELL, SELL_REASON);
@@ -1071,6 +1073,9 @@ async function loadTags(){
 }
 async function loadServicios(){
   const grid = qs('#grid');
+  // Evita salto visual hacia "Pagos pendientes" mientras carga la nueva página.
+  const prevHeight = Math.max(120, Math.round(grid.getBoundingClientRect().height));
+  grid.style.minHeight = `${prevHeight}px`;
   grid.innerHTML = `<div class="col-12 text-muted">Cargando…</div>`;
 
   // Clave única para cache por página/tamaño/búsqueda/tag
@@ -1108,6 +1113,7 @@ async function loadServicios(){
   } catch (e) {
     if (e.name === 'AbortError') return; // petición cancelada: no mostrar error
     grid.innerHTML = `<div class="col-12 text-danger">${esc(e.message)}</div>`;
+    grid.style.minHeight = '';
   } finally {
     _svcAbort = null;
   }
@@ -1395,6 +1401,7 @@ function buildVoucherPdfUrl(size){
     action: 'voucher_pdf',
     venta_id: String(VOUCHER_CTX.venta_id),
     kind: VOUCHER_CTX.kind === 'abono' ? 'abono' : 'venta',
+    presentation: 'cliente',
     size: s
   });
   if (Array.isArray(VOUCHER_CTX.abono_ids) && VOUCHER_CTX.abono_ids.length){

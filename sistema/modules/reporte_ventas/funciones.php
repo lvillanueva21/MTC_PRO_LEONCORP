@@ -338,7 +338,7 @@ if (!function_exists('reporte_cargar_detalles_ventas')) {
  * Filtros soportados en $opts:
  *  - q            : texto libre (cliente, doc cliente, doc contratante, nombre contratante)
  *  - servicio_id  : servicio en los detalles
- *  - estado       : 'pagado', 'pendiente', 'anulada'
+ *  - estado       : 'pagado', 'pendiente', 'devolucion_parcial', 'devolucion_total'
  *  - fdesde       : fecha venta desde (Y-m-d)
  *  - fhasta       : fecha venta hasta (Y-m-d)
  *  - serie_id     : v.serie_id
@@ -355,7 +355,10 @@ if (!function_exists('reporte_build_ventas_where')) {
     $q          = isset($opts['q']) ? trim((string)$opts['q']) : '';
     $servicioId = isset($opts['servicio_id']) ? (int)$opts['servicio_id'] : 0;
     $estado     = isset($opts['estado']) ? (string)$opts['estado'] : '';
-    if (!in_array($estado, ['pagado', 'pendiente', 'anulada'], true)) {
+    if ($estado === 'anulada') {
+      $estado = 'devolucion_total';
+    }
+    if (!in_array($estado, ['pagado', 'pendiente', 'devolucion_parcial', 'devolucion_total'], true)) {
       $estado = '';
     }
     $fdesde = isset($opts['fdesde']) ? (string)$opts['fdesde'] : '';
@@ -393,12 +396,15 @@ if (!function_exists('reporte_build_ventas_where')) {
       $vals[] = $servicioId;
     }
 
-    // Estado visual (pagado / pendiente / anulada)
+    // Estado visual (pagado / pendiente / devoluciones)
     if ($estado === 'pagado') {
-      $where[] = "(v.estado = 'EMITIDA' AND v.saldo <= 0)";
+      $where[] = "(v.estado = 'EMITIDA' AND v.saldo <= 0 AND NOT EXISTS (SELECT 1 FROM pos_devoluciones d WHERE d.venta_id = v.id))";
     } elseif ($estado === 'pendiente') {
+      // Incluye ventas emitidas con saldo pendiente, incluso si tienen devoluciones parciales.
       $where[] = "(v.estado = 'EMITIDA' AND v.saldo > 0)";
-    } elseif ($estado === 'anulada') {
+    } elseif ($estado === 'devolucion_parcial') {
+      $where[] = "(v.estado = 'EMITIDA' AND EXISTS (SELECT 1 FROM pos_devoluciones d WHERE d.venta_id = v.id))";
+    } elseif ($estado === 'devolucion_total') {
       $where[] = "v.estado = 'ANULADA'";
     }
 
@@ -646,7 +652,7 @@ if (!function_exists('listar_ventas_basico')) {
  *  - total_pagado
  *  - total_devuelto
  *  - total_saldo
- *  - total_neto (pagado - devuelto)
+ *  - total_neto (ingresado neto actual)
  */
 if (!function_exists('obtener_resumen_ventas')) {
   function obtener_resumen_ventas(mysqli $db, int $empresaId, array $opts = []): array {
@@ -682,7 +688,8 @@ if (!function_exists('obtener_resumen_ventas')) {
     $totalPagado   = isset($row['total_pagado']) ? (float)$row['total_pagado'] : 0.0;
     $totalDevuelto = isset($row['total_devuelto']) ? (float)$row['total_devuelto'] : 0.0;
     $totalSaldo    = isset($row['total_saldo']) ? (float)$row['total_saldo'] : 0.0;
-    $totalNeto     = $totalPagado - $totalDevuelto;
+    // total_pagado ya se considera neto luego de devoluciones.
+    $totalNeto     = $totalPagado;
 
     return [
       'total_ventas'   => (int)($row['total_ventas'] ?? 0),

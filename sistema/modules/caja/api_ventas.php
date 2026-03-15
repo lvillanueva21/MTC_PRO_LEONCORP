@@ -1,7 +1,7 @@
 <?php
 // /modules/caja/api_ventas.php
 // API para "Ventas pendientes": buscar ventas, ver detalle, registrar abonos,
-// anular ventas, devolución total y devolución por abono.
+// devolucion total de venta y devolucion por abono.
 
 header('Content-Type: application/json; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
@@ -9,6 +9,7 @@ header('X-Content-Type-Options: nosniff');
 require_once __DIR__ . '/../../includes/acl.php';
 require_once __DIR__ . '/../../includes/permisos.php';
 require_once __DIR__ . '/../../includes/conexion.php';
+require_once __DIR__ . '/voucher_history_service.php';
 
 acl_require_ids([3,4]); // Recepción (3) o Administración (4)
 verificarPermiso(['Recepción','Administración']);
@@ -176,6 +177,63 @@ function fetch_principal_conductor(mysqli $db, int $ventaId){
   return $q->get_result()->fetch_assoc() ?: null;
 }
 
+function venta_get_aplicado_total(mysqli $db, int $ventaId): float {
+  $q = $db->prepare("SELECT COALESCE(SUM(monto_aplicado),0) AS aplicado
+                     FROM pos_abono_aplicaciones
+                     WHERE venta_id=?");
+  $q->bind_param('i', $ventaId);
+  $q->execute();
+  $row = $q->get_result()->fetch_assoc() ?: [];
+  return money2((float)($row['aplicado'] ?? 0));
+}
+
+function venta_get_devuelto_total(mysqli $db, int $ventaId): float {
+  $q = $db->prepare("SELECT COALESCE(SUM(monto_devuelto),0) AS devuelto
+                     FROM pos_devoluciones
+                     WHERE venta_id=?");
+  $q->bind_param('i', $ventaId);
+  $q->execute();
+  $row = $q->get_result()->fetch_assoc() ?: [];
+  return money2((float)($row['devuelto'] ?? 0));
+}
+
+function venta_recalcular_totales(mysqli $db, int $ventaId, float $totalVenta, bool $forzarAnulada = false): array {
+  $aplicado = venta_get_aplicado_total($db, $ventaId);
+  $devuelto = venta_get_devuelto_total($db, $ventaId);
+  $pagadoNeto = max(0.00, money2($aplicado - $devuelto));
+
+  if ($forzarAnulada) {
+    return [
+      'pagado' => 0.00,
+      'saldo' => 0.00,
+      'devuelto_total' => $devuelto,
+      'aplicado_total' => $aplicado
+    ];
+  }
+
+  $saldo = max(0.00, money2($totalVenta - $pagadoNeto));
+  return [
+    'pagado' => $pagadoNeto,
+    'saldo' => $saldo,
+    'devuelto_total' => $devuelto,
+    'aplicado_total' => $aplicado
+  ];
+}
+
+function venta_build_estado_visual(string $estadoVenta, float $saldo, float $devueltoTotal): array {
+  $eps = 0.000001;
+  if (strtoupper($estadoVenta) === 'ANULADA') {
+    return ['code' => 'refund_total', 'text' => 'Devolucion total'];
+  }
+  if ($devueltoTotal > $eps) {
+    return ['code' => 'refund_partial', 'text' => 'Devolucion parcial'];
+  }
+  if ($saldo > $eps) {
+    return ['code' => 'pending', 'text' => 'Pendiente'];
+  }
+  return ['code' => 'paid', 'text' => 'Pagado'];
+}
+
 function voucher_norm_size($size): string {
   $s = strtolower(trim((string)$size));
   if (in_array($s, ['ticket58', 't58', '58', '58mm'], true)) return 'ticket58';
@@ -195,6 +253,354 @@ function voucher_parse_ids_csv($value): array {
   return array_values($out);
 }
 
+function voucher_norm_scope($scope): string {
+  $s = strtolower(trim((string)$scope));
+  return ($s === 'original') ? 'original' : 'actual';
+}
+
+function voucher_norm_presentation($presentation): string {
+  $s = strtolower(trim((string)$presentation));
+  return ($s === 'cliente') ? 'cliente' : 'auditoria';
+}
+
+function voucher_payload_to_render_data(array $payload, int $empId, mysqli $db): array {
+  $empresaRaw = $payload['empresa'] ?? [];
+  $metaRaw = $payload['meta'] ?? [];
+  $clienteRaw = $payload['cliente'] ?? [];
+  $contrRaw = $payload['contratante'] ?? [];
+  $condRaw = $payload['conductor'] ?? [];
+
+  $empresa = [
+    'nombre' => (string)($empresaRaw['nombre'] ?? ''),
+    'razon_social' => (string)($empresaRaw['razon_social'] ?? ''),
+    'ruc' => (string)($empresaRaw['ruc'] ?? ''),
+    'direccion' => (string)($empresaRaw['direccion'] ?? ''),
+    'logo_data_uri' => voucher_logo_data_uri((string)($empresaRaw['logo_path'] ?? ''))
+  ];
+  if ($empresa['nombre'] === '' && $empresa['razon_social'] === '' && $empresa['ruc'] === '' && $empresa['direccion'] === '') {
+    $empDb = vh_fetch_empresa($db, $empId);
+    if ($empDb) {
+      $empresa = [
+        'nombre' => (string)($empDb['nombre'] ?? ''),
+        'razon_social' => (string)($empDb['razon_social'] ?? ''),
+        'ruc' => (string)($empDb['ruc'] ?? ''),
+        'direccion' => (string)($empDb['direccion'] ?? ''),
+        'logo_data_uri' => voucher_logo_data_uri((string)($empDb['logo_path'] ?? ''))
+      ];
+    }
+  }
+
+  $items = [];
+  foreach (($payload['items'] ?? []) as $it) {
+    $items[] = [
+      'nombre' => (string)($it['nombre'] ?? ''),
+      'cantidad' => (float)($it['cantidad'] ?? 0),
+      'precio' => (float)($it['precio'] ?? 0),
+      'total' => (float)($it['total'] ?? 0)
+    ];
+  }
+
+  $abonos = [];
+  foreach (($payload['abonos'] ?? []) as $ab) {
+    $abonos[] = [
+      'abono_id' => (int)($ab['abono_id'] ?? 0),
+      'medio' => (string)($ab['medio'] ?? '—'),
+      'referencia' => (string)($ab['referencia'] ?? ''),
+      'monto' => (float)($ab['monto'] ?? 0),
+      'fecha' => (string)($ab['fecha'] ?? ''),
+      'estado_code' => (string)($ab['estado_code'] ?? ''),
+      'estado_text' => (string)($ab['estado_text'] ?? ''),
+      'monto_aplicado' => (float)($ab['monto_aplicado'] ?? 0),
+      'monto_devuelto' => (float)($ab['monto_devuelto'] ?? 0),
+      'monto_neto' => (float)($ab['monto_neto'] ?? 0)
+    ];
+  }
+
+  $cajeroOperacion = trim((string)($metaRaw['cajero_operacion_nombre'] ?? ''));
+  if ($cajeroOperacion === '') {
+    $cajeroOperacion = trim((string)($metaRaw['cajero_operacion_usuario'] ?? ''));
+  }
+  if ($cajeroOperacion === '') $cajeroOperacion = 'Usuario';
+
+  $reimpresoPor = trim((string)($metaRaw['reimpreso_por_nombre'] ?? ''));
+  if ($reimpresoPor === '') {
+    $reimpresoPor = trim((string)($metaRaw['reimpreso_por_usuario'] ?? ''));
+  }
+
+  $fechaRaw = (string)($metaRaw['fecha_raw'] ?? '');
+  $fechaVentaRaw = (string)($metaRaw['fecha_venta_raw'] ?? '');
+  $ticket = (string)($metaRaw['ticket'] ?? '');
+  $alcanceLabel = strtoupper((string)($metaRaw['alcance_label'] ?? ''));
+  if ($alcanceLabel === '') {
+    $alcance = strtolower((string)($payload['scope'] ?? 'actual'));
+    $alcanceLabel = ($alcance === 'original') ? 'ORIGINAL' : 'ACTUAL';
+  }
+  $exactitud = strtoupper((string)($metaRaw['exactitud'] ?? ($payload['exactitud'] ?? 'EXACTO')));
+  if (!in_array($exactitud, ['EXACTO', 'APROXIMADO'], true)) $exactitud = 'EXACTO';
+
+  $estadoVenta = strtoupper(trim((string)($metaRaw['estado_venta'] ?? '')));
+  $totDevMeta = (float)($payload['totales']['devuelto'] ?? 0);
+  if ($estadoVenta === 'ANULADA') {
+    $estadoVentaTexto = 'Devolucion total';
+  } elseif ($totDevMeta > 0.000001) {
+    $estadoVentaTexto = 'Devolucion parcial';
+  } else {
+    $estadoVentaTexto = 'Emitida';
+  }
+
+  return [
+    'empresa' => $empresa,
+    'meta' => [
+      'ticket' => $ticket,
+      'fecha' => voucher_fmt_dt($fechaRaw),
+      'fecha_venta' => voucher_fmt_dt($fechaVentaRaw),
+      'cajero' => $cajeroOperacion,
+      'reimpreso_por' => $reimpresoPor,
+      'alcance_label' => $alcanceLabel,
+      'exactitud' => $exactitud,
+      'estado_venta' => $estadoVenta,
+      'estado_venta_texto' => $estadoVentaTexto
+    ],
+    'cliente' => [
+      'doc' => (string)($clienteRaw['doc'] ?? ''),
+      'nombre' => (string)($clienteRaw['nombre'] ?? ''),
+      'telefono' => (string)($clienteRaw['telefono'] ?? '')
+    ],
+    'contratante' => [
+      'doc' => (string)($contrRaw['doc'] ?? ''),
+      'nombre' => (string)($contrRaw['nombre'] ?? ''),
+      'telefono' => (string)($contrRaw['telefono'] ?? '')
+    ],
+    'conductor' => [
+      'doc' => (string)($condRaw['doc'] ?? ''),
+      'nombre' => (string)($condRaw['nombre'] ?? ''),
+      'telefono' => (string)($condRaw['telefono'] ?? '')
+    ],
+    'items' => $items,
+    'abonos' => $abonos,
+    'totales' => [
+      'total' => (float)($payload['totales']['total'] ?? 0),
+      'pagado' => (float)($payload['totales']['pagado'] ?? 0),
+      'saldo' => (float)($payload['totales']['saldo'] ?? 0),
+      'devuelto' => (float)($payload['totales']['devuelto'] ?? 0)
+    ],
+    'refs' => [
+      'venta_id' => (int)($payload['refs']['venta_id'] ?? 0),
+      'abono_ids' => array_values(array_map('intval', (array)($payload['refs']['abono_ids'] ?? [])))
+    ]
+  ];
+}
+
+function voucher_payload_to_preview_data(array $payload): array {
+  $meta = $payload['meta'] ?? [];
+  $cliente = $payload['cliente'] ?? [];
+  $contr = $payload['contratante'] ?? [];
+  $conductor = $payload['conductor'] ?? [];
+
+  $clienteDocTipo = (string)($cliente['doc_tipo'] ?? '');
+  $clienteDocNum = (string)($cliente['doc_numero'] ?? '');
+  $clienteTipoPersona = strtoupper((string)($cliente['tipo_persona'] ?? 'NATURAL'));
+  if ($clienteTipoPersona !== 'JURIDICA') $clienteTipoPersona = 'NATURAL';
+
+  $clienteOut = [
+    'tipo_persona' => $clienteTipoPersona,
+    'tipo' => $clienteDocTipo,
+    'doc' => $clienteDocNum,
+    'razon' => $clienteTipoPersona === 'JURIDICA' ? (string)($cliente['nombre'] ?? '') : '',
+    'nombres' => $clienteTipoPersona === 'NATURAL' ? (string)($cliente['nombre'] ?? '') : '',
+    'apellidos' => '',
+    'telefono' => (string)($cliente['telefono'] ?? '')
+  ];
+
+  $contrOut = [
+    'tipo' => (string)($contr['doc_tipo'] ?? ''),
+    'doc' => (string)($contr['doc_numero'] ?? ''),
+    'nombres' => (string)($contr['nombre'] ?? ''),
+    'apellidos' => '',
+    'telefono' => (string)($contr['telefono'] ?? '')
+  ];
+
+  $condOut = [
+    'tipo' => (string)($conductor['doc_tipo'] ?? ''),
+    'doc' => (string)($conductor['doc_numero'] ?? ''),
+    'nombres' => (string)($conductor['nombre'] ?? ''),
+    'apellidos' => '',
+    'telefono' => (string)($conductor['telefono'] ?? '')
+  ];
+
+  $items = [];
+  foreach (($payload['items'] ?? []) as $it) {
+    $items[] = [
+      'nombre' => (string)($it['nombre'] ?? ''),
+      'qty' => (float)($it['cantidad'] ?? 0),
+      'precio' => (float)($it['precio'] ?? 0)
+    ];
+  }
+
+  $abonos = [];
+  foreach (($payload['abonos'] ?? []) as $ab) {
+    $ref = 'Recibo ABN-' . str_pad((string)((int)($ab['abono_id'] ?? 0)), 6, '0', STR_PAD_LEFT);
+    $extraRef = trim((string)($ab['referencia'] ?? ''));
+    if ($extraRef !== '') $ref .= ' - ' . $extraRef;
+    $estadoTxt = trim((string)($ab['estado_text'] ?? ''));
+    if ($estadoTxt !== '') $ref .= ' - ' . $estadoTxt;
+    $abonos[] = [
+      'medio' => (string)($ab['medio'] ?? ''),
+      'monto' => (float)($ab['monto'] ?? 0),
+      'ref' => $ref
+    ];
+  }
+
+  $alcanceLabel = strtoupper((string)($meta['alcance_label'] ?? 'ACTUAL'));
+  if ($alcanceLabel === '') $alcanceLabel = 'ACTUAL';
+  $exactitud = strtoupper((string)($meta['exactitud'] ?? 'EXACTO'));
+  if (!in_array($exactitud, ['EXACTO', 'APROXIMADO'], true)) $exactitud = 'EXACTO';
+
+  $cajero = trim((string)($meta['cajero_operacion_nombre'] ?? ''));
+  if ($cajero === '') $cajero = trim((string)($meta['cajero_operacion_usuario'] ?? ''));
+  if ($cajero === '') $cajero = 'Usuario';
+
+  $reimpresoPor = trim((string)($meta['reimpreso_por_nombre'] ?? ''));
+  if ($reimpresoPor === '') $reimpresoPor = trim((string)($meta['reimpreso_por_usuario'] ?? ''));
+
+  $scopeOut = strtolower((string)($payload['scope'] ?? ($meta['alcance'] ?? 'actual')));
+  $scopeOut = ($scopeOut === 'original') ? 'original' : 'actual';
+  $abonoIdsOut = array_values(array_map('intval', (array)($payload['refs']['abono_ids'] ?? [])));
+  $abonoIdOut = (count($abonoIdsOut) === 1) ? (int)$abonoIdsOut[0] : 0;
+
+  return [
+    'kind' => strtolower((string)($payload['kind'] ?? 'venta')) === 'abono' ? 'abono' : 'venta',
+    'scope' => $scopeOut,
+    'venta_id' => (int)($payload['refs']['venta_id'] ?? 0),
+    'abono_id' => $abonoIdOut,
+    'abono_ids' => $abonoIdsOut,
+    'empresa' => (string)($payload['empresa']['nombre'] ?? ''),
+    'ticket' => (string)($meta['ticket'] ?? ''),
+    'fecha' => voucher_fmt_dt((string)($meta['fecha_raw'] ?? '')),
+    'cajero' => $cajero,
+    'reimpreso_por' => $reimpresoPor,
+    'alcance_label' => $alcanceLabel,
+    'exactitud' => $exactitud,
+    'estado_venta' => (string)($meta['estado_venta'] ?? ''),
+    'estado_venta_texto' => (string)($meta['estado_venta_texto'] ?? ''),
+    'cliente' => $clienteOut,
+    'contratante' => $contrOut,
+    'conductor' => $condOut,
+    'items' => $items,
+    'abonos' => $abonos,
+    'totales' => [
+      'total' => (float)($payload['totales']['total'] ?? 0),
+      'pagado' => (float)($payload['totales']['pagado'] ?? 0),
+      'saldo' => (float)($payload['totales']['saldo'] ?? 0),
+      'devuelto' => (float)($payload['totales']['devuelto'] ?? 0)
+    ]
+  ];
+}
+
+function voucher_apply_preview_presentation(array $preview, string $presentation): array {
+  if (voucher_norm_presentation($presentation) === 'cliente') {
+    $preview['reimpreso_por'] = '';
+    $preview['alcance_label'] = '';
+    $preview['exactitud'] = 'EXACTO';
+  }
+  return $preview;
+}
+
+function voucher_load_payload_for_scope(
+  mysqli $db,
+  int $empId,
+  array $u,
+  int $ventaId,
+  string $kind,
+  string $scope,
+  array $abonoIds,
+  int $abonoId
+): array {
+  $kind = ($kind === 'abono') ? 'abono' : 'venta';
+  $scope = voucher_norm_scope($scope);
+
+  if ($kind === 'abono' && $ventaId <= 0 && $abonoId > 0) {
+    $ventaId = vh_resolve_venta_id_by_abono($db, $empId, $abonoId);
+  }
+  if ($ventaId <= 0) {
+    throw new RuntimeException('Venta invalida para comprobante.');
+  }
+
+  if ($kind === 'abono') {
+    if ($abonoId > 0) {
+      $abonoIds[] = $abonoId;
+    }
+    $abonoIds = array_values(array_unique(array_filter(array_map('intval', $abonoIds), function($x){ return $x > 0; })));
+  } else {
+    $abonoIds = [];
+  }
+
+  $reimpresor = [
+    'id' => (int)($u['id'] ?? 0),
+    'usuario' => (string)($u['usuario'] ?? ''),
+    'nombre' => trim((string)($u['nombres'] ?? '') . ' ' . (string)($u['apellidos'] ?? ''))
+  ];
+  if ($reimpresor['nombre'] === '') $reimpresor['nombre'] = $reimpresor['usuario'];
+
+  if ($scope === 'original') {
+    $snapshot = null;
+    if ($kind === 'venta') {
+      $snapshot = vh_find_original_snapshot_venta($db, $empId, $ventaId);
+    } else {
+      $findId = $abonoId > 0 ? $abonoId : (int)($abonoIds[0] ?? 0);
+      if ($findId > 0) $snapshot = vh_find_original_snapshot_abono($db, $empId, $findId);
+    }
+
+    $payload = vh_decode_snapshot_payload($snapshot);
+    if (is_array($payload)) {
+      if (!isset($payload['meta']) || !is_array($payload['meta'])) $payload['meta'] = [];
+      $payload['scope'] = 'original';
+      $payload['exactitud'] = (string)($snapshot['exactitud'] ?? ($payload['exactitud'] ?? 'EXACTO'));
+      $payload['meta']['alcance'] = 'original';
+      $payload['meta']['alcance_label'] = 'ORIGINAL';
+      $payload['meta']['exactitud'] = $payload['exactitud'];
+      $payload['meta']['reimpreso_por_id'] = $reimpresor['id'];
+      $payload['meta']['reimpreso_por_usuario'] = $reimpresor['usuario'];
+      $payload['meta']['reimpreso_por_nombre'] = $reimpresor['nombre'];
+      return $payload;
+    }
+
+    $fallback = vh_build_payload(
+      $db,
+      $empId,
+      $ventaId,
+      $kind,
+      $abonoIds,
+      'original',
+      'APROXIMADO',
+      $reimpresor
+    );
+    $fallback['scope'] = 'original';
+    $fallback['exactitud'] = 'APROXIMADO';
+    $fallback['meta']['alcance'] = 'original';
+    $fallback['meta']['alcance_label'] = 'ORIGINAL';
+    $fallback['meta']['exactitud'] = 'APROXIMADO';
+    return $fallback;
+  }
+
+  $actual = vh_build_payload(
+    $db,
+    $empId,
+    $ventaId,
+    $kind,
+    $abonoIds,
+    'actual',
+    'EXACTO',
+    $reimpresor
+  );
+  $actual['scope'] = 'actual';
+  $actual['exactitud'] = 'EXACTO';
+  $actual['meta']['alcance'] = 'actual';
+  $actual['meta']['alcance_label'] = 'ACTUAL';
+  $actual['meta']['exactitud'] = 'EXACTO';
+  return $actual;
+}
+
 function voucher_fmt_money($n): string {
   return 'S/ ' . number_format((float)$n, 2, '.', ',');
 }
@@ -211,6 +617,49 @@ function voucher_fmt_dt($value): string {
 
 function voucher_h($s): string {
   return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
+}
+
+function voucher_filename_part($value, string $fallback): string {
+  $txt = trim((string)$value);
+  if ($txt === '') $txt = $fallback;
+  if (function_exists('iconv')) {
+    $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $txt);
+    if (is_string($ascii) && $ascii !== '') $txt = $ascii;
+  }
+  $txt = preg_replace('/\s+/', '_', $txt);
+  $txt = preg_replace('/[^A-Za-z0-9_-]+/', '_', (string)$txt);
+  $txt = preg_replace('/_+/', '_', (string)$txt);
+  $txt = trim((string)$txt, '_-');
+  if ($txt === '') $txt = $fallback;
+  return strtoupper($txt);
+}
+
+function voucher_pdf_filename(array $data, string $kind): string {
+  $kind = ($kind === 'abono') ? 'abono' : 'venta';
+  $tipo = ($kind === 'abono') ? 'comprobante_abono' : 'ticket_venta';
+
+  $codigo = trim((string)($data['meta']['ticket'] ?? ''));
+  if ($kind === 'abono') {
+    $abonoIds = array_values(array_map('intval', (array)($data['refs']['abono_ids'] ?? [])));
+    $abonoId = (int)($abonoIds[0] ?? 0);
+    if ($abonoId > 0) {
+      $codigo = 'ABN-' . str_pad((string)$abonoId, 6, '0', STR_PAD_LEFT);
+    } elseif ($codigo === '') {
+      $codigo = 'ABN-SIN-CODIGO';
+    }
+  } elseif ($codigo === '') {
+    $codigo = 'TICKET-SIN-CODIGO';
+  }
+
+  $empresa = trim((string)($data['empresa']['razon_social'] ?? ''));
+  if ($empresa === '') $empresa = trim((string)($data['empresa']['nombre'] ?? ''));
+  if ($empresa === '') $empresa = 'EMPRESA';
+
+  $tipoSafe = voucher_filename_part($tipo, 'COMPROBANTE');
+  $codigoSafe = voucher_filename_part($codigo, 'CODIGO');
+  $empresaSafe = voucher_filename_part($empresa, 'EMPRESA');
+
+  return strtolower($tipoSafe) . '_' . $codigoSafe . '_' . $empresaSafe . '.pdf';
 }
 
 function voucher_norm_person_text($value): string {
@@ -411,7 +860,7 @@ function voucher_estimate_ticket_height(array $data, string $size): float {
   return $estimated;
 }
 
-function voucher_render_pdf(array $data, string $size, string $kind): void {
+function voucher_render_pdf(array $data, string $size, string $kind, string $presentation = 'auditoria'): void {
   $tcpdfFile = __DIR__ . '/../TCPDF/tcpdf.php';
   if (!file_exists($tcpdfFile)) {
     throw new RuntimeException('TCPDF no encontrado en modules/TCPDF.');
@@ -420,6 +869,8 @@ function voucher_render_pdf(array $data, string $size, string $kind): void {
 
   $size = voucher_norm_size($size);
   $kind = ($kind === 'abono') ? 'abono' : 'venta';
+  $presentation = voucher_norm_presentation($presentation);
+  $showInternalMeta = ($presentation === 'auditoria');
 
   if ($size === 'a4') {
     $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
@@ -465,6 +916,23 @@ function voucher_render_pdf(array $data, string $size, string $kind): void {
   $contrTel = trim((string)($contratante['telefono'] ?? ''));
   $condTel = trim((string)($conductor['telefono'] ?? ''));
   $ticketValue = trim((string)($meta['ticket'] ?? ''));
+  $alcanceLabel = strtoupper(trim((string)($meta['alcance_label'] ?? '')));
+  if ($alcanceLabel === '') $alcanceLabel = 'ACTUAL';
+  $exactitud = strtoupper(trim((string)($meta['exactitud'] ?? 'EXACTO')));
+  if (!in_array($exactitud, ['EXACTO', 'APROXIMADO'], true)) $exactitud = 'EXACTO';
+  $estadoVentaText = trim((string)($meta['estado_venta_texto'] ?? ''));
+  if ($estadoVentaText === '') {
+    $estadoVentaRaw = strtoupper(trim((string)($meta['estado_venta'] ?? '')));
+    $totDevRaw = (float)($tot['devuelto'] ?? 0);
+    if ($estadoVentaRaw === 'ANULADA') {
+      $estadoVentaText = 'Devolucion total';
+    } elseif ($totDevRaw > 0.000001) {
+      $estadoVentaText = 'Devolucion parcial';
+    } else {
+      $estadoVentaText = 'Emitida';
+    }
+  }
+  $reimpresoPor = trim((string)($meta['reimpreso_por'] ?? ''));
   $hideConductorSection = voucher_same_person_cliente_conductor($cliente, $conductor);
   $isTicketPaper = ($size === 'ticket58' || $size === 'ticket80');
   $logoW = ($size === 'a4') ? '18mm' : (($size === 'ticket58') ? '11mm' : '13mm');
@@ -513,6 +981,7 @@ function voucher_render_pdf(array $data, string $size, string $kind): void {
       .head-title { font-size:' . $titleSize . 'pt; font-weight:bold; line-height:1.02; margin:0; }
       .head-company { font-size:' . ($fontBase + 0.9) . 'pt; font-weight:bold; line-height:1.05; margin:' . $headRowGap . ' 0 0 0; }
       .head-meta { font-size:' . $fontSmall . 'pt; color:#444; line-height:1.08; margin:' . $headRowGap . ' 0 0 0; }
+      .scope { display:inline-block; padding:0.4mm 1.4mm; border:1px solid #444; border-radius:2mm; font-weight:bold; font-size:' . max(6.6, $fontSmall) . 'pt; margin-top:0.5mm; }
       .tk-row { width:100%; border-collapse:collapse; margin:0.6mm 0 0.9mm 0; }
       .tk-row td { border:none; padding:0; vertical-align:baseline; }
       .tk-k { width:30%; text-align:left; font-size:' . max(6.8, $fontSmall) . 'pt; font-weight:bold; letter-spacing:0.5px; }
@@ -591,6 +1060,15 @@ function voucher_render_pdf(array $data, string $size, string $kind): void {
   }
   $html .= '</div>';
 
+  $scopeTxt = '';
+  if ($showInternalMeta) {
+    $scopeTxt = $alcanceLabel;
+    if ($exactitud === 'APROXIMADO') $scopeTxt .= ' (APROXIMADO)';
+  }
+  if ($showInternalMeta && $scopeTxt !== '') {
+    $html .= '<div class="center"><span class="scope">' . voucher_h($scopeTxt) . '</span></div>';
+  }
+
   if ($ticketValue !== '') {
     if ($size === 'ticket58' || $size === 'ticket80') {
       $html .= '<div class="tk-center"><span class="tk-label-inline">TICKET:</span> <span class="tk-value-inline mono">' . voucher_h($ticketValue) . '</span></div>';
@@ -604,11 +1082,20 @@ function voucher_render_pdf(array $data, string $size, string $kind): void {
   $html .= '<div class="rule"></div>';
 
   $html .= '<table>';
+  if ($showInternalMeta && $scopeTxt !== '') {
+    $html .= '<tr><td class="b">Alcance</td><td class="right">' . voucher_h($scopeTxt) . '</td></tr>';
+  }
   $html .= '<tr><td class="b">Fecha</td><td class="right">' . voucher_h((string)($meta['fecha'] ?? '')) . '</td></tr>';
   if ($kind === 'abono' && !empty($meta['fecha_venta'])) {
     $html .= '<tr><td class="b">Fecha venta</td><td class="right">' . voucher_h((string)$meta['fecha_venta']) . '</td></tr>';
   }
-  $html .= '<tr><td class="b">Cajero</td><td class="right">' . voucher_h((string)($meta['cajero'] ?? '')) . '</td></tr>';
+  $html .= '<tr><td class="b">Operacion por</td><td class="right">' . voucher_h((string)($meta['cajero'] ?? '')) . '</td></tr>';
+  if ($showInternalMeta && $reimpresoPor !== '') {
+    $html .= '<tr><td class="b">Reimpreso por</td><td class="right">' . voucher_h($reimpresoPor) . '</td></tr>';
+  }
+  if ($showInternalMeta && $alcanceLabel === 'ACTUAL') {
+    $html .= '<tr><td class="b">Estado actual</td><td class="right">' . voucher_h($estadoVentaText) . '</td></tr>';
+  }
   $html .= '</table>';
 
   $html .= '<div class="rule"></div><div class="sec">CLIENTE</div>';
@@ -665,9 +1152,11 @@ function voucher_render_pdf(array $data, string $size, string $kind): void {
       $monto = voucher_fmt_money((float)($ab['monto'] ?? 0));
       $fechaAb = trim((string)($ab['fecha'] ?? ''));
       $abnCode = (int)($ab['abono_id'] ?? 0);
+      $estadoAb = trim((string)($ab['estado_text'] ?? ''));
       $metaRef = 'ABN-' . str_pad((string)$abnCode, 6, '0', STR_PAD_LEFT);
       if ($ref !== '') $metaRef .= ' - ' . $ref;
       if ($fechaAb !== '') $metaRef .= ' - ' . voucher_fmt_dt($fechaAb);
+      if ($estadoAb !== '') $metaRef .= ' - ' . $estadoAb;
       $html .= '<tr><td>' . voucher_h($medio) . '<br><span class="small muted">' . voucher_h($metaRef) . '</span></td><td class="right">' . voucher_h($monto) . '</td></tr>';
     }
     $html .= '</table>';
@@ -685,8 +1174,9 @@ function voucher_render_pdf(array $data, string $size, string $kind): void {
 
   $html .= '<div class="center small" style="margin-top:6px;">Gracias por su preferencia.</div>';
 
+  $pdfFilename = voucher_pdf_filename($data, $kind);
   header('Content-Type: application/pdf');
-  header('Content-Disposition: inline; filename="voucher_' . ($kind === 'abono' ? 'abono' : 'venta') . '_' . preg_replace('/[^A-Za-z0-9\\-]/', '_', (string)($meta['ticket'] ?? 'doc')) . '.pdf"');
+  header('Content-Disposition: inline; filename="' . $pdfFilename . '"');
   $pdf->writeHTML($html, true, false, true, false, '');
   $pdf->Output('', 'I');
   exit;
@@ -705,130 +1195,68 @@ try {
    * ======================= */
   if ($accion === 'voucher_pdf') {
     $ventaId = (int)($_GET['id'] ?? $_GET['venta_id'] ?? 0);
-    if ($ventaId <= 0) json_err('Venta inválida.');
-
+    $abonoId = (int)($_GET['abono_id'] ?? 0);
     $kind = strtolower(trim((string)($_GET['kind'] ?? 'venta')));
     $kind = ($kind === 'abono') ? 'abono' : 'venta';
+    $scopeVoucher = voucher_norm_scope($_GET['scope'] ?? 'actual');
+    $presentation = voucher_norm_presentation($_GET['presentation'] ?? 'auditoria');
     $size = voucher_norm_size($_GET['size'] ?? 'ticket80');
     $abonoIds = voucher_parse_ids_csv($_GET['abono_ids'] ?? '');
 
-    $venta = fetch_venta_head($db, $empId, $ventaId);
-    if (!$venta) json_err_code(404, 'Venta no encontrada.');
-
-    $condRaw = fetch_principal_conductor($db, $ventaId) ?: [];
-    $cond = resolve_conductor_payload(array_merge($venta, $condRaw));
-
-    $empresa = voucher_fetch_empresa($db, $empId) ?: [
-      'nombre' => '',
-      'razon_social' => '',
-      'ruc' => '',
-      'direccion' => '',
-      'logo_path' => ''
-    ];
-
-    $items = [];
-    foreach (voucher_fetch_items($db, $ventaId) as $it) {
-      $items[] = [
-        'nombre' => (string)($it['servicio_nombre'] ?? ''),
-        'cantidad' => (float)($it['cantidad'] ?? 0),
-        'precio' => (float)($it['precio_unitario'] ?? 0),
-        'total' => (float)($it['total_linea'] ?? 0)
-      ];
+    try {
+      $payload = voucher_load_payload_for_scope(
+        $db,
+        $empId,
+        $u,
+        $ventaId,
+        $kind,
+        $scopeVoucher,
+        $abonoIds,
+        $abonoId
+      );
+    } catch (RuntimeException $e) {
+      json_err($e->getMessage());
     }
-
-    $abonos = [];
-    $abonosRaw = voucher_fetch_abonos($db, $ventaId, ($kind === 'abono') ? $abonoIds : []);
-    if ($kind === 'abono' && !count($abonosRaw)) {
-      json_err('No se encontraron abonos para imprimir.');
-    }
-    foreach ($abonosRaw as $ab) {
-      $abonos[] = [
-        'abono_id' => (int)($ab['abono_id'] ?? 0),
-        'medio' => (string)($ab['medio'] ?? '—'),
-        'referencia' => (string)($ab['referencia'] ?? ''),
-        'monto' => (float)($ab['monto_aplicado'] ?? $ab['monto'] ?? 0),
-        'fecha' => (string)($ab['fecha'] ?? '')
-      ];
-    }
-
-    $clienteDocTipo = (string)($venta['c_doc_tipo'] ?? '');
-    $clienteDocNum = (string)($venta['c_doc_numero'] ?? '');
-    $clienteNombre = trim((string)($venta['c_nombre'] ?? ''));
-    $clienteTelefono = trim((string)($venta['c_telefono'] ?? ''));
-    $clienteDoc = trim($clienteDocTipo . ' ' . $clienteDocNum);
-
-    $contrDoc = trim(((string)($venta['contratante_doc_tipo'] ?? '')) . ' ' . ((string)($venta['contratante_doc_numero'] ?? '')));
-    $contrNombre = trim(((string)($venta['contratante_nombres'] ?? '')) . ' ' . ((string)($venta['contratante_apellidos'] ?? '')));
-    $contrTelefono = trim((string)($venta['contratante_telefono'] ?? ''));
-
-    $conductorDoc = trim(((string)($cond['doc_tipo'] ?? '')) . ' ' . ((string)($cond['doc_numero'] ?? '')));
-    $conductorNombre = trim(((string)($cond['nombres'] ?? '')) . ' ' . ((string)($cond['apellidos'] ?? '')));
-    $conductorTelefono = trim((string)($cond['telefono'] ?? ''));
-    if ($conductorNombre === '') {
-      $conductorNombre = 'No especificado';
-    }
-
-    $cajero = trim((string)(($u['nombres'] ?? '') . ' ' . ($u['apellidos'] ?? '')));
-    if ($cajero === '') {
-      $cajero = (string)($u['usuario'] ?? 'Usuario');
-    }
-    $fechaVenta = (string)($venta['fecha_emision'] ?? '');
-    $fechaDoc = $fechaVenta;
-    if ($kind === 'abono' && count($abonosRaw)) {
-      $lastAb = end($abonosRaw);
-      if (is_array($lastAb) && !empty($lastAb['fecha'])) {
-        $fechaDoc = (string)$lastAb['fecha'];
-      }
-    }
-
-    $data = [
-      'empresa' => [
-        'nombre' => (string)($empresa['nombre'] ?? ''),
-        'razon_social' => (string)($empresa['razon_social'] ?? ''),
-        'ruc' => (string)($empresa['ruc'] ?? ''),
-        'direccion' => (string)($empresa['direccion'] ?? ''),
-        'logo_data_uri' => voucher_logo_data_uri((string)($empresa['logo_path'] ?? ''))
-      ],
-      'meta' => [
-        'ticket' => (string)$venta['serie'] . '-' . pad4((int)$venta['numero']),
-        'fecha' => voucher_fmt_dt($fechaDoc),
-        'fecha_venta' => voucher_fmt_dt($fechaVenta),
-        'cajero' => $cajero
-      ],
-      'cliente' => [
-        'doc' => $clienteDoc,
-        'nombre' => $clienteNombre,
-        'telefono' => $clienteTelefono
-      ],
-      'contratante' => [
-        'doc' => $contrDoc,
-        'nombre' => $contrNombre,
-        'telefono' => $contrTelefono
-      ],
-      'conductor' => [
-        'doc' => $conductorDoc,
-        'nombre' => $conductorNombre,
-        'telefono' => $conductorTelefono
-      ],
-      'items' => $items,
-      'abonos' => $abonos,
-      'totales' => [
-        'total' => (float)($venta['total'] ?? 0),
-        'pagado' => (float)($venta['total_pagado'] ?? 0),
-        'saldo' => (float)($venta['saldo'] ?? 0),
-        'devuelto' => (float)($venta['total_devuelto'] ?? 0)
-      ]
-    ];
-
-    voucher_render_pdf($data, $size, $kind);
+    $dataRender = voucher_payload_to_render_data($payload, $empId, $db);
+    voucher_render_pdf($dataRender, $size, $kind, $presentation);
   }
 
+  /* =======================
+   * GET voucher_preview
+   * ======================= */
+  if ($accion === 'voucher_preview') {
+    $ventaId = (int)($_GET['id'] ?? $_GET['venta_id'] ?? 0);
+    $abonoId = (int)($_GET['abono_id'] ?? 0);
+    $kind = strtolower(trim((string)($_GET['kind'] ?? 'venta')));
+    $kind = ($kind === 'abono') ? 'abono' : 'venta';
+    $scopeVoucher = voucher_norm_scope($_GET['scope'] ?? 'actual');
+    $presentation = voucher_norm_presentation($_GET['presentation'] ?? 'auditoria');
+    $abonoIds = voucher_parse_ids_csv($_GET['abono_ids'] ?? '');
+
+    try {
+      $payload = voucher_load_payload_for_scope(
+        $db,
+        $empId,
+        $u,
+        $ventaId,
+        $kind,
+        $scopeVoucher,
+        $abonoIds,
+        $abonoId
+      );
+    } catch (RuntimeException $e) {
+      json_err($e->getMessage());
+    }
+    $preview = voucher_payload_to_preview_data($payload);
+    $preview = voucher_apply_preview_presentation($preview, $presentation);
+    json_ok(['payload' => $preview]);
+  }
   /* =======================
    * GET ventas_buscar
    * ======================= */
   if ($accion === 'ventas_buscar') {
     $q      = trim((string)($_GET['q'] ?? ''));
-    $estado = $_GET['estado'] ?? 'pending'; // pending | paid | void | refund | all
+    $estado = $_GET['estado'] ?? 'pending'; // pending | paid | refund_partial | refund_total | all
     $scope  = trim((string)($_GET['scope'] ?? 'latest')); // latest | date | range
     $fecha  = trim((string)($_GET['fecha'] ?? ''));
     $desde  = trim((string)($_GET['desde'] ?? ''));
@@ -914,20 +1342,25 @@ try {
       array_push($pars, $like, $like, $like, $like, $like, $like, $like, $like, $like, $like);
     }
 
-    // Filtro por estado (basado en saldo + devoluciones + anulación)
+    // Filtro por estado (semantica de negocio: pendiente, pagado, devolucion parcial, devolucion total)
     // NOTA: usamos alias r.devuelto_total, así que debe existir en los JOINs
     switch ($estado) {
       case 'pending':
-        $where[] = "v.estado<>'ANULADA' AND v.saldo > 0";
+        // Incluye cualquier venta emitida con saldo pendiente, tenga o no devoluciones parciales.
+        $where[] = "v.estado='EMITIDA' AND v.saldo > 0.000001";
         break;
       case 'paid':
-        $where[] = "v.estado<>'ANULADA' AND v.saldo = 0";
+        $where[] = "v.estado='EMITIDA' AND v.saldo <= 0.000001 AND COALESCE(r.devuelto_total,0) <= 0.000001";
         break;
+      case 'refund_partial':
+      case 'devolucion_parcial':
+      case 'refund':
+        $where[] = "v.estado='EMITIDA' AND COALESCE(r.devuelto_total,0) > 0.000001";
+        break;
+      case 'refund_total':
+      case 'devolucion_total':
       case 'void':
         $where[] = "v.estado='ANULADA'";
-        break;
-      case 'refund':
-        $where[] = "COALESCE(r.devuelto_total,0) > 0";
         break;
       case 'all':
       default:
@@ -1031,16 +1464,9 @@ try {
       $estadoVenta  = (string)$r['estado'];
       $devuelto     = (float)($r['devuelto_total'] ?? 0);
 
-      // Precedencia visual: refund > void > pending > paid
-      if ($devuelto > 0.000001) {
-        $estado_code = 'refund'; $estado_text = 'Con devolución';
-      } elseif ($estadoVenta === 'ANULADA') {
-        $estado_code = 'void';   $estado_text = 'Anulada';
-      } elseif ($saldo > 0.000001) {
-        $estado_code = 'pending'; $estado_text = 'Pendiente';
-      } else {
-        $estado_code = 'paid';    $estado_text = 'Pagado';
-      }
+      $estadoVisual = venta_build_estado_visual($estadoVenta, $saldo, $devuelto);
+      $estado_code = $estadoVisual['code'];
+      $estado_text = $estadoVisual['text'];
 
       $out[] = [
         'id'           => (int)$r['id'],
@@ -1091,13 +1517,22 @@ try {
     $condRaw = fetch_principal_conductor($db,$ventaId) ?: [];
     $cond = resolve_conductor_payload(array_merge($V, $condRaw));
 
-    // Abonos aplicados (con id de aplicación para posibles devoluciones)
-    $qa = $db->prepare("SELECT apl.id AS aplicacion_id, mp.nombre AS medio, a.monto,
-                               apl.monto_aplicado, a.referencia, a.fecha
+    // Abonos aplicados (con saldo pendiente por aplicar para posibles devoluciones)
+    $qa = $db->prepare("SELECT apl.id AS aplicacion_id,
+                               a.id AS abono_id,
+                               mp.nombre AS medio,
+                               a.monto,
+                               apl.monto_aplicado,
+                               COALESCE(SUM(d.monto_devuelto),0) AS devuelto_monto,
+                               GREATEST(0, apl.monto_aplicado - COALESCE(SUM(d.monto_devuelto),0)) AS monto_pendiente_devolver,
+                               a.referencia,
+                               a.fecha
                         FROM pos_abono_aplicaciones apl
                         JOIN pos_abonos a ON a.id=apl.abono_id
                         JOIN pos_medios_pago mp ON mp.id=a.medio_id
+                        LEFT JOIN pos_devoluciones d ON d.abono_aplicacion_id=apl.id
                         WHERE apl.venta_id=?
+                        GROUP BY apl.id, a.id, mp.nombre, a.monto, apl.monto_aplicado, a.referencia, a.fecha
                         ORDER BY apl.id");
     $qa->bind_param('i',$ventaId); $qa->execute();
     $abonos = $qa->get_result()->fetch_all(MYSQLI_ASSOC) ?: [];
@@ -1193,8 +1628,6 @@ try {
     $db->begin_transaction();
     try{
       $restante = (float)$V['saldo'];
-      $total_pagado   = (float)$V['total_pagado'];
-      $total_devuelto = (float)$V['total_devuelto']; // no se incrementa aquí
 
       $nuevos = [];
 
@@ -1218,7 +1651,6 @@ try {
         $insAp->bind_param('iid', $abono_id, $ventaId, $aplicar);
         $insAp->execute();
         $restante = money2($restante - $aplicar);
-        $total_pagado = money2($total_pagado + $aplicar);
 
         $nuevos[] = [
           'abono_id'  => $abono_id,
@@ -1229,53 +1661,67 @@ try {
         ];
       }
 
-      $saldo = max(0.00, money2(((float)$V['total']) - $total_pagado));
+      $recalc = venta_recalcular_totales($db, $ventaId, (float)$V['total'], false);
+      $total_pagado = (float)$recalc['pagado'];
+      $saldo = (float)$recalc['saldo'];
+      $total_devuelto = (float)$recalc['devuelto_total'];
       $upV = $db->prepare("UPDATE pos_ventas SET total_pagado=?, saldo=?, total_devuelto=? WHERE id=? LIMIT 1");
       $upV->bind_param('dddi', $total_pagado, $saldo, $total_devuelto, $ventaId);
       $upV->execute();
 
+      // Snapshot inmutable del comprobante original de abono (operacion actual)
+      $actorUsuario = (string)($u['usuario'] ?? '');
+      $actorNombre = trim((string)($u['nombres'] ?? '') . ' ' . (string)($u['apellidos'] ?? ''));
+      if ($actorNombre === '') $actorNombre = $actorUsuario;
+      $idsNuevos = array_values(array_map(function($x){ return (int)($x['abono_id'] ?? 0); }, $nuevos));
+      $idsNuevos = array_values(array_filter($idsNuevos, function($x){ return $x > 0; }));
+
+      $payloadOriginalAbono = vh_build_payload(
+        $db,
+        $empId,
+        $ventaId,
+        'abono',
+        $idsNuevos,
+        'original',
+        'EXACTO',
+        [
+          'id' => $uid,
+          'usuario' => $actorUsuario,
+          'nombre' => $actorNombre
+        ]
+      );
+      $comprobanteAbonoId = vh_save_original_snapshot(
+        $db,
+        $empId,
+        'ABONO',
+        $ventaId,
+        $payloadOriginalAbono,
+        $uid,
+        $actorUsuario,
+        $actorNombre,
+        'ticket80',
+        'EXACTO',
+        null
+      );
+      vh_link_snapshot_abonos($db, $comprobanteAbonoId, $ventaId, (array)($payloadOriginalAbono['abonos'] ?? []));
+
+      $estadoVisual = venta_build_estado_visual((string)$V['estado'], (float)$saldo, (float)$total_devuelto);
       $db->commit();
       json_ok([
         'ticket'=> $V['serie'].'-'.pad4($V['numero']),
         'total'=> (float)$V['total'],
         'pagado'=> (float)$total_pagado,
         'saldo'=> (float)$saldo,
-        'nuevos'=> $nuevos
+        'devuelto_total' => (float)$total_devuelto,
+        'estado_venta' => (string)$V['estado'],
+        'estado_code' => (string)$estadoVisual['code'],
+        'estado_text' => (string)$estadoVisual['text'],
+        'nuevos'=> $nuevos,
+        'comprobante_id' => $comprobanteAbonoId
       ]);
     }catch(Throwable $e){
       $db->rollback();
       json_err_code(500,'No se pudo registrar abonos',['dev'=>$e->getMessage()]);
-    }
-  }
-
-  /* =======================
-   * POST venta_anular (sin devoluciones automáticas)
-   * ======================= */
-  if ($accion === 'venta_anular') {
-    if ($method!=='POST') json_err('Método no permitido');
-    $ventaId = (int)($_POST['venta_id'] ?? 0);
-    $motivo  = trim((string)($_POST['motivo'] ?? ''));
-    if ($ventaId<=0) json_err('Venta inválida');
-    if ($motivo==='') json_err('Debes indicar un motivo.');
-
-    $V = fetch_venta_head($db,$empId,$ventaId);
-    if (!$V) json_err('Venta no encontrada');
-    if ($V['estado']==='ANULADA') json_err('La venta ya está anulada.');
-
-    $db->begin_transaction();
-    try{
-      $up = $db->prepare("UPDATE pos_ventas SET estado='ANULADA', observacion=CONCAT(COALESCE(observacion,''),' | ANULADA: ',?) WHERE id=? LIMIT 1");
-      $up->bind_param('si',$motivo,$ventaId); $up->execute();
-
-      $ins = $db->prepare("INSERT INTO pos_ventas_anulaciones(venta_id,motivo,anulado_por,anulado_en)
-                           VALUES (?,?,?,NOW())");
-      $ins->bind_param('isi',$ventaId,$motivo,$uid); $ins->execute();
-
-      $db->commit();
-      json_ok(['msg'=>'Venta anulada.']);
-    }catch(Throwable $e){
-      $db->rollback();
-      json_err_code(500,'No se pudo anular la venta',['dev'=>$e->getMessage()]);
     }
   }
 
@@ -1291,6 +1737,7 @@ try {
 
     $V = fetch_venta_head($db,$empId,$ventaId);
     if (!$V) json_err('Venta no encontrada');
+    if ((string)$V['estado'] === 'ANULADA') json_err('La venta ya tiene devolucion total.');
 
     $cd = getDiariaAbierta($db,$empId);
     if(!$cd) json_err('No hay caja diaria abierta. Cierra la pendiente o abre la del día actual.');
@@ -1324,15 +1771,34 @@ try {
         $total_refund = money2($total_refund + $pend);
       }
 
-      // Marcar ANULADA y llevar totales a 0 (no queda saldo ni pagado)
-      $upV = $db->prepare("UPDATE pos_ventas SET estado='ANULADA', total_pagado=0.00, saldo=0.00, observacion=CONCAT(COALESCE(observacion,''),' | DEVOLUCIÓN: ',?) WHERE id=? LIMIT 1");
+      // Marcar ANULADA y luego recalcular totales para mantener consistencia monetaria.
+      $upV = $db->prepare("UPDATE pos_ventas SET estado='ANULADA', observacion=CONCAT(COALESCE(observacion,''),' | DEVOLUCION TOTAL: ',?) WHERE id=? LIMIT 1");
       $upV->bind_param('si',$motivo,$ventaId); $upV->execute();
+
+      $recalc = venta_recalcular_totales($db, $ventaId, (float)$V['total'], true);
+      $pagadoFinal = (float)$recalc['pagado'];
+      $saldoFinal = (float)$recalc['saldo'];
+      $devueltoFinal = (float)$recalc['devuelto_total'];
+      $upT = $db->prepare("UPDATE pos_ventas SET total_pagado=?, saldo=?, total_devuelto=? WHERE id=? LIMIT 1");
+      $upT->bind_param('dddi', $pagadoFinal, $saldoFinal, $devueltoFinal, $ventaId);
+      $upT->execute();
 
       $insA = $db->prepare("INSERT INTO pos_ventas_anulaciones(venta_id,motivo,anulado_por,anulado_en) VALUES (?,?,?,NOW())");
       $insA->bind_param('isi',$ventaId,$motivo,$uid); $insA->execute();
 
+      $estadoVisual = venta_build_estado_visual('ANULADA', $saldoFinal, $devueltoFinal);
       $db->commit();
-      json_ok(['msg'=>'Venta anulada con devolución total.','devuelto'=>$total_refund]);
+      json_ok([
+        'msg' => 'Devolucion total registrada.',
+        'devuelto' => $total_refund,
+        'devuelto_total' => $devueltoFinal,
+        'total' => (float)$V['total'],
+        'pagado' => $pagadoFinal,
+        'saldo' => $saldoFinal,
+        'estado_venta' => 'ANULADA',
+        'estado_code' => (string)$estadoVisual['code'],
+        'estado_text' => (string)$estadoVisual['text']
+      ]);
     }catch(Throwable $e){
       $db->rollback();
       json_err_code(500,'No se pudo realizar la devolución',['dev'=>$e->getMessage()]);
@@ -1382,15 +1848,29 @@ try {
       $insDev->bind_param('iiiiidsi', $empId, $caja_diaria_id, $ventaId, $aplId, $mid, $pend, $motivo, $uid);
       $insDev->execute();
 
-      // Actualizar totales de la venta (si no está anulada)
-      $new_pagado = max(0.00, money2(((float)$V['total_pagado']) - $pend));
-      $new_saldo  = max(0.00, money2(((float)$V['total']) - $new_pagado));
-      $upV = $db->prepare("UPDATE pos_ventas SET total_pagado=?, saldo=? WHERE id=? LIMIT 1");
-      $upV->bind_param('ddi', $new_pagado, $new_saldo, $ventaId);
+      $forzarAnulada = ((string)$V['estado'] === 'ANULADA');
+      $recalc = venta_recalcular_totales($db, $ventaId, (float)$V['total'], $forzarAnulada);
+      $new_pagado = (float)$recalc['pagado'];
+      $new_saldo  = (float)$recalc['saldo'];
+      $new_devuelto_total = (float)$recalc['devuelto_total'];
+
+      $upV = $db->prepare("UPDATE pos_ventas SET total_pagado=?, saldo=?, total_devuelto=? WHERE id=? LIMIT 1");
+      $upV->bind_param('dddi', $new_pagado, $new_saldo, $new_devuelto_total, $ventaId);
       $upV->execute();
 
+      $estadoVisual = venta_build_estado_visual((string)$V['estado'], (float)$new_saldo, (float)$new_devuelto_total);
       $db->commit();
-      json_ok(['msg'=>'Devolución registrada.','total'=>$V['total'],'pagado'=>$new_pagado,'saldo'=>$new_saldo,'devuelto'=>$pend]);
+      json_ok([
+        'msg' => 'Devolucion registrada.',
+        'total' => (float)$V['total'],
+        'pagado' => $new_pagado,
+        'saldo' => $new_saldo,
+        'devuelto' => $pend,
+        'devuelto_total' => $new_devuelto_total,
+        'estado_venta' => (string)$V['estado'],
+        'estado_code' => (string)$estadoVisual['code'],
+        'estado_text' => (string)$estadoVisual['text']
+      ]);
     }catch(Throwable $e){
       $db->rollback();
       json_err_code(500,'No se pudo registrar la devolución',['dev'=>$e->getMessage()]);
@@ -1403,3 +1883,5 @@ try {
 catch (Throwable $e) {
   json_err_code(500, 'Error no controlado', ['dev'=>$e->getMessage()]);
 }
+
+

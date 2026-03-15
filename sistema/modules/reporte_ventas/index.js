@@ -117,6 +117,8 @@
     if (isRefRequiredError(s)) return 'Este medio exige referencia. Completala para continuar.';
     if (s.includes('excede el total') || s.includes('excede el saldo')) return 'El monto ingresado supera el saldo. Ingresa un monto menor o igual al saldo.';
     if (s.includes('venta no encontrada')) return 'No se encontro la venta.';
+    if (s.includes('venta invalida para comprobante') || s.includes('venta invalida')) return 'No se pudo resolver la venta del comprobante.';
+    if (s.includes('no se encontraron abonos')) return 'No se encontraron abonos para este comprobante.';
     if (s.includes('anulada')) return 'La venta esta anulada. No es posible registrar mas operaciones.';
     return 'Ocurrio un error. Revisa los datos e intentalo nuevamente.';
   }
@@ -181,34 +183,61 @@
 
   function normalizeVoucherCtx(v) {
     const kind = String((v && v.kind) || 'venta').toLowerCase() === 'abono' ? 'abono' : 'venta';
+    const scopeRaw = String((v && v.scope) || (v && v.alcance_label) || 'actual').toLowerCase();
+    const scope = scopeRaw === 'original' ? 'original' : 'actual';
     const ventaId = Number((v && v.venta_id) || 0);
+    const abonoIdRaw = Number((v && v.abono_id) || 0);
     const abonoIds = Array.isArray(v && v.abono_ids)
       ? v.abono_ids.map((x) => parseInt(x, 10)).filter((x) => Number.isFinite(x) && x > 0)
       : [];
-    return { kind, venta_id: Number.isFinite(ventaId) ? Math.trunc(ventaId) : 0, abono_ids: abonoIds };
+    const abonoId = Number.isFinite(abonoIdRaw) && abonoIdRaw > 0 ? Math.trunc(abonoIdRaw) : 0;
+    return { kind, scope, venta_id: Number.isFinite(ventaId) ? Math.trunc(ventaId) : 0, abono_id: abonoId, abono_ids: abonoIds };
   }
   function buildVoucherPdfUrl(size) {
-    if (!VOUCHER_CTX || !(VOUCHER_CTX.venta_id > 0)) return '';
+    if (!VOUCHER_CTX || (!(VOUCHER_CTX.venta_id > 0) && !(VOUCHER_CTX.abono_id > 0))) return '';
     const s = (size === 'a4' || size === 'ticket58' || size === 'ticket80') ? size : 'ticket80';
     const p = new URLSearchParams({
       action: 'voucher_pdf',
       venta_id: String(VOUCHER_CTX.venta_id),
       kind: VOUCHER_CTX.kind === 'abono' ? 'abono' : 'venta',
+      scope: VOUCHER_CTX.scope === 'original' ? 'original' : 'actual',
+      presentation: 'auditoria',
       size: s
     });
+    if (VOUCHER_CTX.abono_id > 0) p.set('abono_id', String(VOUCHER_CTX.abono_id));
     if (Array.isArray(VOUCHER_CTX.abono_ids) && VOUCHER_CTX.abono_ids.length) p.set('abono_ids', VOUCHER_CTX.abono_ids.join(','));
     return `${API_VENTAS}?${p.toString()}`;
+  }
+
+  async function fetchVoucherPreview(ctx) {
+    const c = normalizeVoucherCtx(ctx || {});
+    const params = {
+      action: 'voucher_preview',
+      kind: c.kind === 'abono' ? 'abono' : 'venta',
+      scope: c.scope === 'original' ? 'original' : 'actual',
+      presentation: 'auditoria'
+    };
+    if (c.venta_id > 0) params.venta_id = String(c.venta_id);
+    if (c.abono_id > 0) params.abono_id = String(c.abono_id);
+    if (Array.isArray(c.abono_ids) && c.abono_ids.length) params.abono_ids = c.abono_ids.join(',');
+    const j = await vpGET(params);
+    return j.payload || null;
   }
 
   function openVoucher(v) {
     VOUCHER_CTX = normalizeVoucherCtx(v || {});
     const isAbono = VOUCHER_CTX.kind === 'abono';
+    const alcanceLabel = String(v && v.alcance_label ? v.alcance_label : (VOUCHER_CTX.scope === 'original' ? 'ORIGINAL' : 'ACTUAL'));
+    const exactitud = String((v && v.exactitud) || 'EXACTO').toUpperCase();
+    const alcanceHtml = exactitud === 'APROXIMADO'
+      ? `${alcanceLabel} (APROXIMADO)`
+      : alcanceLabel;
 
     const el = qs('#voucherBody');
     if (!el) return;
 
     const titleEl = qs('#voucherModalTitle');
-    if (titleEl) titleEl.innerHTML = `<i class="fas fa-receipt mr-2"></i>${isAbono ? 'Voucher de abono' : 'Voucher de venta'}`;
+    if (titleEl) titleEl.innerHTML = `<i class="fas fa-receipt mr-2"></i>${isAbono ? 'Voucher de abono' : 'Voucher de venta'} <span class="badge badge-secondary ml-2">${esc(alcanceHtml)}</span>`;
 
     const logoHtml = EMPRESA_LOGO ? `<div class="v-head-left"><img class="v-logo" src="${esc(EMPRESA_LOGO)}" alt="Logo"></div>` : '';
 
@@ -272,7 +301,11 @@
         <div class="v-box"><div class="v-head">${logoHtml}<div class="v-head-right">
           <div class="fw-bold">${esc(v.empresa || EMPRESA_NOMBRE)}</div>
           <div class="text-muted small">${esc(v.fecha || '')}</div>
-          <div class="small">Ticket: <strong>${esc(v.ticket || '')}</strong> - Cajero: <strong>${esc(v.cajero || USUARIO_NOMBRE)}</strong></div>
+          <div class="small">Ticket: <strong>${esc(v.ticket || '')}</strong> - Operacion por: <strong>${esc(v.cajero || USUARIO_NOMBRE)}</strong></div>
+          ${(v.reimpreso_por ? `<div class="small text-muted">Reimpreso por: <strong>${esc(v.reimpreso_por)}</strong></div>` : '')}
+          ${(String(alcanceLabel).toUpperCase() === 'ACTUAL' && (v.estado_venta_texto || v.estado_venta)
+            ? `<div class="small text-muted">Estado actual: <strong>${esc(v.estado_venta_texto || v.estado_venta)}</strong></div>`
+            : '')}
         </div></div></div>
 
         <div class="v-box"><div class="v-title">Cliente</div>${clienteBlock}</div>
@@ -296,22 +329,31 @@
 
     const saldo = num(data && data.saldo);
     const pagado = num(data && data.pagado);
+    const devueltoTotal = num(data && (data.devuelto_total ?? data.devuelto));
+    const estadoVenta = String((data && data.estado_venta) || '').toUpperCase();
+    const estadoCode = String((data && data.estado_code) || '').toLowerCase();
     const c = row.children;
 
     if (c[7]) c[7].textContent = money(pagado);
     if (c[8]) c[8].textContent = money(saldo);
 
     if (c[9]) {
-      const badge = saldo > 0.000001
-        ? '<span class="badge badge-warning"><i class="fas fa-exclamation-triangle mr-1"></i>Pendiente</span>'
-        : '<span class="badge badge-success"><i class="fas fa-check-circle mr-1"></i>Pagado</span>';
+      let badge = '<span class="badge badge-success"><i class="fas fa-check-circle mr-1"></i>Pagado</span>';
+      if (estadoCode === 'refund_total' || estadoVenta === 'ANULADA') {
+        badge = '<span class="badge badge-danger"><i class="fas fa-times-circle mr-1"></i>Devolucion total</span>';
+      } else if (estadoCode === 'refund_partial' || devueltoTotal > 0.000001) {
+        badge = '<span class="badge badge-info"><i class="fas fa-undo-alt mr-1"></i>Devolucion parcial</span>';
+      } else if (saldo > 0.000001) {
+        badge = '<span class="badge badge-warning"><i class="fas fa-exclamation-triangle mr-1"></i>Pendiente</span>';
+      }
       const meta = c[9].querySelector('.small');
       const metaHtml = meta ? meta.outerHTML : '<div class="small text-muted mt-1"><i class="fas fa-wallet mr-1"></i>Con abonos</div>';
       c[9].innerHTML = badge + metaHtml;
     }
 
     const btn = row.querySelector('.js-abonar');
-    if (saldo <= 0.000001) {
+    const canAbonar = (estadoVenta !== 'ANULADA') && (saldo > 0.000001);
+    if (!canAbonar) {
       if (btn) btn.remove();
     } else if (btn) {
       btn.disabled = !CAN_SELL;
@@ -374,7 +416,11 @@
           <tr>
             <td>${esc(a.medio || '')}</td><td class="text-end">${money(a.monto)}</td><td class="text-end">${money(a.monto_aplicado)}</td>
             <td>${esc(a.referencia || '')}</td><td class="small text-muted">${esc(fmtDT(a.fecha) || '')}</td>
-            <td class="text-end"><button class="btn btn-sm btn-outline-danger vp-refund" data-venta="${Number(H.id || 0)}" data-apl="${Number(a.aplicacion_id || 0)}"><i class="fas fa-undo"></i></button></td>
+            <td class="text-end">
+              ${(num(a.monto_pendiente_devolver) > 0.000001 && String(H.estado || '') !== 'ANULADA')
+                ? `<button class="btn btn-sm btn-outline-danger vp-refund" data-venta="${Number(H.id || 0)}" data-apl="${Number(a.aplicacion_id || 0)}"><i class="fas fa-redo-alt"></i></button>`
+                : '<span class="text-muted small">-</span>'}
+            </td>
           </tr>`).join('')
         : '<tr><td colspan="6" class="text-muted small">- Sin abonos previos -</td></tr>';
 
@@ -543,12 +589,16 @@
 
           openVoucher({
             kind: 'abono',
+            scope: 'actual',
             venta_id: Number(H.id || 0),
             abono_ids: (r.nuevos || []).map((n) => Number(n.abono_id || 0)).filter((x) => x > 0),
             empresa: EMPRESA_NOMBRE,
             ticket: r.ticket || H.ticket || '',
             fecha: new Date().toLocaleString(),
             cajero: USUARIO_NOMBRE,
+            alcance_label: 'ACTUAL',
+            exactitud: 'EXACTO',
+            estado_venta: H.estado || '',
             cliente: clienteVoucher,
             contratante: ctrVoucher,
             conductor: conductorVoucher,
@@ -606,6 +656,38 @@
       if (!id) return;
       const det = qs(`#det-${id}`);
       if (det) det.classList.toggle('d-none');
+      return;
+    }
+
+    const vo = e.target.closest('.js-voucher-original');
+    if (vo) {
+      const id = parseInt(vo.getAttribute('data-id') || '0', 10);
+      if (!id) return;
+      (async () => {
+        try {
+          const payload = await fetchVoucherPreview({ kind: 'venta', scope: 'original', venta_id: id });
+          if (!payload) throw new Error('No se pudo cargar comprobante.');
+          openVoucher({ ...payload, scope: 'original', venta_id: id });
+        } catch (err) {
+          showMsg('Error', mapApiError(err.message || ''), 'danger');
+        }
+      })();
+      return;
+    }
+
+    const va = e.target.closest('.js-voucher-actual');
+    if (va) {
+      const id = parseInt(va.getAttribute('data-id') || '0', 10);
+      if (!id) return;
+      (async () => {
+        try {
+          const payload = await fetchVoucherPreview({ kind: 'venta', scope: 'actual', venta_id: id });
+          if (!payload) throw new Error('No se pudo cargar comprobante.');
+          openVoucher({ ...payload, scope: 'actual', venta_id: id });
+        } catch (err) {
+          showMsg('Error', mapApiError(err.message || ''), 'danger');
+        }
+      })();
       return;
     }
 

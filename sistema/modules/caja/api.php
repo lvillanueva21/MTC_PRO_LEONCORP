@@ -12,6 +12,7 @@ require_once __DIR__ . '/../../includes/acl.php';
 require_once __DIR__ . '/../../includes/permisos.php';
 require_once __DIR__ . '/../../includes/conexion.php';
 require_once __DIR__ . '/perfil_conductor.php';
+require_once __DIR__ . '/voucher_history_service.php';
 
 acl_require_ids([3,4]); // Recepción (3) o Administración (4)
 verificarPermiso(['Recepción','Administración']);
@@ -1381,6 +1382,7 @@ $ct_doc_num   = trim($_POST['contratante_doc_numero'] ?? '');
       $total_abonos = 0.00;
       $total_devuelto = 0.00;
 
+      $abono_ids_creados = [];
       if (count($abonos)){
         $insA  = $db->prepare("INSERT INTO pos_abonos(id_empresa, caja_diaria_id, cliente_id, medio_id, fecha, monto, referencia, observacion, creado_por)
                                VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, ?)");
@@ -1398,6 +1400,7 @@ $ct_doc_num   = trim($_POST['contratante_doc_numero'] ?? '');
           $insA->bind_param('iiiidssi', $empId, $caja_diaria_id, $cliente_id, $mid, $monto, $ref, $obs, $uid);
           $insA->execute();
           $abono_id = (int)$db->insert_id;
+          if ($abono_id > 0) $abono_ids_creados[] = $abono_id;
 
           // Aplicación: solo hasta cubrir el total
           $aplicar = 0.00;
@@ -1482,6 +1485,68 @@ $ct_doc_num   = trim($_POST['contratante_doc_numero'] ?? '');
                            VALUES (?, 'pos_ventas', ?, 'VENTA_CREADA', ?, ?, ?, ?, ?, NOW())");
       $aud->bind_param('iisisss', $empId, $venta_id, $audData, $uid, $actorUsuario, $actorNombre, $ip);
       $aud->execute();
+
+      // 13) Snapshot inmutable del comprobante original de venta
+      $payloadOriginalVenta = vh_build_payload(
+        $db,
+        $empId,
+        $venta_id,
+        'venta',
+        [],
+        'original',
+        'EXACTO',
+        [
+          'id' => $uid,
+          'usuario' => $actorUsuario,
+          'nombre' => $actorNombre
+        ]
+      );
+      vh_save_original_snapshot(
+        $db,
+        $empId,
+        'VENTA',
+        $venta_id,
+        $payloadOriginalVenta,
+        $uid,
+        $actorUsuario,
+        (string)$actorNombre,
+        'ticket80',
+        'EXACTO',
+        null
+      );
+
+      // 14) Snapshot inmutable del comprobante original de abono(s) inicial(es)
+      $abono_ids_creados = array_values(array_filter(array_map('intval', $abono_ids_creados), function($x){ return $x > 0; }));
+      if ($abono_ids_creados) {
+        $payloadOriginalAbono = vh_build_payload(
+          $db,
+          $empId,
+          $venta_id,
+          'abono',
+          $abono_ids_creados,
+          'original',
+          'EXACTO',
+          [
+            'id' => $uid,
+            'usuario' => $actorUsuario,
+            'nombre' => $actorNombre
+          ]
+        );
+        $comprobanteAbonoId = vh_save_original_snapshot(
+          $db,
+          $empId,
+          'ABONO',
+          $venta_id,
+          $payloadOriginalAbono,
+          $uid,
+          $actorUsuario,
+          (string)$actorNombre,
+          'ticket80',
+          'EXACTO',
+          null
+        );
+        vh_link_snapshot_abonos($db, $comprobanteAbonoId, $venta_id, (array)($payloadOriginalAbono['abonos'] ?? []));
+      }
 
       $db->commit();
       json_ok([

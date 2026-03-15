@@ -166,8 +166,8 @@ function renderRows() {
     const code = r.estado_code || ((Number(r.saldo||0) > 0) ? 'pending' : 'paid');
     if (code === 'paid')    return `<span class="badge badge-pill badge-success">Pagado</span>`;
     if (code === 'pending') return `<span class="badge badge-pill badge-warning">Pendiente</span>`;
-    if (code === 'void')    return `<span class="badge badge-pill badge-danger">Anulada</span>`;
-    if (code === 'refund')  return `<span class="badge badge-pill badge-info">Con devolución</span>`;
+    if (code === 'refund_partial' || code === 'refund') return `<span class="badge badge-pill badge-info">Devolucion parcial</span>`;
+    if (code === 'refund_total' || code === 'void') return `<span class="badge badge-pill badge-danger">Devolucion total</span>`;
     return `<span class="badge badge-pill badge-secondary">—</span>`;
   };
 
@@ -179,20 +179,20 @@ function renderRows() {
       actionHTML = `
         <div class="d-flex flex-wrap gap-1">
           <button class="btn btn-sm btn-success vp-abonar" data-id="${r.id}"><i class="fas fa-coins me-1"></i>Completar pago</button>
-          <button class="btn btn-sm btn-danger vp-anular" data-id="${r.id}"><i class="fas fa-ban me-1"></i>Anular</button>
+          <button class="btn btn-sm btn-warning vp-devolucion" data-id="${r.id}"><i class="fas fa-undo me-1"></i>Devolucion</button>
           <button class="btn btn-sm btn-outline-secondary vp-detalle" data-id="${r.id}"><i class="fas fa-eye me-1"></i>Ver detalle</button>
         </div>`;
     } else if (r.estado_code === 'paid') {
       actionHTML = `
         <div class="d-flex flex-wrap gap-1">
-          <button class="btn btn-sm btn-warning vp-devolucion" data-id="${r.id}"><i class="fas fa-undo me-1"></i>Devolución</button>
+          <button class="btn btn-sm btn-warning vp-devolucion" data-id="${r.id}"><i class="fas fa-undo me-1"></i>Devolucion</button>
           <button class="btn btn-sm btn-outline-secondary vp-detalle" data-id="${r.id}"><i class="fas fa-eye me-1"></i>Ver detalle</button>
         </div>`;
-    } else if (r.estado_code === 'refund') {
+    } else if (r.estado_code === 'refund' || r.estado_code === 'refund_partial') {
       actionHTML = `
         <div class="d-flex flex-wrap gap-1">
           ${ canAbonar ? `<button class="btn btn-sm btn-success vp-abonar" data-id="${r.id}"><i class="fas fa-coins me-1"></i>Completar pago</button>` : '' }
-          <button class="btn btn-sm btn-warning vp-devolucion" data-id="${r.id}"><i class="fas fa-undo me-1"></i>Devolución</button>
+          <button class="btn btn-sm btn-warning vp-devolucion" data-id="${r.id}"><i class="fas fa-undo me-1"></i>Devolucion</button>
           <button class="btn btn-sm btn-outline-secondary vp-detalle" data-id="${r.id}"><i class="fas fa-eye me-1"></i>Ver detalle</button>
         </div>`;
     } else {
@@ -518,9 +518,9 @@ async function openDetalle(ventaId){
             <td>${esc(a.referencia||'')}</td>
             <td class="small text-muted">${fmtDT(a.fecha)||''}</td>
             <td class="text-end">
-              <button class="btn btn-sm btn-outline-danger vp-refund" data-venta="${H.id}" data-apl="${a.aplicacion_id}">
-                <i class="fas fa-undo"></i>
-              </button>
+              ${ (Number(a.monto_pendiente_devolver || 0) > 0.000001 && String(H.estado || '') !== 'ANULADA')
+  ? `<button class="btn btn-sm btn-outline-danger vp-refund" data-venta="${H.id}" data-apl="${a.aplicacion_id}"><i class="fas fa-redo-alt"></i></button>`
+  : `<span class="text-muted small">—</span>` }
             </td>
           </tr>`).join('')
       : `<tr><td colspan="6" class="text-muted small">— Sin abonos —</td></tr>`;
@@ -590,7 +590,7 @@ async function openDetalle(ventaId){
       const venta_id = parseInt(btn.dataset.venta||'0',10);
       const apl_id   = parseInt(btn.dataset.apl||'0',10);
       if(!venta_id || !apl_id) return;
-      const motivo = prompt('Motivo de devolución del abono:','');
+      const motivo = prompt('Motivo de devolucion del abono:','');
       if(motivo===null) return;
       if((motivo||'').trim()===''){ showMsg('Aviso','Debes indicar un motivo.','danger'); return; }
       try{
@@ -625,9 +625,9 @@ async function openAbonar(ventaId){
           <td>${esc(a.referencia||'')}</td>
           <td class="small text-muted">${fmtDT(a.fecha)||''}</td>
           <td class="text-end">
-            <button class="btn btn-sm btn-outline-danger vp-refund" data-venta="${H.id}" data-apl="${a.aplicacion_id}">
-              <i class="fas fa-undo"></i>
-            </button>
+            ${ (Number(a.monto_pendiente_devolver || 0) > 0.000001 && String(H.estado || '') !== 'ANULADA')
+  ? `<button class="btn btn-sm btn-outline-danger vp-refund" data-venta="${H.id}" data-apl="${a.aplicacion_id}"><i class="fas fa-redo-alt"></i></button>`
+  : `<span class="text-muted small">—</span>` }
           </td>
         </tr>`).join('')
       : `<tr><td colspan="6" class="text-muted small">— Sin abonos previos —</td></tr>`;
@@ -914,7 +914,7 @@ async function openAbonar(ventaId){
       const venta_id = parseInt(btn.dataset.venta||'0',10);
       const apl_id   = parseInt(btn.dataset.apl||'0',10);
       if(!venta_id || !apl_id) return;
-      const motivo = prompt('Motivo de devolución del abono:','');
+      const motivo = prompt('Motivo de devolucion del abono:','');
       if(motivo===null) return;
       if((motivo||'').trim()===''){ showMsg('Aviso','Debes indicar un motivo.','danger'); return; }
       try{
@@ -950,27 +950,16 @@ async function openAbonar(ventaId){
       openDetalle(id);
       return;
     }
-    const an = e.target.closest('.vp-anular');
-    if (an){
-      const id = parseInt(an.dataset.id||'0',10);
-      if (!id) return;
-      const motivo = prompt('Motivo de anulación:','');
-      if (motivo===null) return;
-      if ((motivo||'').trim()===''){ showMsg('Aviso','Debes indicar un motivo.','danger'); return; }
-      vpPOST('venta_anular', { venta_id:id, motivo })
-        .then(()=>{ showMsg('Listo','Venta anulada.'); doSearch(); })
-        .catch(err=> showMsg('Error',err.message,'danger'));
-      return;
-    }
     const dv = e.target.closest('.vp-devolucion');
+
     if (dv){
       const id = parseInt(dv.dataset.id||'0',10);
       if (!id) return;
-      const motivo = prompt('Motivo de devolución total (anulación con devolución):','');
+      const motivo = prompt('Motivo de devolucion total de la venta:','');
       if (motivo===null) return;
       if ((motivo||'').trim()===''){ showMsg('Aviso','Debes indicar un motivo.','danger'); return; }
       vpPOST('venta_devolucion', { venta_id:id, motivo })
-        .then(()=>{ showMsg('Listo','Venta anulada con devolución.'); doSearch(); })
+        .then(()=>{ showMsg('Listo','Devolucion total registrada.'); doSearch(); })
         .catch(err=> showMsg('Error',err.message,'danger'));
       return;
     }
@@ -983,3 +972,5 @@ async function openAbonar(ventaId){
   vpSetScopeUI();
   doSearch();
 })();
+
+

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1:3306
--- Tiempo de generación: 13-03-2026 a las 06:46:21
+-- Tiempo de generación: 15-03-2026 a las 23:24:01
 -- Versión del servidor: 11.8.3-MariaDB-log
 -- Versión de PHP: 7.2.34
 
@@ -53,7 +53,8 @@ INSERT INTO `al_alertas` (`id`, `id_empresa`, `titulo`, `categoria`, `descripcio
 (4, 19, 'f', 'f', 'asdas', 'ONCE', 0, '2026-03-05 18:53:00', 0, 1, '2026-03-05 18:53:22', '2026-03-05 18:53:22'),
 (5, 19, 'Pagar el disco HDD 4TB EN DELTRON', 'hdd', 'Se debe pagar en deltron hdd 4tb de deltron Se debe pagar en deltron hdd 4tb de deltron Se debe pagar en deltron hdd 4tb de deltron Se debe pagar en deltron hdd 4tb de deltron', 'ONCE', 0, '2026-03-05 20:37:00', 0, 1, '2026-03-05 20:31:51', '2026-03-05 20:35:01'),
 (6, 19, 'adsadasdasdasdasdasdasdsd', 'Documentos', 'asdasdasdasd', 'MONTHLY', 0, '2026-03-05 20:36:00', 0, 1, '2026-03-05 20:34:43', '2026-03-05 20:34:43'),
-(7, 19, 'PAGAR LUZ', '', 'Tengo que pagar la luz con la empresa enosa', 'MONTHLY', 0, '2026-03-30 11:43:00', 2, 1, '2026-03-10 11:44:37', '2026-03-10 11:44:37');
+(7, 19, 'PAGAR LUZ', '', 'Tengo que pagar la luz con la empresa enosa', 'MONTHLY', 0, '2026-03-30 11:43:00', 2, 1, '2026-03-10 11:44:37', '2026-03-10 11:44:37'),
+(8, 19, 'PAGAR ALQUILER', 'pagos', 'Tengo que pagar a la señora del alquiler.', 'MONTHLY', 0, '2026-03-14 18:00:00', 1, 1, '2026-03-13 10:40:29', '2026-03-13 10:40:29');
 
 -- --------------------------------------------------------
 
@@ -89,7 +90,8 @@ INSERT INTO `al_alertas_log` (`id`, `id_alerta`, `evento`, `detalle`, `creado`) 
 (13, 5, 'UPDATED', NULL, '2026-03-05 20:35:01'),
 (14, 2, 'UPDATED', NULL, '2026-03-05 22:25:40'),
 (15, 1, 'UPDATED', NULL, '2026-03-05 22:25:49'),
-(16, 7, 'CREATED', NULL, '2026-03-10 11:44:37');
+(16, 7, 'CREATED', NULL, '2026-03-10 11:44:37'),
+(17, 8, 'CREATED', NULL, '2026-03-13 10:40:29');
 
 -- --------------------------------------------------------
 
@@ -432,7 +434,9 @@ INSERT INTO `cq_certificados` (`id`, `id_empresa`, `id_usuario_emisor`, `id_curs
 (51, 3, 3, 1, 3, 1, 5, 38, '000038', 'RENZO MARTIN', 'VELASQUEZ SANDOVAL', '80490294', '2026-03-06', '2026-03-04', '2026-03-05', 6, 6, 'Activo', '9bb2cf28ffd8001c21af1797d3e51c1e', '2026-03-05 15:44:10', '2026-03-05 15:44:10'),
 (52, 3, 3, 3, 3, 1, 6, 39, '000039', 'JULIO CESAR', 'CRUZ AGURTO', '03877504', '2026-03-06', '2026-03-05', '2026-03-05', 4, 4, 'Activo', '76004ea0f228e680625e3dd547776605', '2026-03-06 18:11:50', '2026-03-06 18:11:50'),
 (53, 3, 3, 3, 3, 1, 1, 40, '000040', 'IRVIN WILFREDO', 'PAJUELO LUCIANO', '46474698', '2026-03-06', '2026-03-05', '2026-03-06', 4, 4, 'Activo', 'b51145d54dcdd0c6b8adc48c031ae8a8', '2026-03-06 18:19:34', '2026-03-06 18:19:34'),
-(54, 19, 10, 1, 6, 1, 3, 1, '000001', 'DELIA', 'VEGA BAZAN', '70009876', '2026-03-10', '2026-03-02', '2026-03-06', 4, 8, 'Activo', 'e03e812df6dd59177d9bca360317b637', '2026-03-10 12:19:33', '2026-03-10 12:19:33');
+(54, 19, 10, 1, 6, 1, 3, 1, '000001', 'DELIA', 'VEGA BAZAN', '70009876', '2026-03-10', '2026-03-02', '2026-03-06', 4, 8, 'Activo', 'e03e812df6dd59177d9bca360317b637', '2026-03-10 12:19:33', '2026-03-10 12:19:33'),
+(55, 19, 10, 1, 6, 1, 2, 2, '000002', 'LUIGI', 'VILLANUEVA PEREZ', '70379885', '2026-03-13', '2026-03-02', '2026-03-06', 6, 6, 'Activo', 'e7ccb83d1acf0335718ab5338fb21717', '2026-03-13 10:35:25', '2026-03-13 10:35:25'),
+(56, 19, 10, 1, 6, 1, 6, 3, '000003', 'VICTOR', 'AGUILAR', '70332326', '2026-03-13', '2026-03-13', '2026-03-13', 12, 8, 'Activo', '154fdb90ff9c0d6b43ce305ba9d87111', '2026-03-13 21:36:23', '2026-03-13 21:36:23');
 
 -- --------------------------------------------------------
 
@@ -770,7 +774,8 @@ CREATE TABLE `cr_formularios` (
 INSERT INTO `cr_formularios` (`id`, `empresa_id`, `modo`, `tipo`, `grupo_id`, `curso_id`, `tema_id`, `titulo`, `descripcion`, `estado`, `intentos_max`, `tiempo_activo`, `duracion_min`, `nota_min`, `mostrar_resultado`, `requisito_cumplimiento`, `campos_fast`, `public_code`, `created_at`, `updated_at`) VALUES
 (1, 19, 'AULA', 'EXAMEN', 2, 12, NULL, 'EXAMEN DE CONOCIMIENTOS SOBRE EL SEMAFORO', 'Este es un examen sobre tus conocimientos sobre el semaforo en la conducción de vehiculos.', 'PUBLICADO', 1, 1, 5, 11.00, 1, 'ENVIAR', NULL, NULL, '2026-03-08 00:11:27', '2026-03-08 00:25:02'),
 (2, 19, 'FAST', 'EXAMEN', NULL, NULL, NULL, 'EXAMEN DE MANEJO DEFENSIVO', 'Este es un examen donde te preguntaremos cosas de manejo defensivo.', 'PUBLICADO', 1, 1, 5, 11.00, 1, 'ENVIAR', '{\"pedir_nombres\":1,\"pedir_apellidos\":1,\"pedir_celular\":1,\"pedir_categorias\":0,\"tipos_doc_permitidos\":[1,2,3]}', 'FAST1BE6385042', '2026-03-08 00:32:33', '2026-03-08 00:34:47'),
-(3, 19, 'AULA', 'EXAMEN', 2, 12, NULL, 'Examen mecanica Basica', 'En esta examen se va a comprobaar los conocimientos de tu aula virtual.', 'BORRADOR', 2, 1, 5, 11.00, 1, 'APROBAR', NULL, NULL, '2026-03-10 12:10:36', '2026-03-10 12:10:36');
+(3, 19, 'AULA', 'EXAMEN', 2, 12, NULL, 'Examen mecanica Basica', 'En esta examen se va a comprobaar los conocimientos de tu aula virtual.', 'BORRADOR', 2, 1, 5, 11.00, 1, 'APROBAR', NULL, NULL, '2026-03-10 12:10:36', '2026-03-10 12:10:36'),
+(4, 19, 'FAST', 'EXAMEN', NULL, NULL, NULL, 'PREGUNTAS DE MANEJO', 'Estas son preguntas rapidas', 'BORRADOR', 2, 1, 10, 11.00, 1, 'ENVIAR', '{\"pedir_nombres\":1,\"pedir_apellidos\":1,\"pedir_celular\":1,\"pedir_categorias\":0,\"tipos_doc_permitidos\":[1,2,3]}', 'FAST10A446AAE3', '2026-03-13 11:36:50', '2026-03-13 11:36:50');
 
 -- --------------------------------------------------------
 
@@ -814,7 +819,8 @@ INSERT INTO `cr_formulario_intentos` (`id`, `formulario_id`, `modo`, `usuario_id
 (5, 2, 'FAST', NULL, 2, 'B98787654', 'Marlon', 'Juarez', '964881834', NULL, 1, 'a54ddd415538c7e03a758111123b3c569f30a99e', 'ENVIADO', '2026-03-08 00:39:34', '2026-03-08 00:44:34', '2026-03-08 00:39:41', '2026-03-08 00:39:41', 8.00, 8.00, 0, '2026-03-08 00:39:34', '2026-03-08 00:39:41'),
 (6, 2, 'FAST', NULL, 3, '8767655456', 'ANGEL', 'Perez perez', '987776543', NULL, 1, '467f8b3ac80c6099ed5bc04f43a424569f2de967', 'ENVIADO', '2026-03-10 12:04:56', '2026-03-10 12:09:56', '2026-03-10 12:05:25', '2026-03-10 12:05:25', 20.00, 20.00, 1, '2026-03-10 12:04:56', '2026-03-10 12:05:25'),
 (7, 2, 'FAST', NULL, 1, '87676544', 'ANGEL', 'Perez perez', '987776543', NULL, 1, 'f46261af124d1f5588701ebdb41d178b1c8993c4', 'ENVIADO', '2026-03-10 12:06:28', '2026-03-10 12:11:28', '2026-03-10 12:06:53', '2026-03-10 12:06:53', 0.00, 0.00, 0, '2026-03-10 12:06:28', '2026-03-10 12:06:53'),
-(8, 1, 'AULA', 14, NULL, NULL, NULL, NULL, NULL, NULL, 1, '7ac82b8db7886188ce4dcd703d1213d8ea292592', 'ENVIADO', '2026-03-10 12:15:47', '2026-03-10 12:20:47', '2026-03-10 12:16:10', '2026-03-10 12:16:10', 8.00, 8.00, 0, '2026-03-10 12:15:47', '2026-03-10 12:16:10');
+(8, 1, 'AULA', 14, NULL, NULL, NULL, NULL, NULL, NULL, 1, '7ac82b8db7886188ce4dcd703d1213d8ea292592', 'ENVIADO', '2026-03-10 12:15:47', '2026-03-10 12:20:47', '2026-03-10 12:16:10', '2026-03-10 12:16:10', 8.00, 8.00, 0, '2026-03-10 12:15:47', '2026-03-10 12:16:10'),
+(9, 2, 'FAST', NULL, 1, '10299876', 'ANGEL', 'Perez perez', '987776543', NULL, 1, 'bc571b82b7e274556ed8646a2c927d3faa656048', 'ENVIADO', '2026-03-13 11:39:26', '2026-03-13 11:44:26', '2026-03-13 11:39:47', '2026-03-13 11:39:47', 20.00, 20.00, 1, '2026-03-13 11:39:26', '2026-03-13 11:39:47');
 
 -- --------------------------------------------------------
 
@@ -866,7 +872,9 @@ INSERT INTO `cr_formulario_opciones` (`id`, `pregunta_id`, `texto`, `es_correcta
 (19, 4, 'Debemos evitar hacer la cosa numero 05', 0, 5, '2026-03-08 00:34:29', '2026-03-08 00:34:29'),
 (20, 5, 'ME DETENGO', 1, 1, '2026-03-10 12:11:30', '2026-03-10 12:11:30'),
 (21, 5, 'CONTINUO', 0, 2, '2026-03-10 12:11:30', '2026-03-10 12:11:30'),
-(22, 5, 'NINGUNA DE LAS ANTERIORES', 0, 3, '2026-03-10 12:11:30', '2026-03-10 12:11:30');
+(22, 5, 'NINGUNA DE LAS ANTERIORES', 0, 3, '2026-03-10 12:11:30', '2026-03-10 12:11:30'),
+(23, 6, '1) Detenerse', 1, 1, '2026-03-13 11:37:33', '2026-03-13 11:37:33'),
+(24, 6, '2) Acelerar', 0, 2, '2026-03-13 11:37:33', '2026-03-13 11:37:33');
 
 -- --------------------------------------------------------
 
@@ -894,7 +902,8 @@ INSERT INTO `cr_formulario_preguntas` (`id`, `formulario_id`, `tipo`, `enunciado
 (2, 1, 'OM_MULTIPLE', 'A cuanta velocidad debes ir en carretera?', 8.00, 2, '2026-03-08 00:24:48', '2026-03-08 00:24:48'),
 (3, 2, 'OM_UNICA', 'Que es el manejo defensivo.', 8.00, 1, '2026-03-08 00:33:36', '2026-03-08 00:33:36'),
 (4, 2, 'OM_MULTIPLE', 'Que debemos evitar en el manejo defensivo?', 12.00, 2, '2026-03-08 00:34:29', '2026-03-08 00:34:29'),
-(5, 3, 'OM_UNICA', 'Que se debe hacer si estoy conduciendo y aparce el semaforo en rojo.', 20.00, 1, '2026-03-10 12:11:30', '2026-03-10 12:11:30');
+(5, 3, 'OM_UNICA', 'Que se debe hacer si estoy conduciendo y aparce el semaforo en rojo.', 20.00, 1, '2026-03-10 12:11:30', '2026-03-10 12:11:30'),
+(6, 4, 'OM_UNICA', '¿Qué debes hacer si estas conduciendo y aparece un semaforo en luz roja?', 20.00, 1, '2026-03-13 11:37:33', '2026-03-13 11:37:33');
 
 -- --------------------------------------------------------
 
@@ -931,7 +940,9 @@ INSERT INTO `cr_formulario_respuestas` (`id`, `intento_id`, `pregunta_id`, `resp
 (50, 7, 4, '[15]', 0, 0.00, '2026-03-10 12:06:42', '2026-03-10 12:06:53'),
 (51, 7, 3, '[14]', 0, 0.00, '2026-03-10 12:06:44', '2026-03-10 12:06:53'),
 (61, 8, 1, '[4]', 0, 0.00, '2026-03-10 12:15:55', '2026-03-10 12:16:10'),
-(63, 8, 2, '[7,8]', 1, 8.00, '2026-03-10 12:15:58', '2026-03-10 12:16:10');
+(63, 8, 2, '[7,8]', 1, 8.00, '2026-03-10 12:15:58', '2026-03-10 12:16:10'),
+(70, 9, 3, '[11]', 1, 8.00, '2026-03-13 11:39:30', '2026-03-13 11:39:47'),
+(72, 9, 4, '[15,16]', 1, 12.00, '2026-03-13 11:39:32', '2026-03-13 11:39:47');
 
 -- --------------------------------------------------------
 
@@ -986,7 +997,8 @@ CREATE TABLE `cr_matriculas_grupo` (
 
 INSERT INTO `cr_matriculas_grupo` (`id`, `curso_id`, `grupo_id`, `usuario_id`, `estado`, `matriculado_at`, `expulsado_at`, `expulsado_by`, `created_at`, `updated_at`) VALUES
 (1, 12, 2, 15, 1, '2026-03-10 11:59:10', NULL, NULL, '2026-03-07 23:49:13', '2026-03-10 11:59:10'),
-(2, 12, 2, 14, 1, '2026-03-10 12:14:05', NULL, NULL, '2026-03-10 12:14:05', NULL);
+(2, 12, 2, 14, 1, '2026-03-10 12:14:05', NULL, NULL, '2026-03-10 12:14:05', NULL),
+(3, 12, 1, 13, 1, '2026-03-13 11:33:49', NULL, NULL, '2026-03-13 11:33:49', NULL);
 
 -- --------------------------------------------------------
 
@@ -1056,7 +1068,8 @@ INSERT INTO `cr_usuario_curso` (`id`, `usuario_id`, `curso_id`, `activo`, `asign
 (16, 15, 14, 1, NULL, '2026-03-07 16:46:51', '2026-03-07 16:46:51'),
 (17, 11, 2, 0, 10, '2026-03-07 18:15:27', '2026-03-07 18:50:02'),
 (23, 15, 12, 1, 10, '2026-03-07 20:08:05', '2026-03-10 11:59:10'),
-(29, 14, 12, 1, 10, '2026-03-10 12:14:05', '2026-03-10 12:14:05');
+(29, 14, 12, 1, 10, '2026-03-10 12:14:05', '2026-03-10 12:14:05'),
+(30, 13, 12, 1, 10, '2026-03-13 11:33:49', '2026-03-13 11:33:49');
 
 -- --------------------------------------------------------
 
@@ -1075,7 +1088,7 @@ CREATE TABLE `egr_correlativos` (
 --
 
 INSERT INTO `egr_correlativos` (`id_empresa`, `ultimo_numero`, `actualizado`) VALUES
-(19, 9, '2026-03-10 11:30:05');
+(19, 13, '2026-03-13 18:22:43');
 
 -- --------------------------------------------------------
 
@@ -1122,7 +1135,39 @@ INSERT INTO `egr_egresos` (`id`, `id_empresa`, `id_caja_mensual`, `id_caja_diari
 (6, 19, 1, 5, 'E019-000006', 6, 'BOLETA', 'B-01', '5263', NULL, '2026-03-10 09:27:00', 20.00, 'BODEGA LA ECONOMIA', '-', 'Gaseosas para alumnos', 'Coordinado con el administrador', 'ACTIVO', NULL, NULL, NULL, 10, '2026-03-10 09:29:40', '2026-03-10 09:29:40'),
 (7, 19, 1, 5, 'E019-000007', 7, 'BOLETA', 'B-002', '3434', NULL, '2026-03-10 09:44:00', 50.00, 'GLADYS CHAVEZ', '70332321', 'Limpieza del local día 10-03-26', 'Coordinado con gerente', 'ACTIVO', NULL, NULL, NULL, 10, '2026-03-10 09:44:51', '2026-03-10 09:44:51'),
 (8, 19, 1, 5, 'E019-000008', 8, 'RECIBO', NULL, NULL, NULL, '2026-03-09 09:44:00', 50.00, 'GLADYS CHAVEZ', '70001012', 'Limpieza del local día 10-03-26', 'Cooridnado con gerente', 'ACTIVO', NULL, NULL, NULL, 10, '2026-03-10 10:02:07', '2026-03-10 10:02:07'),
-(9, 19, 1, 5, 'E019-000009', 9, 'RECIBO', NULL, NULL, NULL, '2026-03-10 11:28:00', 20.00, 'BODEGA ECONOMIA', '-', 'Gaseosas para los alumnos', 'Coordinado con sra Roxana', 'ACTIVO', NULL, NULL, NULL, 10, '2026-03-10 11:30:05', '2026-03-10 11:30:05');
+(9, 19, 1, 5, 'E019-000009', 9, 'RECIBO', NULL, NULL, NULL, '2026-03-10 11:28:00', 20.00, 'BODEGA ECONOMIA', '-', 'Gaseosas para los alumnos', 'Coordinado con sra Roxana', 'ACTIVO', NULL, NULL, NULL, 10, '2026-03-10 11:30:05', '2026-03-10 11:30:05'),
+(10, 19, 1, 7, 'E019-000010', 10, 'RECIBO', NULL, NULL, NULL, '2026-03-13 08:18:00', 10.00, 'BODEGA ECONOMIA', '-', 'Gaseosas para alumnos', 'Coordinado con gerente', 'ACTIVO', NULL, NULL, NULL, 10, '2026-03-13 11:19:35', '2026-03-13 11:19:35'),
+(11, 19, 1, 7, 'E019-000011', 11, 'FACTURA', 'F01', '0002541', NULL, '2026-03-13 11:20:00', 50.00, 'TAYLOY SAC', '20100049181', 'Compra de lapiceros, cuadernos, fotocheck etc.\nCompra de lapiceros, cuadernos, fotocheck etc.\nCompra de lapiceros, cuadernos, fotocheck etc.', 'Coordinador con instructor', 'ANULADO', 10, '2026-03-13 11:23:39', 'Se devolvieron los lapiceros', 10, '2026-03-13 11:22:58', '2026-03-13 11:23:39'),
+(12, 19, 1, 7, 'E019-000012', 12, 'FACTURA', 'F-01', '000256325', NULL, '2026-03-13 15:31:00', 50.00, 'FABER CASTELL SAC', '20601542362', 'Compra de folder para archivar.', 'Observación interna.', 'ACTIVO', NULL, NULL, NULL, 10, '2026-03-13 15:39:05', '2026-03-13 15:39:05'),
+(13, 19, 1, 7, 'E019-000013', 13, 'RECIBO', NULL, NULL, NULL, '2026-03-13 18:21:00', 50.00, 'LUCINDA VASQUEZ', '70366365', 'Pago por concepto de limpieza del día 13 de marzo 2026. Todo conforme.', 'Dinero yapeado a celular de la señora.', 'ACTIVO', NULL, NULL, NULL, 10, '2026-03-13 18:22:43', '2026-03-13 18:22:43');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `egr_egreso_fuentes`
+--
+
+CREATE TABLE `egr_egreso_fuentes` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `id_egreso` bigint(20) UNSIGNED NOT NULL,
+  `id_empresa` int(10) UNSIGNED NOT NULL,
+  `id_caja_diaria` int(10) UNSIGNED NOT NULL,
+  `fuente_key` enum('EFECTIVO','YAPE','PLIN','TRANSFERENCIA') NOT NULL,
+  `medio_id` int(10) UNSIGNED NOT NULL,
+  `monto` decimal(14,2) NOT NULL,
+  `creado` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_spanish_ci;
+
+--
+-- Volcado de datos para la tabla `egr_egreso_fuentes`
+--
+
+INSERT INTO `egr_egreso_fuentes` (`id`, `id_egreso`, `id_empresa`, `id_caja_diaria`, `fuente_key`, `medio_id`, `monto`, `creado`) VALUES
+(1, 12, 19, 7, 'EFECTIVO', 1, 10.00, '2026-03-13 15:39:05'),
+(2, 12, 19, 7, 'YAPE', 2, 10.00, '2026-03-13 15:39:05'),
+(3, 12, 19, 7, 'PLIN', 3, 10.00, '2026-03-13 15:39:05'),
+(4, 12, 19, 7, 'TRANSFERENCIA', 4, 20.00, '2026-03-13 15:39:05'),
+(5, 13, 19, 7, 'YAPE', 2, 50.00, '2026-03-13 18:22:43');
 
 -- --------------------------------------------------------
 
@@ -2090,7 +2135,7 @@ CREATE TABLE `mod_api_hub_uso_mensual` (
 --
 
 INSERT INTO `mod_api_hub_uso_mensual` (`id`, `empresa_id`, `periodo_mes`, `dni_ok`, `dni_fail`, `ruc_ok`, `ruc_fail`, `ultima_consulta_at`, `ultima_tipo`, `ultima_estado`, `ultima_mensaje`, `created_at`, `updated_at`) VALUES
-(1, 19, '2026-03-01', 3, 2, 1, 1, '2026-03-13 01:42:45', 'DNI', 'OK', '', '2026-03-13 01:36:08', '2026-03-13 01:42:45');
+(1, 19, '2026-03-01', 16, 7, 4, 2, '2026-03-15 10:48:34', 'DNI', 'OK', '', '2026-03-13 01:36:08', '2026-03-15 10:48:34');
 
 -- --------------------------------------------------------
 
@@ -2132,7 +2177,11 @@ INSERT INTO `mod_caja_auditoria` (`id`, `id_empresa`, `id_caja_mensual`, `id_caj
 (13, 19, 1, 6, 'cerrar_diaria', 'Cierre extemporáneo CD CD-19-20260312 (fecha 2026-03-12). Motivo: FGFFGGF', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-13 00:01:32'),
 (14, 19, 1, 7, 'abrir_diaria', 'Apertura CD CD-19-20260313', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-13 00:05:46'),
 (15, 19, 1, 7, 'cerrar_diaria', 'Cierre CD CD-19-20260313', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-13 00:05:51'),
-(16, 19, 1, 7, 'abrir_diaria', 'Apertura # 08 | 2026-03-13 | Reapertura', 1, '70379752', 'LUIGI ISRAEL VILLANUEVA PEREZ', '179.6.167.180', '2026-03-13 00:06:37');
+(16, 19, 1, 7, 'abrir_diaria', 'Apertura # 08 | 2026-03-13 | Reapertura', 1, '70379752', 'LUIGI ISRAEL VILLANUEVA PEREZ', '179.6.167.180', '2026-03-13 00:06:37'),
+(17, 19, 1, 7, 'cerrar_diaria', 'Cierre extemporáneo CD CD-19-20260313 (fecha 2026-03-13). Motivo: jjjjjjjjjjjjj', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-14 11:50:59'),
+(18, 19, 1, 8, 'abrir_diaria', 'Apertura CD CD-19-20260314', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-14 11:52:14'),
+(19, 19, 1, 8, 'cerrar_diaria', 'Cierre extemporáneo CD CD-19-20260314 (fecha 2026-03-14). Motivo: aaaaaaaaaaaaa', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-15 10:01:41'),
+(20, 19, 1, 9, 'abrir_diaria', 'Apertura CD CD-19-20260315', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-15 10:02:18');
 
 -- --------------------------------------------------------
 
@@ -2165,7 +2214,9 @@ INSERT INTO `mod_caja_diaria` (`id`, `id_empresa`, `id_caja_mensual`, `fecha`, `
 (4, 19, 1, '2026-03-06', 'CD-19-20260306', 'cerrada', 10, '2026-03-06 17:45:20', 10, '2026-03-10 08:57:24'),
 (5, 19, 1, '2026-03-10', 'CD-19-20260310', 'cerrada', 10, '2026-03-10 08:57:38', 10, '2026-03-12 09:56:48'),
 (6, 19, 1, '2026-03-12', 'CD-19-20260312', 'cerrada', 10, '2026-03-12 09:56:57', 10, '2026-03-13 00:01:32'),
-(7, 19, 1, '2026-03-13', 'CD-19-20260313', 'abierta', 1, '2026-03-13 00:06:37', NULL, NULL);
+(7, 19, 1, '2026-03-13', 'CD-19-20260313', 'cerrada', 1, '2026-03-13 00:06:37', 10, '2026-03-14 11:50:59'),
+(8, 19, 1, '2026-03-14', 'CD-19-20260314', 'cerrada', 10, '2026-03-14 11:52:14', 10, '2026-03-15 10:01:41'),
+(9, 19, 1, '2026-03-15', 'CD-19-20260315', 'abierta', 10, '2026-03-15 10:02:18', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -2224,7 +2275,8 @@ INSERT INTO `mod_empresa_servicio` (`id`, `empresa_id`, `servicio_id`, `creado`,
 (8, 19, 9, '2026-03-12 23:39:13', '2026-03-12 23:39:13'),
 (9, 19, 11, '2026-03-12 23:54:23', '2026-03-12 23:54:23'),
 (10, 19, 10, '2026-03-13 00:01:49', '2026-03-13 00:01:49'),
-(11, 19, 12, '2026-03-13 00:07:36', '2026-03-13 00:07:36');
+(11, 19, 12, '2026-03-13 00:07:36', '2026-03-13 00:07:36'),
+(12, 19, 13, '2026-03-13 10:49:13', '2026-03-13 10:49:13');
 
 -- --------------------------------------------------------
 
@@ -2266,7 +2318,9 @@ INSERT INTO `mod_etiquetas` (`id`, `nombre`, `creado`, `actualizado`) VALUES
 (20, 'mercancias', '2026-03-12 23:53:33', '2026-03-12 23:53:33'),
 (21, 'actualizacion', '2026-03-12 23:53:33', '2026-03-12 23:53:33'),
 (22, 'pasajeros', '2026-03-13 00:03:52', '2026-03-13 00:03:52'),
-(23, 'personas', '2026-03-13 00:03:52', '2026-03-13 00:03:52');
+(23, 'personas', '2026-03-13 00:03:52', '2026-03-13 00:03:52'),
+(24, 'producto', '2026-03-13 10:48:36', '2026-03-13 10:48:36'),
+(25, 'informacion', '2026-03-13 10:48:36', '2026-03-13 10:48:36');
 
 -- --------------------------------------------------------
 
@@ -2406,7 +2460,12 @@ INSERT INTO `mod_precios` (`id`, `empresa_id`, `servicio_id`, `rol`, `precio`, `
 (812, 19, 9, 'B', 0.00, 0, NULL, 0, '2026-03-13 00:11:55', '2026-03-13 00:11:55'),
 (813, 19, 9, 'C', 0.00, 0, NULL, 0, '2026-03-13 00:11:55', '2026-03-13 00:11:55'),
 (814, 19, 9, 'D', 0.00, 0, NULL, 0, '2026-03-13 00:11:55', '2026-03-13 00:11:55'),
-(815, 19, 9, 'E', 0.00, 0, NULL, 0, '2026-03-13 00:11:55', '2026-03-13 00:11:55');
+(815, 19, 9, 'E', 0.00, 0, NULL, 0, '2026-03-13 00:11:55', '2026-03-13 00:11:55'),
+(831, 19, 13, 'A', 10.00, 1, 'precio standar', 1, '2026-03-13 10:49:59', '2026-03-13 10:50:20'),
+(832, 19, 13, 'B', 0.00, 0, NULL, 0, '2026-03-13 10:49:59', '2026-03-13 10:49:59'),
+(833, 19, 13, 'C', 0.00, 0, NULL, 0, '2026-03-13 10:49:59', '2026-03-13 10:49:59'),
+(834, 19, 13, 'D', 0.00, 0, NULL, 0, '2026-03-13 10:49:59', '2026-03-13 10:49:59'),
+(835, 19, 13, 'E', 0.00, 0, NULL, 0, '2026-03-13 10:49:59', '2026-03-13 10:49:59');
 
 -- --------------------------------------------------------
 
@@ -2429,7 +2488,7 @@ CREATE TABLE `mod_servicios` (
 --
 
 INSERT INTO `mod_servicios` (`id`, `nombre`, `descripcion`, `activo`, `imagen_path`, `creado`, `actualizado`) VALUES
-(1, 'MOTO BIIC', 'Este es el curso de MOTO BIIC para conductores nuevos que buscan obtener su brevete.', 1, 'almacen/img_servicios/20260312-moto-biic-srv000001.png', '2026-03-03 23:09:40', '2026-03-12 16:07:38'),
+(1, 'MOTO BIIC', 'Este es el curso de MOTO BIIC para conductores nuevos que buscan obtener su brevete.', 1, 'almacen/img_servicios/20260313075552-moto-biic-srv000001.jpg', '2026-03-03 23:09:40', '2026-03-13 07:55:52'),
 (2, 'RECA AIIA', 'Permite transporte de pasajeros en automóvil', 1, 'almacen/img_servicios/20260312233216-reca-aiia-srv000002.jpg', '2026-03-03 23:11:02', '2026-03-12 23:32:16'),
 (3, 'RECA AIIB', 'licencia AIIB peru microbus minibus transporte de pasajeros carga N2', 1, 'almacen/img_servicios/20260312-reca-aiib-srv000003.jpg', '2026-03-12 16:29:36', '2026-03-12 16:29:36'),
 (4, 'OBTENCIÓN A1', 'Trámite para sacar tu primera licencia de conducir para auto particular.', 1, 'almacen/img_servicios/20260312230817-obtencion-a1-srv000004.jpg', '2026-03-12 23:08:17', '2026-03-12 23:33:29'),
@@ -2440,7 +2499,8 @@ INSERT INTO `mod_servicios` (`id`, `nombre`, `descripcion`, `activo`, `imagen_pa
 (9, 'Taller Cambiemos de Actitud', 'Taller obligatorio para regularizar la situación de conductores sancionados.', 1, 'almacen/img_servicios/20260312233901-taller-cambiemos-de-actitud-srv000009.jpg', '2026-03-12 23:39:01', '2026-03-12 23:39:01'),
 (10, 'Licencia especial AIV', 'Autorización complementaria para conducir vehículos que transportan materiales o residuos peligrosos.', 1, 'almacen/img_servicios/20260312234945-licencia-especial-aiv-srv000010.webp', '2026-03-12 23:49:45', '2026-03-12 23:49:45'),
 (11, 'Curso de actualización - Carga', 'Curso obligatorio para actualizar conocimientos de normativa de transporte y tránsito.', 1, 'almacen/img_servicios/20260312235333-curso-de-actualizacion-carga-srv000011.webp', '2026-03-12 23:53:33', '2026-03-12 23:53:33'),
-(12, 'Curso de actualización - Pasajeros', 'Curso obligatorio para actualizar conocimientos de normativa de transporte y tránsito.', 1, 'almacen/img_servicios/20260313000352-curso-de-actualizacion-pasajeros-srv000012.jpg', '2026-03-13 00:03:52', '2026-03-13 00:03:52');
+(12, 'Curso de actualización - Pasajeros', 'Curso obligatorio para actualizar conocimientos de normativa de transporte y tránsito.', 1, 'almacen/img_servicios/20260313000352-curso-de-actualizacion-pasajeros-srv000012.jpg', '2026-03-13 00:03:52', '2026-03-13 00:03:52'),
+(13, 'BALOTARIO', 'Este es un balotario', 1, 'almacen/img_servicios/20260313104836-balotario-srv000013.jpg', '2026-03-13 10:48:36', '2026-03-13 10:48:36');
 
 -- --------------------------------------------------------
 
@@ -2460,9 +2520,9 @@ CREATE TABLE `mod_servicio_etiqueta` (
 --
 
 INSERT INTO `mod_servicio_etiqueta` (`servicio_id`, `etiqueta_id`, `creado`, `actualizado`) VALUES
-(1, 1, '2026-03-13 00:09:57', '2026-03-13 00:09:57'),
-(1, 2, '2026-03-13 00:09:57', '2026-03-13 00:09:57'),
-(1, 3, '2026-03-13 00:09:57', '2026-03-13 00:09:57'),
+(1, 1, '2026-03-13 07:55:52', '2026-03-13 07:55:52'),
+(1, 2, '2026-03-13 07:55:52', '2026-03-13 07:55:52'),
+(1, 3, '2026-03-13 07:55:52', '2026-03-13 07:55:52'),
 (2, 4, '2026-03-12 23:36:56', '2026-03-12 23:36:56'),
 (2, 13, '2026-03-12 23:36:56', '2026-03-12 23:36:56'),
 (3, 4, '2026-03-12 16:29:36', '2026-03-12 16:29:36'),
@@ -2486,7 +2546,9 @@ INSERT INTO `mod_servicio_etiqueta` (`servicio_id`, `etiqueta_id`, `creado`, `ac
 (11, 21, '2026-03-12 23:53:33', '2026-03-12 23:53:33'),
 (12, 21, '2026-03-13 00:03:52', '2026-03-13 00:03:52'),
 (12, 22, '2026-03-13 00:03:52', '2026-03-13 00:03:52'),
-(12, 23, '2026-03-13 00:03:52', '2026-03-13 00:03:52');
+(12, 23, '2026-03-13 00:03:52', '2026-03-13 00:03:52'),
+(13, 24, '2026-03-13 10:48:36', '2026-03-13 10:48:36'),
+(13, 25, '2026-03-13 10:48:36', '2026-03-13 10:48:36');
 
 -- --------------------------------------------------------
 
@@ -3169,7 +3231,50 @@ INSERT INTO `pos_abonos` (`id`, `id_empresa`, `caja_diaria_id`, `cliente_id`, `m
 (38, 19, 6, 35, 1, '2026-03-12 23:59:00', 1200.00, NULL, NULL, 10, '2026-03-12 23:59:00', '2026-03-12 23:59:00'),
 (39, 19, 7, 38, 1, '2026-03-13 01:41:01', 300.00, NULL, NULL, 10, '2026-03-13 01:41:01', '2026-03-13 01:41:01'),
 (40, 19, 7, 38, 2, '2026-03-13 01:41:01', 100.00, 'ac-3', NULL, 10, '2026-03-13 01:41:01', '2026-03-13 01:41:01'),
-(41, 19, 7, 39, 4, '2026-03-13 01:43:02', 150.00, 'dasdas-sdsd', NULL, 10, '2026-03-13 01:43:02', '2026-03-13 01:43:02');
+(41, 19, 7, 39, 4, '2026-03-13 01:43:02', 150.00, 'dasdas-sdsd', NULL, 10, '2026-03-13 01:43:02', '2026-03-13 01:43:02'),
+(42, 19, 7, 38, 4, '2026-03-13 02:56:04', 50.00, 'ffffff44', NULL, 10, '2026-03-13 02:56:04', '2026-03-13 02:56:04'),
+(43, 19, 7, 38, 3, '2026-03-13 07:56:54', 50.00, 'asds-343', NULL, 10, '2026-03-13 07:56:54', '2026-03-13 07:56:54'),
+(44, 19, 7, 40, 1, '2026-03-13 08:03:04', 150.00, NULL, NULL, 10, '2026-03-13 08:03:04', '2026-03-13 08:03:04'),
+(45, 19, 7, 41, 1, '2026-03-13 10:52:41', 10.00, NULL, NULL, 10, '2026-03-13 10:52:41', '2026-03-13 10:52:41'),
+(46, 19, 7, 42, 4, '2026-03-13 10:56:42', 500.00, 'Nro: 3383993-eer', 'els eñorpago con interbank.', 10, '2026-03-13 10:56:42', '2026-03-13 10:56:42'),
+(47, 19, 7, 42, 3, '2026-03-13 10:58:14', 400.00, '33-ff', NULL, 10, '2026-03-13 10:58:14', '2026-03-13 10:58:14'),
+(48, 19, 7, 43, 2, '2026-03-13 11:04:41', 100.00, 'COD:234', NULL, 10, '2026-03-13 11:04:41', '2026-03-13 11:04:41'),
+(49, 19, 7, 43, 3, '2026-03-13 11:04:41', 50.00, '1233-DS', NULL, 10, '2026-03-13 11:04:41', '2026-03-13 11:04:41'),
+(50, 19, 7, 44, 1, '2026-03-13 11:10:18', 200.00, NULL, NULL, 10, '2026-03-13 11:10:18', '2026-03-13 11:10:18'),
+(51, 19, 7, 44, 2, '2026-03-13 11:10:18', 200.00, 'ASD3', NULL, 10, '2026-03-13 11:10:18', '2026-03-13 11:10:18'),
+(52, 19, 7, 44, 3, '2026-03-13 11:10:18', 500.00, 'ASDAS', NULL, 10, '2026-03-13 11:10:18', '2026-03-13 11:10:18'),
+(53, 19, 7, 44, 4, '2026-03-13 11:10:18', 200.00, 'BCP', NULL, 10, '2026-03-13 11:10:18', '2026-03-13 11:10:18'),
+(54, 19, 7, 37, 1, '2026-03-13 11:13:06', 150.00, NULL, NULL, 10, '2026-03-13 11:13:06', '2026-03-13 11:13:06'),
+(55, 19, 7, 45, 4, '2026-03-13 15:27:42', 150.00, 'jhg-76', NULL, 10, '2026-03-13 15:27:42', '2026-03-13 15:27:42'),
+(56, 19, 7, 40, 1, '2026-03-13 21:31:29', 50.00, NULL, NULL, 10, '2026-03-13 21:31:29', '2026-03-13 21:31:29'),
+(57, 19, 7, 40, 2, '2026-03-13 21:31:29', 50.00, 'ffafa', NULL, 10, '2026-03-13 21:31:29', '2026-03-13 21:31:29'),
+(58, 19, 7, 40, 3, '2026-03-13 21:31:29', 50.00, 'ffff', NULL, 10, '2026-03-13 21:31:29', '2026-03-13 21:31:29'),
+(59, 19, 8, 46, 1, '2026-03-14 11:53:21', 500.00, 'ABC-HGF', NULL, 10, '2026-03-14 11:53:21', '2026-03-14 11:53:21'),
+(60, 19, 8, 47, 1, '2026-03-14 11:54:45', 10.00, NULL, NULL, 10, '2026-03-14 11:54:45', '2026-03-14 11:54:45'),
+(61, 19, 8, 48, 1, '2026-03-14 11:57:54', 1100.00, NULL, NULL, 10, '2026-03-14 11:57:54', '2026-03-14 11:57:54'),
+(62, 19, 8, 49, 2, '2026-03-14 12:14:13', 500.00, 'af3-3f', NULL, 10, '2026-03-14 12:14:13', '2026-03-14 12:14:13'),
+(63, 19, 8, 50, 4, '2026-03-14 12:34:19', 1200.00, 'aa-hyg', NULL, 10, '2026-03-14 12:34:19', '2026-03-14 12:34:19'),
+(64, 19, 8, 51, 1, '2026-03-14 13:23:27', 120.00, NULL, NULL, 10, '2026-03-14 13:23:27', '2026-03-14 13:23:27'),
+(65, 19, 8, 52, 3, '2026-03-14 13:25:06', 600.00, 'ac-7', NULL, 10, '2026-03-14 13:25:06', '2026-03-14 13:25:06'),
+(66, 19, 8, 53, 2, '2026-03-14 13:28:30', 1000.00, 'gggg-gfgg', NULL, 10, '2026-03-14 13:28:30', '2026-03-14 13:28:30'),
+(67, 19, 8, 54, 2, '2026-03-14 13:31:28', 500.00, 'asdsd', NULL, 10, '2026-03-14 13:31:28', '2026-03-14 13:31:28'),
+(68, 19, 8, 54, 3, '2026-03-14 13:31:28', 500.00, '3f3', NULL, 10, '2026-03-14 13:31:28', '2026-03-14 13:31:28'),
+(69, 19, 8, 54, 1, '2026-03-14 13:31:28', 500.00, NULL, NULL, 10, '2026-03-14 13:31:28', '2026-03-14 13:31:28'),
+(70, 19, 8, 55, 1, '2026-03-14 19:34:48', 1100.00, NULL, NULL, 10, '2026-03-14 19:34:48', '2026-03-14 19:34:48'),
+(71, 19, 8, 56, 1, '2026-03-14 19:40:16', 500.00, NULL, NULL, 10, '2026-03-14 19:40:16', '2026-03-14 19:40:16'),
+(72, 19, 8, 57, 1, '2026-03-14 19:45:37', 1000.00, NULL, NULL, 10, '2026-03-14 19:45:37', '2026-03-14 19:45:37'),
+(73, 19, 8, 58, 4, '2026-03-14 19:52:18', 600.00, 'ad2d3', NULL, 10, '2026-03-14 19:52:18', '2026-03-14 19:52:18'),
+(74, 19, 8, 58, 1, '2026-03-14 19:56:31', 150.00, NULL, NULL, 10, '2026-03-14 19:56:31', '2026-03-14 19:56:31'),
+(75, 19, 8, 40, 1, '2026-03-14 20:00:17', 5.00, NULL, NULL, 10, '2026-03-14 20:00:17', '2026-03-14 20:00:17'),
+(76, 19, 8, 40, 1, '2026-03-14 20:00:51', 5.00, NULL, NULL, 10, '2026-03-14 20:00:51', '2026-03-14 20:00:51'),
+(77, 19, 8, 59, 1, '2026-03-14 22:48:09', 1200.00, NULL, NULL, 10, '2026-03-14 22:48:09', '2026-03-14 22:48:09'),
+(78, 19, 8, 60, 1, '2026-03-14 22:54:53', 100.00, NULL, NULL, 10, '2026-03-14 22:54:53', '2026-03-14 22:54:53'),
+(79, 19, 8, 60, 2, '2026-03-14 22:55:12', 100.00, 'DD-DD', NULL, 10, '2026-03-14 22:55:12', '2026-03-14 22:55:12'),
+(80, 19, 8, 60, 1, '2026-03-14 23:01:01', 20.00, NULL, NULL, 10, '2026-03-14 23:01:01', '2026-03-14 23:01:01'),
+(81, 19, 8, 40, 1, '2026-03-15 01:24:18', 100.00, NULL, NULL, 10, '2026-03-15 01:24:18', '2026-03-15 01:24:18'),
+(82, 19, 9, 40, 1, '2026-03-15 10:02:46', 150.00, NULL, NULL, 10, '2026-03-15 10:02:46', '2026-03-15 10:02:46'),
+(83, 19, 9, 40, 1, '2026-03-15 10:06:22', 100.00, NULL, NULL, 10, '2026-03-15 10:06:22', '2026-03-15 10:06:22'),
+(84, 19, 9, 40, 1, '2026-03-15 10:48:41', 1100.00, NULL, NULL, 10, '2026-03-15 10:48:41', '2026-03-15 10:48:41');
 
 -- --------------------------------------------------------
 
@@ -3230,7 +3335,50 @@ INSERT INTO `pos_abono_aplicaciones` (`id`, `abono_id`, `venta_id`, `monto_aplic
 (38, 38, 38, 1200.00, '2026-03-12 23:59:00'),
 (39, 39, 41, 300.00, '2026-03-13 01:41:01'),
 (40, 40, 41, 100.00, '2026-03-13 01:41:01'),
-(41, 41, 42, 150.00, '2026-03-13 01:43:02');
+(41, 41, 42, 150.00, '2026-03-13 01:43:02'),
+(42, 42, 41, 50.00, '2026-03-13 02:56:04'),
+(43, 43, 41, 50.00, '2026-03-13 07:56:54'),
+(44, 44, 43, 150.00, '2026-03-13 08:03:04'),
+(45, 45, 44, 10.00, '2026-03-13 10:52:41'),
+(46, 46, 45, 500.00, '2026-03-13 10:56:42'),
+(47, 47, 45, 400.00, '2026-03-13 10:58:14'),
+(48, 48, 46, 100.00, '2026-03-13 11:04:41'),
+(49, 49, 46, 50.00, '2026-03-13 11:04:41'),
+(50, 50, 47, 200.00, '2026-03-13 11:10:18'),
+(51, 51, 47, 200.00, '2026-03-13 11:10:18'),
+(52, 52, 47, 500.00, '2026-03-13 11:10:18'),
+(53, 53, 47, 200.00, '2026-03-13 11:10:18'),
+(54, 54, 40, 150.00, '2026-03-13 11:13:06'),
+(55, 55, 48, 150.00, '2026-03-13 15:27:42'),
+(56, 56, 49, 50.00, '2026-03-13 21:31:29'),
+(57, 57, 49, 50.00, '2026-03-13 21:31:29'),
+(58, 58, 49, 50.00, '2026-03-13 21:31:29'),
+(59, 59, 50, 500.00, '2026-03-14 11:53:21'),
+(60, 60, 51, 10.00, '2026-03-14 11:54:45'),
+(61, 61, 52, 1100.00, '2026-03-14 11:57:54'),
+(62, 62, 53, 500.00, '2026-03-14 12:14:13'),
+(63, 63, 54, 1200.00, '2026-03-14 12:34:19'),
+(64, 64, 55, 120.00, '2026-03-14 13:23:27'),
+(65, 65, 56, 600.00, '2026-03-14 13:25:06'),
+(66, 66, 57, 1000.00, '2026-03-14 13:28:30'),
+(67, 67, 58, 500.00, '2026-03-14 13:31:28'),
+(68, 68, 58, 500.00, '2026-03-14 13:31:28'),
+(69, 69, 58, 500.00, '2026-03-14 13:31:28'),
+(70, 70, 59, 1100.00, '2026-03-14 19:34:48'),
+(71, 71, 60, 500.00, '2026-03-14 19:40:16'),
+(72, 72, 61, 1000.00, '2026-03-14 19:45:37'),
+(73, 73, 62, 600.00, '2026-03-14 19:52:18'),
+(74, 74, 63, 150.00, '2026-03-14 19:56:31'),
+(75, 75, 64, 5.00, '2026-03-14 20:00:17'),
+(76, 76, 64, 5.00, '2026-03-14 20:00:51'),
+(77, 77, 65, 1200.00, '2026-03-14 22:48:09'),
+(78, 78, 66, 100.00, '2026-03-14 22:54:53'),
+(79, 79, 66, 100.00, '2026-03-14 22:55:12'),
+(80, 80, 66, 20.00, '2026-03-14 23:01:01'),
+(81, 81, 67, 100.00, '2026-03-15 01:24:18'),
+(82, 82, 68, 150.00, '2026-03-15 10:02:46'),
+(83, 83, 68, 100.00, '2026-03-15 10:06:22'),
+(84, 84, 69, 1100.00, '2026-03-15 10:48:41');
 
 -- --------------------------------------------------------
 
@@ -3293,7 +3441,34 @@ INSERT INTO `pos_auditoria` (`id`, `id_empresa`, `tabla`, `registro_id`, `evento
 (34, 19, 'pos_ventas', 39, 'VENTA_CREADA', '{\"cliente\":{\"id\":36,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70555523\",\"nombre\":\"LUIS GUERRA PAZ\",\"telefono\":null},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"cliente_natural\",\"conductor_id\":null,\"doc_tipo\":\"DNI\",\"doc_numero\":\"70555523\",\"nombres\":\"LUIS\",\"apellidos\":\"GUERRA PAZ\",\"telefono\":null},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":6,\"total\":1200,\"pagado\":0,\"saldo\":1200},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-13 00:00:06'),
 (35, 19, 'pos_ventas', 40, 'VENTA_CREADA', '{\"cliente\":{\"id\":37,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70525142\",\"nombre\":\"DIANA PAZ\",\"telefono\":null},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"cliente_natural\",\"conductor_id\":null,\"doc_tipo\":\"DNI\",\"doc_numero\":\"70525142\",\"nombres\":\"DIANA\",\"apellidos\":\"PAZ\",\"telefono\":null},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":7,\"total\":150,\"pagado\":0,\"saldo\":150},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-13 00:18:03'),
 (36, 19, 'pos_ventas', 41, 'VENTA_CREADA', '{\"cliente\":{\"id\":38,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70123625\",\"nombre\":\"SANDRA ERIKA MONTOYA CAMARGO\",\"telefono\":\"966635263\"},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"cliente_natural\",\"conductor_id\":null,\"doc_tipo\":\"DNI\",\"doc_numero\":\"70123625\",\"nombres\":\"SANDRA ERIKA\",\"apellidos\":\"MONTOYA CAMARGO\",\"telefono\":\"966635263\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":7,\"total\":600,\"pagado\":400,\"saldo\":200},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-13 01:41:01'),
-(37, 19, 'pos_ventas', 42, 'VENTA_CREADA', '{\"cliente\":{\"id\":39,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70455253\",\"nombre\":\"CYNTHIA MARIA CARMEN ROUILLON\",\"telefono\":\"963323214\"},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"cliente_natural\",\"conductor_id\":null,\"doc_tipo\":\"DNI\",\"doc_numero\":\"70455253\",\"nombres\":\"CYNTHIA MARIA\",\"apellidos\":\"CARMEN ROUILLON\",\"telefono\":\"963323214\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":7,\"total\":150,\"pagado\":150,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-13 01:43:02');
+(37, 19, 'pos_ventas', 42, 'VENTA_CREADA', '{\"cliente\":{\"id\":39,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70455253\",\"nombre\":\"CYNTHIA MARIA CARMEN ROUILLON\",\"telefono\":\"963323214\"},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"cliente_natural\",\"conductor_id\":null,\"doc_tipo\":\"DNI\",\"doc_numero\":\"70455253\",\"nombres\":\"CYNTHIA MARIA\",\"apellidos\":\"CARMEN ROUILLON\",\"telefono\":\"963323214\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":7,\"total\":150,\"pagado\":150,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-13 01:43:02'),
+(38, 19, 'pos_ventas', 43, 'VENTA_CREADA', '{\"cliente\":{\"id\":40,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"nombre\":\"LUIGI ISRAEL VILLANUEVA PEREZ\",\"telefono\":\"964881841\"},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"cliente_natural\",\"conductor_id\":null,\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"nombres\":\"LUIGI ISRAEL\",\"apellidos\":\"VILLANUEVA PEREZ\",\"telefono\":\"964881841\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":7,\"total\":150,\"pagado\":150,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-13 08:03:04'),
+(39, 19, 'pos_ventas', 44, 'VENTA_CREADA', '{\"cliente\":{\"id\":41,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"18198265\",\"nombre\":\"ROXANA MARILU TRELLES URQUIZA\",\"telefono\":\"963632145\"},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"cliente_natural\",\"conductor_id\":null,\"doc_tipo\":\"DNI\",\"doc_numero\":\"18198265\",\"nombres\":\"ROXANA MARILU\",\"apellidos\":\"TRELLES URQUIZA\",\"telefono\":\"963632145\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":7,\"total\":10,\"pagado\":10,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '2800:200:fdd8:58:b423:e506:88d7:abac', '2026-03-13 10:52:41'),
+(40, 19, 'pos_ventas', 45, 'VENTA_CREADA', '{\"cliente\":{\"id\":42,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"71252952\",\"nombre\":\"JHEFERSON ALESSANDRO RODRIGUEZ PAREDES\",\"telefono\":\"963232142\"},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"cliente_natural\",\"conductor_id\":null,\"doc_tipo\":\"DNI\",\"doc_numero\":\"71252952\",\"nombres\":\"JHEFERSON ALESSANDRO\",\"apellidos\":\"RODRIGUEZ PAREDES\",\"telefono\":\"963232142\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":7,\"total\":900,\"pagado\":500,\"saldo\":400},\"precio_temporal\":{\"aplica\":true,\"actor\":{\"id\":10,\"usuario\":\"12121212\",\"nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"},\"items\":[{\"servicio_id\":7,\"servicio_nombre\":\"RECA AIIIB\",\"cantidad\":1,\"precio_unitario\":900,\"motivo\":\"coordinado con gerencia\",\"fecha\":\"2026-03-13 10:56:42\"}]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '2800:200:fdd8:58:b423:e506:88d7:abac', '2026-03-13 10:56:42'),
+(41, 19, 'pos_ventas', 46, 'VENTA_CREADA', '{\"cliente\":{\"id\":43,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"47305338\",\"nombre\":\"KARLA HELEN BELTRAN ARANDA\",\"telefono\":\"964885412\"},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"cliente_natural\",\"conductor_id\":null,\"doc_tipo\":\"DNI\",\"doc_numero\":\"47305338\",\"nombres\":\"KARLA HELEN\",\"apellidos\":\"BELTRAN ARANDA\",\"telefono\":\"964885412\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":7,\"total\":150,\"pagado\":150,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '2800:200:fdd8:58:b423:e506:88d7:abac', '2026-03-13 11:04:41'),
+(42, 19, 'pos_ventas', 47, 'VENTA_CREADA', '{\"cliente\":{\"id\":44,\"tipo_persona\":\"JURIDICA\",\"doc_tipo\":\"RUC\",\"doc_numero\":\"20482833811\",\"nombre\":\"ESCUELA DE CONDUCTORES INTEGRALES ALLAIN PROST E.I.R.L.\",\"telefono\":\"965332321\"},\"contratante\":{\"doc_tipo\":\"CE\",\"doc_numero\":\"7036365214\",\"nombres\":\"LUIS\",\"apellidos\":\"PAREDES PAREDES\",\"telefono\":\"965332321\"},\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"contratante_juridica\",\"conductor_id\":null,\"doc_tipo\":\"CE\",\"doc_numero\":\"7036365214\",\"nombres\":\"LUIS\",\"apellidos\":\"PAREDES PAREDES\",\"telefono\":\"965332321\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":7,\"total\":1100,\"pagado\":1100,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '2800:200:fdd8:58:b423:e506:88d7:abac', '2026-03-13 11:10:18'),
+(43, 19, 'pos_ventas', 48, 'VENTA_CREADA', '{\"cliente\":{\"id\":45,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70352321\",\"nombre\":\"TATHIANA ALEXE MARIA CAMA CAMASCA\",\"telefono\":\"963323214\"},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"cliente_natural\",\"conductor_id\":null,\"doc_tipo\":\"DNI\",\"doc_numero\":\"70352321\",\"nombres\":\"TATHIANA ALEXE MARIA\",\"apellidos\":\"CAMA CAMASCA\",\"telefono\":\"963323214\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":7,\"total\":150,\"pagado\":150,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '38.253.190.90', '2026-03-13 15:27:42'),
+(44, 19, 'pos_ventas', 49, 'VENTA_CREADA', '{\"cliente\":{\"id\":40,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"nombre\":\"LUIGI ISRAEL VILLANUEVA PEREZ\",\"telefono\":\"964881841\"},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"cliente_natural\",\"conductor_id\":null,\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"nombres\":\"LUIGI ISRAEL\",\"apellidos\":\"VILLANUEVA PEREZ\",\"telefono\":\"964881841\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":7,\"total\":150,\"pagado\":150,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-13 21:31:29'),
+(45, 19, 'pos_ventas', 50, 'VENTA_CREADA', '{\"cliente\":{\"id\":46,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70010001\",\"nombre\":\"Juan Perez\",\"telefono\":\"900111111\"},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"cliente_natural\",\"conductor_id\":null,\"doc_tipo\":\"DNI\",\"doc_numero\":\"70010001\",\"nombres\":\"Juan\",\"apellidos\":\"Perez\",\"telefono\":\"900111111\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":8,\"total\":500,\"pagado\":500,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-14 11:53:21'),
+(46, 19, 'pos_ventas', 51, 'VENTA_CREADA', '{\"cliente\":{\"id\":47,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"CE\",\"doc_numero\":\"70010002\",\"nombre\":\"Maria Loayza\",\"telefono\":\"900111112\"},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"cliente_natural\",\"conductor_id\":null,\"doc_tipo\":\"CE\",\"doc_numero\":\"70010002\",\"nombres\":\"Maria\",\"apellidos\":\"Loayza\",\"telefono\":\"900111112\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":8,\"total\":10,\"pagado\":10,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-14 11:54:45'),
+(47, 19, 'pos_ventas', 52, 'VENTA_CREADA', '{\"cliente\":{\"id\":48,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70010003\",\"nombre\":\"Luis Vargas\",\"telefono\":\"900111113\"},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"cliente_natural\",\"conductor_id\":null,\"doc_tipo\":\"DNI\",\"doc_numero\":\"70010003\",\"nombres\":\"Luis\",\"apellidos\":\"Vargas\",\"telefono\":\"900111113\"},\"conductor_perfil_extra\":{\"doc_tipo\":\"DNI\",\"doc_numero\":\"70010003\",\"canal\":\"WHATSAPP\",\"email\":\"luis.test@demo.com\",\"nacimiento\":\"1993-04-10\",\"categoria_auto_id\":null,\"categoria_moto_id\":null,\"nota\":\"cliente satisfecho. Volverá.\"},\"venta\":{\"caja_diaria_id\":8,\"total\":1100,\"pagado\":1100,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-14 11:57:54'),
+(48, 19, 'pos_ventas', 53, 'VENTA_CREADA', '{\"cliente\":{\"id\":49,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70010005\",\"nombre\":\"Ana Ruiz\",\"telefono\":\"900111115\"},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"REGISTRADO\",\"origen\":\"conductor_otra_persona\",\"conductor_id\":12,\"doc_tipo\":\"DNI\",\"doc_numero\":\"70020005\",\"nombres\":\"Pedro\",\"apellidos\":\"Soto\",\"telefono\":\"911222331\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":8,\"total\":500,\"pagado\":500,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-14 12:14:13'),
+(49, 19, 'pos_ventas', 54, 'VENTA_CREADA', '{\"cliente\":{\"id\":50,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"CE\",\"doc_numero\":\"70010006\",\"nombre\":\"Elena Paz\",\"telefono\":\"900111116\"},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"cliente_natural\",\"conductor_id\":null,\"doc_tipo\":\"CE\",\"doc_numero\":\"70010006\",\"nombres\":\"Elena\",\"apellidos\":\"Paz\",\"telefono\":\"900111116\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":8,\"total\":1200,\"pagado\":1200,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-14 12:34:19'),
+(50, 19, 'pos_ventas', 55, 'VENTA_CREADA', '{\"cliente\":{\"id\":51,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"52719384\",\"nombre\":\"Rocío Castro Luna Arce\",\"telefono\":\"912345675\"},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"REGISTRADO\",\"origen\":\"conductor_otra_persona\",\"conductor_id\":13,\"doc_tipo\":\"DNI\",\"doc_numero\":\"46820517\",\"nombres\":\"Bruno\",\"apellidos\":\"Soto Aguilar\",\"telefono\":\"923456781\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":8,\"total\":120,\"pagado\":120,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-14 13:23:27'),
+(51, 19, 'pos_ventas', 56, 'VENTA_CREADA', '{\"cliente\":{\"id\":52,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"784512309\",\"nombre\":\"Matías Herrera Campos\",\"telefono\":\"912345676\"},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"REGISTRADO\",\"origen\":\"conductor_otra_persona\",\"conductor_id\":14,\"doc_tipo\":\"BREVETE\",\"doc_numero\":\"B90817263\",\"nombres\":\"Andrea\",\"apellidos\":\"Peña Cárdenas\",\"telefono\":\"923456782\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":8,\"total\":600,\"pagado\":600,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-14 13:25:06'),
+(52, 19, 'pos_ventas', 57, 'VENTA_CREADA', '{\"cliente\":{\"id\":53,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"63917420\",\"nombre\":\"Fernanda Núñez Ramos\",\"telefono\":\"912345677\"},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"REGISTRADO\",\"origen\":\"conductor_otra_persona\",\"conductor_id\":15,\"doc_tipo\":\"DNI\",\"doc_numero\":\"57284019\",\"nombres\":\"Santiago\",\"apellidos\":\"Vega Lozano\",\"telefono\":\"923456783\"},\"conductor_perfil_extra\":{\"doc_tipo\":\"DNI\",\"doc_numero\":\"57284019\",\"canal\":\"SMS\",\"email\":\"santiago.vega+uatf401@example.com\",\"nacimiento\":\"1993-11-27\",\"categoria_auto_id\":null,\"categoria_moto_id\":null,\"nota\":\"Enviar aviso por SMS\"},\"venta\":{\"caja_diaria_id\":8,\"total\":1000,\"pagado\":1000,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-14 13:28:30'),
+(53, 19, 'pos_ventas', 58, 'VENTA_CREADA', '{\"cliente\":{\"id\":54,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"47820563\",\"nombre\":\"Kevin Torres Mejía\",\"telefono\":\"912345678\"},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"REGISTRADO\",\"origen\":\"conductor_otra_persona\",\"conductor_id\":16,\"doc_tipo\":\"CE\",\"doc_numero\":\"659301842\",\"nombres\":\"Lucía\",\"apellidos\":\"Suárez Pinto\",\"telefono\":\"923456784\"},\"conductor_perfil_extra\":{\"doc_tipo\":\"CE\",\"doc_numero\":\"659301842\",\"canal\":\"SMS\",\"email\":\"lucia.suarez+uatf402@example.com\",\"nacimiento\":\"2001-05-09\",\"categoria_auto_id\":null,\"categoria_moto_id\":null,\"nota\":\"Correo de confirmación requerido\"},\"venta\":{\"caja_diaria_id\":8,\"total\":1500,\"pagado\":1500,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-14 13:31:28'),
+(54, 19, 'pos_ventas', 59, 'VENTA_CREADA', '{\"cliente\":{\"id\":55,\"tipo_persona\":\"JURIDICA\",\"doc_tipo\":\"RUC\",\"doc_numero\":\"20574839216\",\"nombre\":\"Servicios Andinos UAT S.A.C.\",\"telefono\":\"912345679\"},\"contratante\":{\"doc_tipo\":\"DNI\",\"doc_numero\":\"71640258\",\"nombres\":\"Marcos\",\"apellidos\":\"Cruz Valdivia\",\"telefono\":\"912345679\"},\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"contratante_juridica\",\"conductor_id\":null,\"doc_tipo\":\"DNI\",\"doc_numero\":\"71640258\",\"nombres\":\"Marcos\",\"apellidos\":\"Cruz Valdivia\",\"telefono\":\"912345679\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":8,\"total\":1100,\"pagado\":1100,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-14 19:34:48'),
+(55, 19, 'pos_ventas', 60, 'VENTA_CREADA', '{\"cliente\":{\"id\":56,\"tipo_persona\":\"JURIDICA\",\"doc_tipo\":\"RUC\",\"doc_numero\":\"20650173928\",\"nombre\":\"Constructora Nuevo Horizonte UAT S.R.L.\",\"telefono\":\"912345681\"},\"contratante\":{\"doc_tipo\":\"DNI\",\"doc_numero\":\"68492017\",\"nombres\":\"Renzo\",\"apellidos\":\"Flores Castañeda\",\"telefono\":\"912345681\"},\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"contratante_juridica\",\"conductor_id\":null,\"doc_tipo\":\"DNI\",\"doc_numero\":\"68492017\",\"nombres\":\"Renzo\",\"apellidos\":\"Flores Castañeda\",\"telefono\":\"912345681\"},\"conductor_perfil_extra\":{\"doc_tipo\":\"DNI\",\"doc_numero\":\"68492017\",\"canal\":\"WHATSAPP\",\"email\":\"renzo.flores+uatf601@example.com\",\"nacimiento\":\"1985-01-22\",\"categoria_auto_id\":2,\"categoria_moto_id\":null,\"nota\":\"Enviar constancia firmada\"},\"venta\":{\"caja_diaria_id\":8,\"total\":500,\"pagado\":500,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-14 19:40:16'),
+(56, 19, 'pos_ventas', 61, 'VENTA_CREADA', '{\"cliente\":{\"id\":57,\"tipo_persona\":\"JURIDICA\",\"doc_tipo\":\"RUC\",\"doc_numero\":\"20948573612\",\"nombre\":\"Grupo Ferretero Tambo UAT S.R.L.\",\"telefono\":\"739201458\"},\"contratante\":{\"doc_tipo\":\"CE\",\"doc_numero\":\"912345684\",\"nombres\":\"Elena\",\"apellidos\":\"Navarro Cordero\",\"telefono\":\"739201458\"},\"conductor\":{\"tipo_relacion\":\"REGISTRADO\",\"origen\":\"conductor_otra_persona\",\"conductor_id\":17,\"doc_tipo\":\"BREVETE\",\"doc_numero\":\"B61529407\",\"nombres\":\"Iván\",\"apellidos\":\"Quinteros Ledesma\",\"telefono\":\"923456786\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":8,\"total\":1000,\"pagado\":1000,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-14 19:45:37'),
+(57, 19, 'pos_ventas', 62, 'VENTA_CREADA', '{\"cliente\":{\"id\":58,\"tipo_persona\":\"JURIDICA\",\"doc_tipo\":\"RUC\",\"doc_numero\":\"20173948526\",\"nombre\":\"Tecnored UAT Solutions S.A.C.\",\"telefono\":\"912345686\"},\"contratante\":{\"doc_tipo\":\"BREVETE\",\"doc_numero\":\"A90371642\",\"nombres\":\"Nicolás\",\"apellidos\":\"Ávila Sarmiento\",\"telefono\":\"912345686\"},\"conductor\":{\"tipo_relacion\":\"REGISTRADO\",\"origen\":\"conductor_otra_persona\",\"conductor_id\":18,\"doc_tipo\":\"DNI\",\"doc_numero\":\"54839271\",\"nombres\":\"Carla\",\"apellidos\":\"Bautista Romero\",\"telefono\":\"923456788\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":8,\"total\":600,\"pagado\":600,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-14 19:52:18'),
+(58, 19, 'pos_ventas', 63, 'VENTA_CREADA', '{\"cliente\":{\"id\":58,\"tipo_persona\":\"JURIDICA\",\"doc_tipo\":\"RUC\",\"doc_numero\":\"20173948526\",\"nombre\":\"Tecnored UAT Solutions S.A.C.\",\"telefono\":\"912345686\"},\"contratante\":{\"doc_tipo\":\"BREVETE\",\"doc_numero\":\"A90371642\",\"nombres\":\"Nicolás\",\"apellidos\":\"Ávila Sarmiento\",\"telefono\":\"912345686\"},\"conductor\":{\"tipo_relacion\":\"REGISTRADO\",\"origen\":\"conductor_otra_persona\",\"conductor_id\":18,\"doc_tipo\":\"DNI\",\"doc_numero\":\"54839271\",\"nombres\":\"Carla\",\"apellidos\":\"Bautista Romero\",\"telefono\":\"923456788\"},\"conductor_perfil_extra\":{\"doc_tipo\":\"DNI\",\"doc_numero\":\"54839271\",\"canal\":\"SMS\",\"email\":\"carla.bautista+uatf802@example.com\",\"nacimiento\":\"1998-05-12\",\"categoria_auto_id\":4,\"categoria_moto_id\":9,\"nota\":\"Notificar por SMS al conductor\"},\"venta\":{\"caja_diaria_id\":8,\"total\":150,\"pagado\":150,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-14 19:56:31'),
+(59, 19, 'pos_ventas', 64, 'VENTA_CREADA', '{\"cliente\":{\"id\":40,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"nombre\":\"LUIGI ISRAEL VILLANUEVA PEREZ\",\"telefono\":\"964881842\"},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"cliente_natural\",\"conductor_id\":null,\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"nombres\":\"LUIGI ISRAEL\",\"apellidos\":\"VILLANUEVA PEREZ\",\"telefono\":\"964881842\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":8,\"total\":10,\"pagado\":5,\"saldo\":5},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-14 20:00:17'),
+(60, 19, 'pos_ventas', 65, 'VENTA_CREADA', '{\"cliente\":{\"id\":59,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70000001\",\"nombre\":\"JUAN PEREZ\",\"telefono\":\"900111222\"},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"cliente_natural\",\"conductor_id\":null,\"doc_tipo\":\"DNI\",\"doc_numero\":\"70000001\",\"nombres\":\"JUAN\",\"apellidos\":\"PEREZ\",\"telefono\":\"900111222\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":8,\"total\":1200,\"pagado\":1200,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-14 22:48:09'),
+(61, 19, 'pos_ventas', 66, 'VENTA_CREADA', '{\"cliente\":{\"id\":60,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70212121\",\"nombre\":\"WILIE MARQUEZ\",\"telefono\":\"963232142\"},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"cliente_natural\",\"conductor_id\":null,\"doc_tipo\":\"DNI\",\"doc_numero\":\"70212121\",\"nombres\":\"WILIE\",\"apellidos\":\"MARQUEZ\",\"telefono\":\"963232142\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":8,\"total\":350,\"pagado\":100,\"saldo\":250},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-14 22:54:53'),
+(62, 19, 'pos_ventas', 67, 'VENTA_CREADA', '{\"cliente\":{\"id\":40,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"nombre\":\"LUIGI ISRAEL VILLANUEVA PEREZ\",\"telefono\":\"964881854\"},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"cliente_natural\",\"conductor_id\":null,\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"nombres\":\"LUIGI ISRAEL\",\"apellidos\":\"VILLANUEVA PEREZ\",\"telefono\":\"964881854\"},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":8,\"total\":150,\"pagado\":100,\"saldo\":50},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-15 01:24:18'),
+(63, 19, 'pos_ventas', 68, 'VENTA_CREADA', '{\"cliente\":{\"id\":40,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"nombre\":\"LUIGI ISRAEL VILLANUEVA PEREZ\",\"telefono\":null},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"cliente_natural\",\"conductor_id\":null,\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"nombres\":\"LUIGI ISRAEL\",\"apellidos\":\"VILLANUEVA PEREZ\",\"telefono\":null},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":9,\"total\":150,\"pagado\":150,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-15 10:02:46'),
+(64, 19, 'pos_ventas', 69, 'VENTA_CREADA', '{\"cliente\":{\"id\":40,\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"nombre\":\"LUIGI ISRAEL VILLANUEVA PEREZ\",\"telefono\":null},\"contratante\":null,\"conductor\":{\"tipo_relacion\":\"CLIENTE\",\"origen\":\"cliente_natural\",\"conductor_id\":null,\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"nombres\":\"LUIGI ISRAEL\",\"apellidos\":\"VILLANUEVA PEREZ\",\"telefono\":null},\"conductor_perfil_extra\":null,\"venta\":{\"caja_diaria_id\":9,\"total\":1100,\"pagado\":1100,\"saldo\":0},\"precio_temporal\":{\"aplica\":false,\"actor\":null,\"items\":[]}}', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', '179.6.167.180', '2026-03-15 10:48:41');
 
 -- --------------------------------------------------------
 
@@ -3357,7 +3532,98 @@ INSERT INTO `pos_clientes` (`id`, `id_empresa`, `tipo_persona`, `doc_tipo`, `doc
 (36, 19, 'NATURAL', 'DNI', '70555523', 'LUIS GUERRA PAZ', NULL, 1, '2026-03-13 00:00:06', '2026-03-13 00:00:06'),
 (37, 19, 'NATURAL', 'DNI', '70525142', 'DIANA PAZ', NULL, 1, '2026-03-13 00:18:03', '2026-03-13 00:18:03'),
 (38, 19, 'NATURAL', 'DNI', '70123625', 'SANDRA ERIKA MONTOYA CAMARGO', '966635263', 1, '2026-03-13 01:41:01', '2026-03-13 01:41:01'),
-(39, 19, 'NATURAL', 'DNI', '70455253', 'CYNTHIA MARIA CARMEN ROUILLON', '963323214', 1, '2026-03-13 01:43:02', '2026-03-13 01:43:02');
+(39, 19, 'NATURAL', 'DNI', '70455253', 'CYNTHIA MARIA CARMEN ROUILLON', '963323214', 1, '2026-03-13 01:43:02', '2026-03-13 01:43:02'),
+(40, 19, 'NATURAL', 'DNI', '70379752', 'LUIGI ISRAEL VILLANUEVA PEREZ', NULL, 1, '2026-03-13 08:03:04', '2026-03-15 10:02:46'),
+(41, 19, 'NATURAL', 'DNI', '18198265', 'ROXANA MARILU TRELLES URQUIZA', '963632145', 1, '2026-03-13 10:52:41', '2026-03-13 10:52:41'),
+(42, 19, 'NATURAL', 'DNI', '71252952', 'JHEFERSON ALESSANDRO RODRIGUEZ PAREDES', '963232142', 1, '2026-03-13 10:56:42', '2026-03-13 10:56:42'),
+(43, 19, 'NATURAL', 'DNI', '47305338', 'KARLA HELEN BELTRAN ARANDA', '964885412', 1, '2026-03-13 11:04:41', '2026-03-13 11:04:41'),
+(44, 19, 'JURIDICA', 'RUC', '20482833811', 'ESCUELA DE CONDUCTORES INTEGRALES ALLAIN PROST E.I.R.L.', '965332321', 1, '2026-03-13 11:10:18', '2026-03-13 11:10:18'),
+(45, 19, 'NATURAL', 'DNI', '70352321', 'TATHIANA ALEXE MARIA CAMA CAMASCA', '963323214', 1, '2026-03-13 15:27:42', '2026-03-13 15:27:42'),
+(46, 19, 'NATURAL', 'DNI', '70010001', 'Juan Perez', '900111111', 1, '2026-03-14 11:53:21', '2026-03-14 11:53:21'),
+(47, 19, 'NATURAL', 'CE', '70010002', 'Maria Loayza', '900111112', 1, '2026-03-14 11:54:45', '2026-03-14 11:54:45'),
+(48, 19, 'NATURAL', 'DNI', '70010003', 'Luis Vargas', '900111113', 1, '2026-03-14 11:57:54', '2026-03-14 11:57:54'),
+(49, 19, 'NATURAL', 'DNI', '70010005', 'Ana Ruiz', '900111115', 1, '2026-03-14 12:14:13', '2026-03-14 12:14:13'),
+(50, 19, 'NATURAL', 'CE', '70010006', 'Elena Paz', '900111116', 1, '2026-03-14 12:34:19', '2026-03-14 12:34:19'),
+(51, 19, 'NATURAL', 'DNI', '52719384', 'Rocío Castro Luna Arce', '912345675', 1, '2026-03-14 13:23:27', '2026-03-14 13:23:27'),
+(52, 19, 'NATURAL', 'DNI', '784512309', 'Matías Herrera Campos', '912345676', 1, '2026-03-14 13:25:06', '2026-03-14 13:25:06'),
+(53, 19, 'NATURAL', 'DNI', '63917420', 'Fernanda Núñez Ramos', '912345677', 1, '2026-03-14 13:28:30', '2026-03-14 13:28:30'),
+(54, 19, 'NATURAL', 'DNI', '47820563', 'Kevin Torres Mejía', '912345678', 1, '2026-03-14 13:31:28', '2026-03-14 13:31:28'),
+(55, 19, 'JURIDICA', 'RUC', '20574839216', 'Servicios Andinos UAT S.A.C.', '912345679', 1, '2026-03-14 19:34:48', '2026-03-14 19:34:48'),
+(56, 19, 'JURIDICA', 'RUC', '20650173928', 'Constructora Nuevo Horizonte UAT S.R.L.', '912345681', 1, '2026-03-14 19:40:16', '2026-03-14 19:40:16'),
+(57, 19, 'JURIDICA', 'RUC', '20948573612', 'Grupo Ferretero Tambo UAT S.R.L.', '739201458', 1, '2026-03-14 19:45:37', '2026-03-14 19:45:37'),
+(58, 19, 'JURIDICA', 'RUC', '20173948526', 'Tecnored UAT Solutions S.A.C.', '912345686', 1, '2026-03-14 19:52:18', '2026-03-14 19:52:18'),
+(59, 19, 'NATURAL', 'DNI', '70000001', 'JUAN PEREZ', '900111222', 1, '2026-03-14 22:48:09', '2026-03-14 22:48:09'),
+(60, 19, 'NATURAL', 'DNI', '70212121', 'WILIE MARQUEZ', '963232142', 1, '2026-03-14 22:54:53', '2026-03-14 22:54:53');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `pos_comprobantes`
+--
+
+CREATE TABLE `pos_comprobantes` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `id_empresa` int(10) UNSIGNED NOT NULL,
+  `tipo` enum('VENTA','ABONO') NOT NULL,
+  `modo` enum('ORIGINAL') NOT NULL DEFAULT 'ORIGINAL',
+  `venta_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `ticket_serie` varchar(10) NOT NULL,
+  `ticket_numero` int(10) UNSIGNED NOT NULL,
+  `ticket_codigo` varchar(20) NOT NULL,
+  `emitido_en` datetime NOT NULL,
+  `emitido_por` int(10) UNSIGNED DEFAULT NULL,
+  `emitido_por_usuario` varchar(64) DEFAULT NULL,
+  `emitido_por_nombre` varchar(150) DEFAULT NULL,
+  `formato_default` enum('ticket80','ticket58','a4') NOT NULL DEFAULT 'ticket80',
+  `snapshot_json` longtext NOT NULL,
+  `exactitud` enum('EXACTO','APROXIMADO') NOT NULL DEFAULT 'EXACTO',
+  `observacion` varchar(255) DEFAULT NULL,
+  `creado` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_spanish_ci;
+
+--
+-- Volcado de datos para la tabla `pos_comprobantes`
+--
+
+INSERT INTO `pos_comprobantes` (`id`, `id_empresa`, `tipo`, `modo`, `venta_id`, `ticket_serie`, `ticket_numero`, `ticket_codigo`, `emitido_en`, `emitido_por`, `emitido_por_usuario`, `emitido_por_nombre`, `formato_default`, `snapshot_json`, `exactitud`, `observacion`, `creado`) VALUES
+(1, 19, 'VENTA', 'ORIGINAL', 65, 'T018', 65, 'T018-0065', '2026-03-14 22:48:09', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', 'ticket80', '{\"version\":1,\"kind\":\"venta\",\"scope\":\"original\",\"exactitud\":\"EXACTO\",\"empresa\":{\"nombre\":\"LSISTEMAS\",\"razon_social\":\"LUIGI SISTEMAS\",\"ruc\":\"20601111111\",\"direccion\":\"Calle 8 de septiembre #1345\",\"logo_path\":\"almacen/2026/03/03/img_logos_empresas/logo-empresa-empresa-19-20260303T225708-f14484.png\"},\"meta\":{\"ticket\":\"T018-0065\",\"serie\":\"T018\",\"numero\":65,\"fecha_raw\":\"2026-03-14 22:48:09\",\"fecha_venta_raw\":\"2026-03-14 22:48:09\",\"alcance\":\"original\",\"alcance_label\":\"ORIGINAL\",\"estado_venta\":\"EMITIDA\",\"exactitud\":\"EXACTO\",\"cajero_operacion_id\":10,\"cajero_operacion_usuario\":\"12121212\",\"cajero_operacion_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\",\"reimpreso_por_id\":10,\"reimpreso_por_usuario\":\"12121212\",\"reimpreso_por_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"},\"cliente\":{\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70000001\",\"doc\":\"DNI 70000001\",\"nombre\":\"JUAN PEREZ\",\"telefono\":\"900111222\"},\"contratante\":{\"doc_tipo\":\"\",\"doc_numero\":\"\",\"doc\":\"\",\"nombre\":\"\",\"telefono\":\"\"},\"conductor\":{\"doc_tipo\":\"DNI\",\"doc_numero\":\"70000001\",\"doc\":\"DNI 70000001\",\"nombre\":\"JUAN PEREZ\",\"telefono\":\"900111222\"},\"items\":[{\"nombre\":\"RECA AIIA\",\"cantidad\":1,\"precio\":1200,\"total\":1200}],\"abonos\":[{\"abono_id\":77,\"aplicacion_id\":77,\"medio\":\"EFECTIVO\",\"referencia\":\"\",\"monto\":1200,\"monto_aplicado\":1200,\"monto_devuelto\":0,\"monto_neto\":1200,\"estado_code\":\"APLICADO\",\"estado_text\":\"Aplicado\",\"fecha\":\"2026-03-14 22:48:09\",\"creado_por\":10,\"creado_usuario\":\"12121212\",\"creado_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"}],\"totales\":{\"total\":1200,\"pagado\":1200,\"saldo\":0,\"devuelto\":0},\"refs\":{\"venta_id\":65,\"abono_ids\":[77]}}', 'EXACTO', NULL, '2026-03-14 22:48:09'),
+(2, 19, 'VENTA', 'ORIGINAL', 66, 'T018', 66, 'T018-0066', '2026-03-14 22:54:53', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', 'ticket80', '{\"version\":1,\"kind\":\"venta\",\"scope\":\"original\",\"exactitud\":\"EXACTO\",\"empresa\":{\"nombre\":\"LSISTEMAS\",\"razon_social\":\"LUIGI SISTEMAS\",\"ruc\":\"20601111111\",\"direccion\":\"Calle 8 de septiembre #1345\",\"logo_path\":\"almacen/2026/03/03/img_logos_empresas/logo-empresa-empresa-19-20260303T225708-f14484.png\"},\"meta\":{\"ticket\":\"T018-0066\",\"serie\":\"T018\",\"numero\":66,\"fecha_raw\":\"2026-03-14 22:54:53\",\"fecha_venta_raw\":\"2026-03-14 22:54:53\",\"alcance\":\"original\",\"alcance_label\":\"ORIGINAL\",\"estado_venta\":\"EMITIDA\",\"exactitud\":\"EXACTO\",\"cajero_operacion_id\":10,\"cajero_operacion_usuario\":\"12121212\",\"cajero_operacion_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\",\"reimpreso_por_id\":10,\"reimpreso_por_usuario\":\"12121212\",\"reimpreso_por_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"},\"cliente\":{\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70212121\",\"doc\":\"DNI 70212121\",\"nombre\":\"WILIE MARQUEZ\",\"telefono\":\"963232142\"},\"contratante\":{\"doc_tipo\":\"\",\"doc_numero\":\"\",\"doc\":\"\",\"nombre\":\"\",\"telefono\":\"\"},\"conductor\":{\"doc_tipo\":\"DNI\",\"doc_numero\":\"70212121\",\"doc\":\"DNI 70212121\",\"nombre\":\"WILIE MARQUEZ\",\"telefono\":\"963232142\"},\"items\":[{\"nombre\":\"Taller Cambiemos de Actitud\",\"cantidad\":1,\"precio\":350,\"total\":350}],\"abonos\":[{\"abono_id\":78,\"aplicacion_id\":78,\"medio\":\"EFECTIVO\",\"referencia\":\"\",\"monto\":100,\"monto_aplicado\":100,\"monto_devuelto\":0,\"monto_neto\":100,\"estado_code\":\"APLICADO\",\"estado_text\":\"Aplicado\",\"fecha\":\"2026-03-14 22:54:53\",\"creado_por\":10,\"creado_usuario\":\"12121212\",\"creado_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"}],\"totales\":{\"total\":350,\"pagado\":100,\"saldo\":250,\"devuelto\":0},\"refs\":{\"venta_id\":66,\"abono_ids\":[78]}}', 'EXACTO', NULL, '2026-03-14 22:54:53'),
+(3, 19, 'ABONO', 'ORIGINAL', 66, 'T018', 66, 'T018-0066', '2026-03-14 22:55:12', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', 'ticket80', '{\"version\":1,\"kind\":\"abono\",\"scope\":\"original\",\"exactitud\":\"EXACTO\",\"empresa\":{\"nombre\":\"LSISTEMAS\",\"razon_social\":\"LUIGI SISTEMAS\",\"ruc\":\"20601111111\",\"direccion\":\"Calle 8 de septiembre #1345\",\"logo_path\":\"almacen/2026/03/03/img_logos_empresas/logo-empresa-empresa-19-20260303T225708-f14484.png\"},\"meta\":{\"ticket\":\"T018-0066\",\"serie\":\"T018\",\"numero\":66,\"fecha_raw\":\"2026-03-14 22:55:12\",\"fecha_venta_raw\":\"2026-03-14 22:54:53\",\"alcance\":\"original\",\"alcance_label\":\"ORIGINAL\",\"estado_venta\":\"EMITIDA\",\"exactitud\":\"EXACTO\",\"cajero_operacion_id\":10,\"cajero_operacion_usuario\":\"12121212\",\"cajero_operacion_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\",\"reimpreso_por_id\":10,\"reimpreso_por_usuario\":\"12121212\",\"reimpreso_por_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"},\"cliente\":{\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70212121\",\"doc\":\"DNI 70212121\",\"nombre\":\"WILIE MARQUEZ\",\"telefono\":\"963232142\"},\"contratante\":{\"doc_tipo\":\"\",\"doc_numero\":\"\",\"doc\":\"\",\"nombre\":\"\",\"telefono\":\"\"},\"conductor\":{\"doc_tipo\":\"DNI\",\"doc_numero\":\"70212121\",\"doc\":\"DNI 70212121\",\"nombre\":\"WILIE MARQUEZ\",\"telefono\":\"963232142\"},\"items\":[{\"nombre\":\"Taller Cambiemos de Actitud\",\"cantidad\":1,\"precio\":350,\"total\":350}],\"abonos\":[{\"abono_id\":79,\"aplicacion_id\":79,\"medio\":\"YAPE\",\"referencia\":\"DD-DD\",\"monto\":100,\"monto_aplicado\":100,\"monto_devuelto\":0,\"monto_neto\":100,\"estado_code\":\"APLICADO\",\"estado_text\":\"Aplicado\",\"fecha\":\"2026-03-14 22:55:12\",\"creado_por\":10,\"creado_usuario\":\"12121212\",\"creado_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"}],\"totales\":{\"total\":350,\"pagado\":200,\"saldo\":150,\"devuelto\":0},\"refs\":{\"venta_id\":66,\"abono_ids\":[79]}}', 'EXACTO', NULL, '2026-03-14 22:55:12'),
+(4, 19, 'ABONO', 'ORIGINAL', 66, 'T018', 66, 'T018-0066', '2026-03-14 23:01:01', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', 'ticket80', '{\"version\":1,\"kind\":\"abono\",\"scope\":\"original\",\"exactitud\":\"EXACTO\",\"empresa\":{\"nombre\":\"LSISTEMAS\",\"razon_social\":\"LUIGI SISTEMAS\",\"ruc\":\"20601111111\",\"direccion\":\"Calle 8 de septiembre #1345\",\"logo_path\":\"almacen/2026/03/03/img_logos_empresas/logo-empresa-empresa-19-20260303T225708-f14484.png\"},\"meta\":{\"ticket\":\"T018-0066\",\"serie\":\"T018\",\"numero\":66,\"fecha_raw\":\"2026-03-14 23:01:01\",\"fecha_venta_raw\":\"2026-03-14 22:54:53\",\"alcance\":\"original\",\"alcance_label\":\"ORIGINAL\",\"estado_venta\":\"EMITIDA\",\"exactitud\":\"EXACTO\",\"cajero_operacion_id\":10,\"cajero_operacion_usuario\":\"12121212\",\"cajero_operacion_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\",\"reimpreso_por_id\":10,\"reimpreso_por_usuario\":\"12121212\",\"reimpreso_por_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"},\"cliente\":{\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70212121\",\"doc\":\"DNI 70212121\",\"nombre\":\"WILIE MARQUEZ\",\"telefono\":\"963232142\"},\"contratante\":{\"doc_tipo\":\"\",\"doc_numero\":\"\",\"doc\":\"\",\"nombre\":\"\",\"telefono\":\"\"},\"conductor\":{\"doc_tipo\":\"DNI\",\"doc_numero\":\"70212121\",\"doc\":\"DNI 70212121\",\"nombre\":\"WILIE MARQUEZ\",\"telefono\":\"963232142\"},\"items\":[{\"nombre\":\"Taller Cambiemos de Actitud\",\"cantidad\":1,\"precio\":350,\"total\":350}],\"abonos\":[{\"abono_id\":80,\"aplicacion_id\":80,\"medio\":\"EFECTIVO\",\"referencia\":\"\",\"monto\":20,\"monto_aplicado\":20,\"monto_devuelto\":0,\"monto_neto\":20,\"estado_code\":\"APLICADO\",\"estado_text\":\"Aplicado\",\"fecha\":\"2026-03-14 23:01:01\",\"creado_por\":10,\"creado_usuario\":\"12121212\",\"creado_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"}],\"totales\":{\"total\":350,\"pagado\":220,\"saldo\":130,\"devuelto\":0},\"refs\":{\"venta_id\":66,\"abono_ids\":[80]}}', 'EXACTO', NULL, '2026-03-14 23:01:01'),
+(5, 19, 'VENTA', 'ORIGINAL', 67, 'T018', 67, 'T018-0067', '2026-03-15 01:24:18', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', 'ticket80', '{\"version\":1,\"kind\":\"venta\",\"scope\":\"original\",\"exactitud\":\"EXACTO\",\"empresa\":{\"nombre\":\"LSISTEMAS\",\"razon_social\":\"LUIGI SISTEMAS\",\"ruc\":\"20601111111\",\"direccion\":\"Calle 8 de septiembre #1345\",\"logo_path\":\"almacen/2026/03/03/img_logos_empresas/logo-empresa-empresa-19-20260303T225708-f14484.png\"},\"meta\":{\"ticket\":\"T018-0067\",\"serie\":\"T018\",\"numero\":67,\"fecha_raw\":\"2026-03-15 01:24:18\",\"fecha_venta_raw\":\"2026-03-15 01:24:18\",\"alcance\":\"original\",\"alcance_label\":\"ORIGINAL\",\"estado_venta\":\"EMITIDA\",\"exactitud\":\"EXACTO\",\"cajero_operacion_id\":10,\"cajero_operacion_usuario\":\"12121212\",\"cajero_operacion_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\",\"reimpreso_por_id\":10,\"reimpreso_por_usuario\":\"12121212\",\"reimpreso_por_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"},\"cliente\":{\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"doc\":\"DNI 70379752\",\"nombre\":\"LUIGI ISRAEL VILLANUEVA PEREZ\",\"telefono\":\"964881854\"},\"contratante\":{\"doc_tipo\":\"\",\"doc_numero\":\"\",\"doc\":\"\",\"nombre\":\"\",\"telefono\":\"\"},\"conductor\":{\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"doc\":\"DNI 70379752\",\"nombre\":\"LUIGI ISRAEL VILLANUEVA PEREZ\",\"telefono\":\"964881854\"},\"items\":[{\"nombre\":\"Curso de actualización - Carga\",\"cantidad\":1,\"precio\":150,\"total\":150}],\"abonos\":[{\"abono_id\":81,\"aplicacion_id\":81,\"medio\":\"EFECTIVO\",\"referencia\":\"\",\"monto\":100,\"monto_aplicado\":100,\"monto_devuelto\":0,\"monto_neto\":100,\"estado_code\":\"APLICADO\",\"estado_text\":\"Aplicado\",\"fecha\":\"2026-03-15 01:24:18\",\"creado_por\":10,\"creado_usuario\":\"12121212\",\"creado_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"}],\"totales\":{\"total\":150,\"pagado\":100,\"saldo\":50,\"devuelto\":0},\"refs\":{\"venta_id\":67,\"abono_ids\":[81]}}', 'EXACTO', NULL, '2026-03-15 01:24:18'),
+(6, 19, 'ABONO', 'ORIGINAL', 67, 'T018', 67, 'T018-0067', '2026-03-15 01:24:18', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', 'ticket80', '{\"version\":1,\"kind\":\"abono\",\"scope\":\"original\",\"exactitud\":\"EXACTO\",\"empresa\":{\"nombre\":\"LSISTEMAS\",\"razon_social\":\"LUIGI SISTEMAS\",\"ruc\":\"20601111111\",\"direccion\":\"Calle 8 de septiembre #1345\",\"logo_path\":\"almacen/2026/03/03/img_logos_empresas/logo-empresa-empresa-19-20260303T225708-f14484.png\"},\"meta\":{\"ticket\":\"T018-0067\",\"serie\":\"T018\",\"numero\":67,\"fecha_raw\":\"2026-03-15 01:24:18\",\"fecha_venta_raw\":\"2026-03-15 01:24:18\",\"alcance\":\"original\",\"alcance_label\":\"ORIGINAL\",\"estado_venta\":\"EMITIDA\",\"exactitud\":\"EXACTO\",\"cajero_operacion_id\":10,\"cajero_operacion_usuario\":\"12121212\",\"cajero_operacion_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\",\"reimpreso_por_id\":10,\"reimpreso_por_usuario\":\"12121212\",\"reimpreso_por_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"},\"cliente\":{\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"doc\":\"DNI 70379752\",\"nombre\":\"LUIGI ISRAEL VILLANUEVA PEREZ\",\"telefono\":\"964881854\"},\"contratante\":{\"doc_tipo\":\"\",\"doc_numero\":\"\",\"doc\":\"\",\"nombre\":\"\",\"telefono\":\"\"},\"conductor\":{\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"doc\":\"DNI 70379752\",\"nombre\":\"LUIGI ISRAEL VILLANUEVA PEREZ\",\"telefono\":\"964881854\"},\"items\":[{\"nombre\":\"Curso de actualización - Carga\",\"cantidad\":1,\"precio\":150,\"total\":150}],\"abonos\":[{\"abono_id\":81,\"aplicacion_id\":81,\"medio\":\"EFECTIVO\",\"referencia\":\"\",\"monto\":100,\"monto_aplicado\":100,\"monto_devuelto\":0,\"monto_neto\":100,\"estado_code\":\"APLICADO\",\"estado_text\":\"Aplicado\",\"fecha\":\"2026-03-15 01:24:18\",\"creado_por\":10,\"creado_usuario\":\"12121212\",\"creado_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"}],\"totales\":{\"total\":150,\"pagado\":100,\"saldo\":50,\"devuelto\":0},\"refs\":{\"venta_id\":67,\"abono_ids\":[81]}}', 'EXACTO', NULL, '2026-03-15 01:24:18'),
+(7, 19, 'VENTA', 'ORIGINAL', 68, 'T018', 68, 'T018-0068', '2026-03-15 10:02:46', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', 'ticket80', '{\"version\":1,\"kind\":\"venta\",\"scope\":\"original\",\"exactitud\":\"EXACTO\",\"empresa\":{\"nombre\":\"LSISTEMAS\",\"razon_social\":\"LUIGI SISTEMAS\",\"ruc\":\"20601111111\",\"direccion\":\"Calle 8 de septiembre #1345\",\"logo_path\":\"almacen/2026/03/03/img_logos_empresas/logo-empresa-empresa-19-20260303T225708-f14484.png\"},\"meta\":{\"ticket\":\"T018-0068\",\"serie\":\"T018\",\"numero\":68,\"fecha_raw\":\"2026-03-15 10:02:46\",\"fecha_venta_raw\":\"2026-03-15 10:02:46\",\"alcance\":\"original\",\"alcance_label\":\"ORIGINAL\",\"estado_venta\":\"EMITIDA\",\"exactitud\":\"EXACTO\",\"cajero_operacion_id\":10,\"cajero_operacion_usuario\":\"12121212\",\"cajero_operacion_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\",\"reimpreso_por_id\":10,\"reimpreso_por_usuario\":\"12121212\",\"reimpreso_por_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"},\"cliente\":{\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"doc\":\"DNI 70379752\",\"nombre\":\"LUIGI ISRAEL VILLANUEVA PEREZ\",\"telefono\":\"\"},\"contratante\":{\"doc_tipo\":\"\",\"doc_numero\":\"\",\"doc\":\"\",\"nombre\":\"\",\"telefono\":\"\"},\"conductor\":{\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"doc\":\"DNI 70379752\",\"nombre\":\"LUIGI ISRAEL VILLANUEVA PEREZ\",\"telefono\":\"\"},\"items\":[{\"nombre\":\"Curso de actualización - Pasajeros\",\"cantidad\":1,\"precio\":150,\"total\":150}],\"abonos\":[{\"abono_id\":82,\"aplicacion_id\":82,\"medio\":\"EFECTIVO\",\"referencia\":\"\",\"monto\":150,\"monto_aplicado\":150,\"monto_devuelto\":0,\"monto_neto\":150,\"estado_code\":\"APLICADO\",\"estado_text\":\"Aplicado\",\"fecha\":\"2026-03-15 10:02:46\",\"creado_por\":10,\"creado_usuario\":\"12121212\",\"creado_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"}],\"totales\":{\"total\":150,\"pagado\":150,\"saldo\":0,\"devuelto\":0},\"refs\":{\"venta_id\":68,\"abono_ids\":[82]}}', 'EXACTO', NULL, '2026-03-15 10:02:46'),
+(8, 19, 'ABONO', 'ORIGINAL', 68, 'T018', 68, 'T018-0068', '2026-03-15 10:02:46', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', 'ticket80', '{\"version\":1,\"kind\":\"abono\",\"scope\":\"original\",\"exactitud\":\"EXACTO\",\"empresa\":{\"nombre\":\"LSISTEMAS\",\"razon_social\":\"LUIGI SISTEMAS\",\"ruc\":\"20601111111\",\"direccion\":\"Calle 8 de septiembre #1345\",\"logo_path\":\"almacen/2026/03/03/img_logos_empresas/logo-empresa-empresa-19-20260303T225708-f14484.png\"},\"meta\":{\"ticket\":\"T018-0068\",\"serie\":\"T018\",\"numero\":68,\"fecha_raw\":\"2026-03-15 10:02:46\",\"fecha_venta_raw\":\"2026-03-15 10:02:46\",\"alcance\":\"original\",\"alcance_label\":\"ORIGINAL\",\"estado_venta\":\"EMITIDA\",\"exactitud\":\"EXACTO\",\"cajero_operacion_id\":10,\"cajero_operacion_usuario\":\"12121212\",\"cajero_operacion_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\",\"reimpreso_por_id\":10,\"reimpreso_por_usuario\":\"12121212\",\"reimpreso_por_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"},\"cliente\":{\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"doc\":\"DNI 70379752\",\"nombre\":\"LUIGI ISRAEL VILLANUEVA PEREZ\",\"telefono\":\"\"},\"contratante\":{\"doc_tipo\":\"\",\"doc_numero\":\"\",\"doc\":\"\",\"nombre\":\"\",\"telefono\":\"\"},\"conductor\":{\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"doc\":\"DNI 70379752\",\"nombre\":\"LUIGI ISRAEL VILLANUEVA PEREZ\",\"telefono\":\"\"},\"items\":[{\"nombre\":\"Curso de actualización - Pasajeros\",\"cantidad\":1,\"precio\":150,\"total\":150}],\"abonos\":[{\"abono_id\":82,\"aplicacion_id\":82,\"medio\":\"EFECTIVO\",\"referencia\":\"\",\"monto\":150,\"monto_aplicado\":150,\"monto_devuelto\":0,\"monto_neto\":150,\"estado_code\":\"APLICADO\",\"estado_text\":\"Aplicado\",\"fecha\":\"2026-03-15 10:02:46\",\"creado_por\":10,\"creado_usuario\":\"12121212\",\"creado_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"}],\"totales\":{\"total\":150,\"pagado\":150,\"saldo\":0,\"devuelto\":0},\"refs\":{\"venta_id\":68,\"abono_ids\":[82]}}', 'EXACTO', NULL, '2026-03-15 10:02:46'),
+(9, 19, 'ABONO', 'ORIGINAL', 68, 'T018', 68, 'T018-0068', '2026-03-15 10:06:22', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', 'ticket80', '{\"version\":1,\"kind\":\"abono\",\"scope\":\"original\",\"exactitud\":\"EXACTO\",\"empresa\":{\"nombre\":\"LSISTEMAS\",\"razon_social\":\"LUIGI SISTEMAS\",\"ruc\":\"20601111111\",\"direccion\":\"Calle 8 de septiembre #1345\",\"logo_path\":\"almacen/2026/03/03/img_logos_empresas/logo-empresa-empresa-19-20260303T225708-f14484.png\"},\"meta\":{\"ticket\":\"T018-0068\",\"serie\":\"T018\",\"numero\":68,\"fecha_raw\":\"2026-03-15 10:06:22\",\"fecha_venta_raw\":\"2026-03-15 10:02:46\",\"alcance\":\"original\",\"alcance_label\":\"ORIGINAL\",\"estado_venta\":\"EMITIDA\",\"exactitud\":\"EXACTO\",\"cajero_operacion_id\":10,\"cajero_operacion_usuario\":\"12121212\",\"cajero_operacion_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\",\"reimpreso_por_id\":10,\"reimpreso_por_usuario\":\"12121212\",\"reimpreso_por_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"},\"cliente\":{\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"doc\":\"DNI 70379752\",\"nombre\":\"LUIGI ISRAEL VILLANUEVA PEREZ\",\"telefono\":\"\"},\"contratante\":{\"doc_tipo\":\"\",\"doc_numero\":\"\",\"doc\":\"\",\"nombre\":\"\",\"telefono\":\"\"},\"conductor\":{\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"doc\":\"DNI 70379752\",\"nombre\":\"LUIGI ISRAEL VILLANUEVA PEREZ\",\"telefono\":\"\"},\"items\":[{\"nombre\":\"Curso de actualización - Pasajeros\",\"cantidad\":1,\"precio\":150,\"total\":150}],\"abonos\":[{\"abono_id\":83,\"aplicacion_id\":83,\"medio\":\"EFECTIVO\",\"referencia\":\"\",\"monto\":100,\"monto_aplicado\":100,\"monto_devuelto\":0,\"monto_neto\":100,\"estado_code\":\"APLICADO\",\"estado_text\":\"Aplicado\",\"fecha\":\"2026-03-15 10:06:22\",\"creado_por\":10,\"creado_usuario\":\"12121212\",\"creado_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"}],\"totales\":{\"total\":150,\"pagado\":100,\"saldo\":50,\"devuelto\":150},\"refs\":{\"venta_id\":68,\"abono_ids\":[83]}}', 'EXACTO', NULL, '2026-03-15 10:06:22'),
+(10, 19, 'VENTA', 'ORIGINAL', 69, 'T018', 69, 'T018-0069', '2026-03-15 10:48:41', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', 'ticket80', '{\"version\":1,\"kind\":\"venta\",\"scope\":\"original\",\"exactitud\":\"EXACTO\",\"empresa\":{\"nombre\":\"LSISTEMAS\",\"razon_social\":\"LUIGI SISTEMAS\",\"ruc\":\"20601111111\",\"direccion\":\"Calle 8 de septiembre #1345\",\"logo_path\":\"almacen/2026/03/03/img_logos_empresas/logo-empresa-empresa-19-20260303T225708-f14484.png\"},\"meta\":{\"ticket\":\"T018-0069\",\"serie\":\"T018\",\"numero\":69,\"fecha_raw\":\"2026-03-15 10:48:41\",\"fecha_venta_raw\":\"2026-03-15 10:48:41\",\"alcance\":\"original\",\"alcance_label\":\"ORIGINAL\",\"estado_venta\":\"EMITIDA\",\"exactitud\":\"EXACTO\",\"cajero_operacion_id\":10,\"cajero_operacion_usuario\":\"12121212\",\"cajero_operacion_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\",\"reimpreso_por_id\":10,\"reimpreso_por_usuario\":\"12121212\",\"reimpreso_por_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"},\"cliente\":{\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"doc\":\"DNI 70379752\",\"nombre\":\"LUIGI ISRAEL VILLANUEVA PEREZ\",\"telefono\":\"\"},\"contratante\":{\"doc_tipo\":\"\",\"doc_numero\":\"\",\"doc\":\"\",\"nombre\":\"\",\"telefono\":\"\"},\"conductor\":{\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"doc\":\"DNI 70379752\",\"nombre\":\"LUIGI ISRAEL VILLANUEVA PEREZ\",\"telefono\":\"\"},\"items\":[{\"nombre\":\"RECA AIIB\",\"cantidad\":1,\"precio\":1100,\"total\":1100}],\"abonos\":[{\"abono_id\":84,\"aplicacion_id\":84,\"medio\":\"EFECTIVO\",\"referencia\":\"\",\"monto\":1100,\"monto_aplicado\":1100,\"monto_devuelto\":0,\"monto_neto\":1100,\"estado_code\":\"APLICADO\",\"estado_text\":\"Aplicado\",\"fecha\":\"2026-03-15 10:48:41\",\"creado_por\":10,\"creado_usuario\":\"12121212\",\"creado_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"}],\"totales\":{\"total\":1100,\"pagado\":1100,\"saldo\":0,\"devuelto\":0},\"refs\":{\"venta_id\":69,\"abono_ids\":[84]}}', 'EXACTO', NULL, '2026-03-15 10:48:41'),
+(11, 19, 'ABONO', 'ORIGINAL', 69, 'T018', 69, 'T018-0069', '2026-03-15 10:48:41', 10, '12121212', 'JOSE ALBERTO VARGAS CHAVEZ', 'ticket80', '{\"version\":1,\"kind\":\"abono\",\"scope\":\"original\",\"exactitud\":\"EXACTO\",\"empresa\":{\"nombre\":\"LSISTEMAS\",\"razon_social\":\"LUIGI SISTEMAS\",\"ruc\":\"20601111111\",\"direccion\":\"Calle 8 de septiembre #1345\",\"logo_path\":\"almacen/2026/03/03/img_logos_empresas/logo-empresa-empresa-19-20260303T225708-f14484.png\"},\"meta\":{\"ticket\":\"T018-0069\",\"serie\":\"T018\",\"numero\":69,\"fecha_raw\":\"2026-03-15 10:48:41\",\"fecha_venta_raw\":\"2026-03-15 10:48:41\",\"alcance\":\"original\",\"alcance_label\":\"ORIGINAL\",\"estado_venta\":\"EMITIDA\",\"exactitud\":\"EXACTO\",\"cajero_operacion_id\":10,\"cajero_operacion_usuario\":\"12121212\",\"cajero_operacion_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\",\"reimpreso_por_id\":10,\"reimpreso_por_usuario\":\"12121212\",\"reimpreso_por_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"},\"cliente\":{\"tipo_persona\":\"NATURAL\",\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"doc\":\"DNI 70379752\",\"nombre\":\"LUIGI ISRAEL VILLANUEVA PEREZ\",\"telefono\":\"\"},\"contratante\":{\"doc_tipo\":\"\",\"doc_numero\":\"\",\"doc\":\"\",\"nombre\":\"\",\"telefono\":\"\"},\"conductor\":{\"doc_tipo\":\"DNI\",\"doc_numero\":\"70379752\",\"doc\":\"DNI 70379752\",\"nombre\":\"LUIGI ISRAEL VILLANUEVA PEREZ\",\"telefono\":\"\"},\"items\":[{\"nombre\":\"RECA AIIB\",\"cantidad\":1,\"precio\":1100,\"total\":1100}],\"abonos\":[{\"abono_id\":84,\"aplicacion_id\":84,\"medio\":\"EFECTIVO\",\"referencia\":\"\",\"monto\":1100,\"monto_aplicado\":1100,\"monto_devuelto\":0,\"monto_neto\":1100,\"estado_code\":\"APLICADO\",\"estado_text\":\"Aplicado\",\"fecha\":\"2026-03-15 10:48:41\",\"creado_por\":10,\"creado_usuario\":\"12121212\",\"creado_nombre\":\"JOSE ALBERTO VARGAS CHAVEZ\"}],\"totales\":{\"total\":1100,\"pagado\":1100,\"saldo\":0,\"devuelto\":0},\"refs\":{\"venta_id\":69,\"abono_ids\":[84]}}', 'EXACTO', NULL, '2026-03-15 10:48:41');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `pos_comprobante_abonos`
+--
+
+CREATE TABLE `pos_comprobante_abonos` (
+  `id` bigint(20) UNSIGNED NOT NULL,
+  `comprobante_id` bigint(20) UNSIGNED NOT NULL,
+  `abono_id` bigint(20) UNSIGNED NOT NULL,
+  `venta_id` bigint(20) UNSIGNED NOT NULL,
+  `monto_aplicado_snapshot` decimal(14,2) NOT NULL DEFAULT 0.00,
+  `creado` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_spanish_ci;
+
+--
+-- Volcado de datos para la tabla `pos_comprobante_abonos`
+--
+
+INSERT INTO `pos_comprobante_abonos` (`id`, `comprobante_id`, `abono_id`, `venta_id`, `monto_aplicado_snapshot`, `creado`) VALUES
+(1, 3, 79, 66, 100.00, '2026-03-14 22:55:12'),
+(2, 4, 80, 66, 20.00, '2026-03-14 23:01:01'),
+(3, 6, 81, 67, 100.00, '2026-03-15 01:24:18'),
+(4, 8, 82, 68, 150.00, '2026-03-15 10:02:46'),
+(5, 9, 83, 68, 100.00, '2026-03-15 10:06:22'),
+(6, 11, 84, 69, 1100.00, '2026-03-15 10:48:41');
 
 -- --------------------------------------------------------
 
@@ -3394,7 +3660,14 @@ INSERT INTO `pos_conductores` (`id`, `id_empresa`, `doc_tipo`, `doc_numero`, `no
 (8, 19, 'DNI', '41414525', 'ANA LUCIA', 'JARA PEREZ', '966363636', NULL, 1, '2026-03-04 14:16:27', '2026-03-04 14:16:27'),
 (9, 19, 'DNI', '50504012', 'ALEXANDRA', 'ALAMA VASQUEZ', '966363254', NULL, 1, '2026-03-04 21:29:45', '2026-03-04 21:29:45'),
 (10, 19, 'CE', '90303060233', 'JULIAN', 'PEREZ PEREZ', '966636254', NULL, 1, '2026-03-05 16:09:22', '2026-03-05 16:09:22'),
-(11, 19, 'DNI', '70000000', 'PEPITO', 'RUIZ JUAREZ', '965555555', NULL, 1, '2026-03-05 16:19:50', '2026-03-05 16:19:50');
+(11, 19, 'DNI', '70000000', 'PEPITO', 'RUIZ JUAREZ', '965555555', NULL, 1, '2026-03-05 16:19:50', '2026-03-05 16:19:50'),
+(12, 19, 'DNI', '70020005', 'Pedro', 'Soto', '911222331', NULL, 1, '2026-03-14 12:14:13', '2026-03-14 12:14:13'),
+(13, 19, 'DNI', '46820517', 'Bruno', 'Soto Aguilar', '923456781', NULL, 1, '2026-03-14 13:23:27', '2026-03-14 13:23:27'),
+(14, 19, 'BREVETE', 'B90817263', 'Andrea', 'Peña Cárdenas', '923456782', NULL, 1, '2026-03-14 13:25:06', '2026-03-14 13:25:06'),
+(15, 19, 'DNI', '57284019', 'Santiago', 'Vega Lozano', '923456783', NULL, 1, '2026-03-14 13:28:30', '2026-03-14 13:28:30'),
+(16, 19, 'CE', '659301842', 'Lucía', 'Suárez Pinto', '923456784', NULL, 1, '2026-03-14 13:31:28', '2026-03-14 13:31:28'),
+(17, 19, 'BREVETE', 'B61529407', 'Iván', 'Quinteros Ledesma', '923456786', NULL, 1, '2026-03-14 19:45:37', '2026-03-14 19:45:37'),
+(18, 19, 'DNI', '54839271', 'Carla', 'Bautista Romero', '923456788', NULL, 1, '2026-03-14 19:52:18', '2026-03-14 19:52:18');
 
 -- --------------------------------------------------------
 
@@ -3415,6 +3688,23 @@ CREATE TABLE `pos_devoluciones` (
   `devuelto_por` int(10) UNSIGNED DEFAULT NULL,
   `devuelto_en` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_spanish_ci;
+
+--
+-- Volcado de datos para la tabla `pos_devoluciones`
+--
+
+INSERT INTO `pos_devoluciones` (`id`, `id_empresa`, `caja_diaria_id`, `venta_id`, `abono_aplicacion_id`, `medio_id`, `monto_devuelto`, `referencia`, `motivo`, `devuelto_por`, `devuelto_en`) VALUES
+(1, 19, 7, 43, 44, 1, 150.00, NULL, 'Su huella no pasa.', 10, '2026-03-13 08:03:27'),
+(2, 19, 7, 45, 46, 4, 500.00, NULL, 'La huella del cliente no pasaba', 10, '2026-03-13 10:59:26'),
+(3, 19, 7, 45, 47, 3, 400.00, NULL, 'La huella del cliente no pasaba', 10, '2026-03-13 10:59:26'),
+(4, 19, 8, 65, 77, 1, 1200.00, NULL, 'tyutyuytu', 10, '2026-03-14 22:50:06'),
+(5, 19, 8, 67, 81, 1, 100.00, NULL, 'ikk', 10, '2026-03-15 01:42:36'),
+(6, 19, 8, 66, 78, 1, 100.00, NULL, 'asdasd', 10, '2026-03-15 02:41:45'),
+(7, 19, 8, 66, 79, 2, 100.00, NULL, 'asdasd', 10, '2026-03-15 02:41:45'),
+(8, 19, 8, 66, 80, 1, 20.00, NULL, 'asdasd', 10, '2026-03-15 02:41:45'),
+(9, 19, 9, 68, 82, 1, 150.00, NULL, 'lllllllllllllllll', 10, '2026-03-15 10:04:51'),
+(10, 19, 9, 68, 83, 1, 100.00, NULL, 'l{ñ{', 10, '2026-03-15 10:08:13'),
+(11, 19, 9, 69, 84, 1, 1100.00, NULL, 'ddddddddddddd', 10, '2026-03-15 10:49:07');
 
 -- --------------------------------------------------------
 
@@ -3472,7 +3762,12 @@ INSERT INTO `pos_perfil_conductor` (`id`, `id_empresa`, `doc_tipo`, `doc_numero`
 (3, 19, 'DNI', '50201214', 'LLAMADA', 'qqq@gmail.com', '1980-09-09', 3, 9, 'Señor interesado en revalidar.', '2026-03-05 13:42:27', '2026-03-05 13:42:27'),
 (4, 19, 'CE', '90303060233', 'TIKTOK', 'aaa@gmail.com', '1975-08-08', 4, 9, 'Vio un tiktok y le dio risa, entonces vino al local.', '2026-03-05 16:09:22', '2026-03-05 16:09:22'),
 (5, 19, 'DNI', '70000000', 'TIKTOK', 'a@gmail.com', '1998-05-05', 4, 8, 'VIO UN TIKTOK Y LE GUSTÓ', '2026-03-05 16:19:50', '2026-03-05 16:19:50'),
-(6, 19, 'DNI', '78888876', 'FACEBOOK', NULL, '1999-03-04', 3, 10, 'El señor viene de una municipalidad posible convenio', '2026-03-10 11:43:19', '2026-03-10 11:43:19');
+(6, 19, 'DNI', '78888876', 'FACEBOOK', NULL, '1999-03-04', 3, 10, 'El señor viene de una municipalidad posible convenio', '2026-03-10 11:43:19', '2026-03-10 11:43:19'),
+(7, 19, 'DNI', '70010003', 'WHATSAPP', 'luis.test@demo.com', '1993-04-10', NULL, NULL, 'cliente satisfecho. Volverá.', '2026-03-14 11:57:54', '2026-03-14 11:57:54'),
+(8, 19, 'DNI', '57284019', 'SMS', 'santiago.vega+uatf401@example.com', '1993-11-27', NULL, NULL, 'Enviar aviso por SMS', '2026-03-14 13:28:30', '2026-03-14 13:28:30'),
+(9, 19, 'CE', '659301842', 'SMS', 'lucia.suarez+uatf402@example.com', '2001-05-09', NULL, NULL, 'Correo de confirmación requerido', '2026-03-14 13:31:28', '2026-03-14 13:31:28'),
+(10, 19, 'DNI', '68492017', 'WHATSAPP', 'renzo.flores+uatf601@example.com', '1985-01-22', 2, NULL, 'Enviar constancia firmada', '2026-03-14 19:40:16', '2026-03-14 19:40:16'),
+(11, 19, 'DNI', '54839271', 'SMS', 'carla.bautista+uatf802@example.com', '1998-05-12', 4, 9, 'Notificar por SMS al conductor', '2026-03-14 19:56:31', '2026-03-14 19:56:31');
 
 -- --------------------------------------------------------
 
@@ -3496,7 +3791,7 @@ CREATE TABLE `pos_series` (
 --
 
 INSERT INTO `pos_series` (`id`, `id_empresa`, `tipo_comprobante`, `serie`, `siguiente_numero`, `activo`, `creado`, `actualizado`) VALUES
-(1, 19, 'TICKET', 'T018', 43, 1, '2026-03-04 00:31:54', '2026-03-13 01:43:02');
+(1, 19, 'TICKET', 'T018', 70, 1, '2026-03-04 00:31:54', '2026-03-15 10:48:41');
 
 -- --------------------------------------------------------
 
@@ -3510,6 +3805,11 @@ CREATE TABLE `pos_ventas` (
   `caja_diaria_id` int(10) UNSIGNED NOT NULL,
   `serie_id` int(10) UNSIGNED NOT NULL,
   `cliente_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `cliente_snapshot_tipo_persona` enum('NATURAL','JURIDICA') DEFAULT NULL,
+  `cliente_snapshot_doc_tipo` enum('DNI','RUC','CE','PAS','BREVETE') DEFAULT NULL,
+  `cliente_snapshot_doc_numero` varchar(20) DEFAULT NULL,
+  `cliente_snapshot_nombre` varchar(200) DEFAULT NULL,
+  `cliente_snapshot_telefono` varchar(30) DEFAULT NULL,
   `contratante_doc_tipo` enum('DNI','CE','BREVETE') DEFAULT NULL,
   `contratante_doc_numero` varchar(32) DEFAULT NULL,
   `contratante_nombres` varchar(120) DEFAULT NULL,
@@ -3536,49 +3836,76 @@ CREATE TABLE `pos_ventas` (
 -- Volcado de datos para la tabla `pos_ventas`
 --
 
-INSERT INTO `pos_ventas` (`id`, `id_empresa`, `caja_diaria_id`, `serie_id`, `cliente_id`, `contratante_doc_tipo`, `contratante_doc_numero`, `contratante_nombres`, `contratante_apellidos`, `contratante_telefono`, `tipo_comprobante`, `serie`, `numero`, `fecha_emision`, `moneda`, `estado`, `total`, `total_pagado`, `total_devuelto`, `saldo`, `tiene_precio_temporal`, `observacion`, `creado_por`, `creado`, `actualizado`) VALUES
-(1, 19, 1, 1, 3, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 1, '2026-03-04 00:34:34', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 00:34:34', '2026-03-04 00:34:34'),
-(2, 19, 2, 1, 4, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 2, '2026-03-04 10:05:28', 'PEN', 'EMITIDA', 500.00, 200.00, 0.00, 300.00, 0, NULL, 10, '2026-03-04 10:05:28', '2026-03-04 10:05:28'),
-(3, 19, 2, 1, 5, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 3, '2026-03-04 11:25:54', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 11:25:54', '2026-03-04 11:25:54'),
-(4, 19, 2, 1, 6, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 4, '2026-03-04 13:29:25', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 13:29:25', '2026-03-04 13:29:25'),
-(5, 19, 2, 1, 3, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 5, '2026-03-04 13:32:25', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 13:32:25', '2026-03-04 13:32:25'),
-(6, 19, 2, 1, 7, 'DNI', '58585474', 'Luis', 'Aguilar', '9', 'TICKET', 'T018', 6, '2026-03-04 13:35:38', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 13:35:38', '2026-03-04 13:35:38'),
-(7, 19, 2, 1, 8, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 7, '2026-03-04 13:38:28', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 13:38:28', '2026-03-04 13:38:28'),
-(8, 19, 2, 1, 9, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 8, '2026-03-04 14:16:27', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 14:16:27', '2026-03-04 14:16:27'),
-(9, 19, 2, 1, 10, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 9, '2026-03-04 15:15:37', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 15:15:37', '2026-03-04 15:15:37'),
-(10, 19, 2, 1, 11, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 10, '2026-03-04 15:23:39', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 15:23:39', '2026-03-04 15:23:39'),
-(11, 19, 2, 1, 12, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 11, '2026-03-04 15:53:20', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 15:53:20', '2026-03-04 15:53:20'),
-(12, 19, 2, 1, 13, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 12, '2026-03-04 16:03:27', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 16:03:27', '2026-03-04 16:03:27'),
-(13, 19, 2, 1, 14, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 13, '2026-03-04 16:04:52', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 16:04:52', '2026-03-04 16:04:52'),
-(14, 19, 2, 1, 15, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 14, '2026-03-04 16:08:54', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 16:08:54', '2026-03-04 16:08:54'),
-(15, 19, 2, 1, 16, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 15, '2026-03-04 16:16:37', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 16:16:37', '2026-03-04 16:16:37'),
-(16, 19, 2, 1, 17, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 16, '2026-03-04 16:18:00', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 16:18:00', '2026-03-04 16:18:00'),
-(17, 19, 2, 1, 18, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 17, '2026-03-04 21:29:45', 'PEN', 'EMITIDA', 1200.00, 1000.00, 0.00, 200.00, 0, NULL, 10, '2026-03-04 21:29:45', '2026-03-04 21:29:45'),
-(18, 19, 3, 1, 19, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 18, '2026-03-05 09:42:20', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-05 09:42:20', '2026-03-05 09:42:20'),
-(19, 19, 3, 1, 20, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 19, '2026-03-05 09:56:05', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-05 09:56:05', '2026-03-05 09:56:05'),
-(20, 19, 3, 1, 21, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 20, '2026-03-05 13:40:04', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-05 13:40:04', '2026-03-05 13:40:04'),
-(21, 19, 3, 1, 22, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 21, '2026-03-05 13:42:27', 'PEN', 'EMITIDA', 1700.00, 1200.00, 0.00, 500.00, 0, NULL, 10, '2026-03-05 13:42:27', '2026-03-05 13:42:27'),
-(22, 19, 3, 1, 23, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 22, '2026-03-05 15:23:03', 'PEN', 'EMITIDA', 1200.00, 712.00, 0.00, 488.00, 0, NULL, 10, '2026-03-05 15:23:03', '2026-03-05 16:10:18'),
-(23, 19, 3, 1, 24, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 23, '2026-03-05 16:09:22', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-05 16:09:22', '2026-03-05 16:09:22'),
-(24, 19, 3, 1, 25, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 24, '2026-03-05 16:19:50', 'PEN', 'EMITIDA', 1200.00, 1000.00, 0.00, 200.00, 0, NULL, 10, '2026-03-05 16:19:50', '2026-03-05 16:19:50'),
-(25, 19, 4, 1, 26, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 25, '2026-03-06 17:46:04', 'PEN', 'EMITIDA', 4800.00, 4800.00, 0.00, 0.00, 0, NULL, 10, '2026-03-06 17:46:04', '2026-03-06 17:46:04'),
-(26, 19, 5, 1, 27, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 26, '2026-03-10 09:16:36', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-10 09:16:36', '2026-03-10 09:16:36'),
-(27, 19, 5, 1, 28, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 27, '2026-03-10 09:27:00', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-10 09:27:00', '2026-03-10 09:27:00'),
-(28, 19, 5, 1, 29, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 28, '2026-03-10 11:34:08', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-10 11:34:08', '2026-03-10 11:34:08'),
-(29, 19, 5, 1, 30, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 29, '2026-03-10 11:35:57', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-10 11:35:57', '2026-03-10 11:37:26'),
-(30, 19, 5, 1, 31, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 30, '2026-03-10 11:43:19', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-10 11:43:19', '2026-03-10 11:43:19'),
-(31, 19, 6, 1, 32, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 31, '2026-03-12 22:37:03', 'PEN', 'EMITIDA', 1050.00, 0.00, 0.00, 1050.00, 0, NULL, 10, '2026-03-12 22:37:03', '2026-03-12 22:37:03'),
-(32, 19, 6, 1, 32, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 32, '2026-03-12 22:38:23', 'PEN', 'EMITIDA', 1050.00, 0.00, 0.00, 1050.00, 0, NULL, 10, '2026-03-12 22:38:23', '2026-03-12 22:38:23'),
-(33, 19, 6, 1, 33, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 33, '2026-03-12 22:39:15', 'PEN', 'EMITIDA', 500.00, 0.00, 0.00, 500.00, 0, NULL, 10, '2026-03-12 22:39:15', '2026-03-12 22:39:15'),
-(34, 19, 6, 1, 32, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 34, '2026-03-12 22:51:20', 'PEN', 'EMITIDA', 1200.00, 0.00, 0.00, 1200.00, 0, NULL, 10, '2026-03-12 22:51:20', '2026-03-12 22:51:20'),
-(35, 19, 6, 1, 32, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 35, '2026-03-12 22:51:22', 'PEN', 'EMITIDA', 1200.00, 0.00, 0.00, 1200.00, 0, NULL, 10, '2026-03-12 22:51:22', '2026-03-12 22:51:22'),
-(36, 19, 6, 1, 32, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 36, '2026-03-12 22:58:24', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-12 22:58:24', '2026-03-12 22:58:24'),
-(37, 19, 6, 1, 34, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 37, '2026-03-12 23:01:16', 'PEN', 'EMITIDA', 1050.00, 500.00, 0.00, 550.00, 1, NULL, 10, '2026-03-12 23:01:16', '2026-03-12 23:01:16'),
-(38, 19, 6, 1, 35, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 38, '2026-03-12 23:59:00', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-12 23:59:00', '2026-03-12 23:59:00'),
-(39, 19, 6, 1, 36, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 39, '2026-03-13 00:00:06', 'PEN', 'EMITIDA', 1200.00, 0.00, 0.00, 1200.00, 0, NULL, 10, '2026-03-13 00:00:06', '2026-03-13 00:00:06'),
-(40, 19, 7, 1, 37, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 40, '2026-03-13 00:18:03', 'PEN', 'EMITIDA', 150.00, 0.00, 0.00, 150.00, 0, NULL, 10, '2026-03-13 00:18:03', '2026-03-13 00:18:03'),
-(41, 19, 7, 1, 38, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 41, '2026-03-13 01:41:01', 'PEN', 'EMITIDA', 600.00, 400.00, 0.00, 200.00, 0, NULL, 10, '2026-03-13 01:41:01', '2026-03-13 01:41:01'),
-(42, 19, 7, 1, 39, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 42, '2026-03-13 01:43:02', 'PEN', 'EMITIDA', 150.00, 150.00, 0.00, 0.00, 0, NULL, 10, '2026-03-13 01:43:02', '2026-03-13 01:43:02');
+INSERT INTO `pos_ventas` (`id`, `id_empresa`, `caja_diaria_id`, `serie_id`, `cliente_id`, `cliente_snapshot_tipo_persona`, `cliente_snapshot_doc_tipo`, `cliente_snapshot_doc_numero`, `cliente_snapshot_nombre`, `cliente_snapshot_telefono`, `contratante_doc_tipo`, `contratante_doc_numero`, `contratante_nombres`, `contratante_apellidos`, `contratante_telefono`, `tipo_comprobante`, `serie`, `numero`, `fecha_emision`, `moneda`, `estado`, `total`, `total_pagado`, `total_devuelto`, `saldo`, `tiene_precio_temporal`, `observacion`, `creado_por`, `creado`, `actualizado`) VALUES
+(1, 19, 1, 1, 3, 'NATURAL', 'DNI', '70366365', 'Maria Lopez', '966362532', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 1, '2026-03-04 00:34:34', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 00:34:34', '2026-03-14 16:41:30'),
+(2, 19, 2, 1, 4, 'NATURAL', 'DNI', '72554145', 'MELISA RODRIGUEZ', '966653254', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 2, '2026-03-04 10:05:28', 'PEN', 'EMITIDA', 500.00, 200.00, 0.00, 300.00, 0, NULL, 10, '2026-03-04 10:05:28', '2026-03-14 16:41:30'),
+(3, 19, 2, 1, 5, 'NATURAL', 'DNI', '48392015', 'Carlos Mendoza Ríos', '987654321', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 3, '2026-03-04 11:25:54', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 11:25:54', '2026-03-14 16:41:30'),
+(4, 19, 2, 1, 6, 'NATURAL', 'DNI', '52412514', 'KIMBERLY FLORES LOPEZ', '965252145', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 4, '2026-03-04 13:29:25', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 13:29:25', '2026-03-14 16:41:30'),
+(5, 19, 2, 1, 3, 'NATURAL', 'DNI', '70366365', 'Maria Lopez', '966362532', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 5, '2026-03-04 13:32:25', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 13:32:25', '2026-03-14 16:41:30'),
+(6, 19, 2, 1, 7, 'JURIDICA', 'RUC', '20603562514', 'EMPRESA CONSTRUCTORA SAC', '9', 'DNI', '58585474', 'Luis', 'Aguilar', '9', 'TICKET', 'T018', 6, '2026-03-04 13:35:38', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 13:35:38', '2026-03-14 16:41:30'),
+(7, 19, 2, 1, 8, 'NATURAL', 'CE', '48392716', 'Diego Ramírez Soto', '912345678', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 7, '2026-03-04 13:38:28', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 13:38:28', '2026-03-14 16:41:30'),
+(8, 19, 2, 1, 9, 'NATURAL', 'DNI', '41414251', 'JULIO VELASQUEZ QUESQUEN', '966565214', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 8, '2026-03-04 14:16:27', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 14:16:27', '2026-03-14 16:41:30'),
+(9, 19, 2, 1, 10, 'NATURAL', 'DNI', '70111141', 'Maricarmen Villalobos Alfaro', '9633632541', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 9, '2026-03-04 15:15:37', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 15:15:37', '2026-03-14 16:41:30'),
+(10, 19, 2, 1, 11, 'NATURAL', 'BREVETE', 'B63635478', 'MARIA ELENA COBARRUBIAS ALVA', '966663574', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 10, '2026-03-04 15:23:39', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 15:23:39', '2026-03-14 16:41:30'),
+(11, 19, 2, 1, 12, 'NATURAL', 'DNI', '70414215', 'CAMILA PAREDES GONZALES', '966565415', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 11, '2026-03-04 15:53:20', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 15:53:20', '2026-03-14 16:41:30'),
+(12, 19, 2, 1, 13, 'NATURAL', 'DNI', '41141251', 'CRISTIANM CASTRO CARRILLO', '965211412', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 12, '2026-03-04 16:03:27', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 16:03:27', '2026-03-14 16:41:30'),
+(13, 19, 2, 1, 14, 'NATURAL', 'DNI', '71114121', 'julian juarez juvenal', '963323214', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 13, '2026-03-04 16:04:52', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 16:04:52', '2026-03-14 16:41:30'),
+(14, 19, 2, 1, 15, 'NATURAL', 'DNI', '70414125', 'ALBERTO BARROS BAILON', '966363251', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 14, '2026-03-04 16:08:54', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 16:08:54', '2026-03-14 16:41:30'),
+(15, 19, 2, 1, 16, 'NATURAL', 'DNI', '70252541', 'melisa perez juarez', '963323214', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 15, '2026-03-04 16:16:37', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 16:16:37', '2026-03-14 16:41:30'),
+(16, 19, 2, 1, 17, 'NATURAL', 'DNI', '70333236', 'ROBERTO BLADES JUAREZ', '965554474', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 16, '2026-03-04 16:18:00', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-04 16:18:00', '2026-03-14 16:41:30'),
+(17, 19, 2, 1, 18, 'NATURAL', 'BREVETE', 'A63635412', 'CAMILA AMERICA', '96478547', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 17, '2026-03-04 21:29:45', 'PEN', 'EMITIDA', 1200.00, 1000.00, 0.00, 200.00, 0, NULL, 10, '2026-03-04 21:29:45', '2026-03-14 16:41:30'),
+(18, 19, 3, 1, 19, 'NATURAL', 'BREVETE', 'Q34567891', 'Luis Vargas Soto', '965874123', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 18, '2026-03-05 09:42:20', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-05 09:42:20', '2026-03-14 16:41:30'),
+(19, 19, 3, 1, 20, 'NATURAL', 'DNI', '59201734', 'Andrea Torres Vega', '944785236', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 19, '2026-03-05 09:56:05', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-05 09:56:05', '2026-03-14 16:41:30'),
+(20, 19, 3, 1, 21, 'NATURAL', 'DNI', '52625214', 'VICENTE CARDENAS CARDENAS', '963332145', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 20, '2026-03-05 13:40:04', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-05 13:40:04', '2026-03-14 16:41:30'),
+(21, 19, 3, 1, 22, 'NATURAL', 'DNI', '50201214', 'Miguel Mariños Marcial', '963323214', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 21, '2026-03-05 13:42:27', 'PEN', 'EMITIDA', 1700.00, 1200.00, 0.00, 500.00, 0, NULL, 10, '2026-03-05 13:42:27', '2026-03-14 16:41:30'),
+(22, 19, 3, 1, 23, 'NATURAL', 'DNI', '70555562', 'JUAN LUIS GUERRA PAZ', '963333632', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 22, '2026-03-05 15:23:03', 'PEN', 'EMITIDA', 1200.00, 712.00, 0.00, 488.00, 0, NULL, 10, '2026-03-05 15:23:03', '2026-03-14 16:41:30'),
+(23, 19, 3, 1, 24, 'NATURAL', 'DNI', '70333321', 'George Washington', '963323214', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 23, '2026-03-05 16:09:22', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-05 16:09:22', '2026-03-14 16:41:30'),
+(24, 19, 3, 1, 25, 'NATURAL', 'DNI', '703333215', 'JUAN JUAREZ JORA', '969696854', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 24, '2026-03-05 16:19:50', 'PEN', 'EMITIDA', 1200.00, 1000.00, 0.00, 200.00, 0, NULL, 10, '2026-03-05 16:19:50', '2026-03-14 16:41:30'),
+(25, 19, 4, 1, 26, 'NATURAL', 'DNI', '70554411', 'ELOISA MARTINEZ FERNANDEZ', '963323214', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 25, '2026-03-06 17:46:04', 'PEN', 'EMITIDA', 4800.00, 4800.00, 0.00, 0.00, 0, NULL, 10, '2026-03-06 17:46:04', '2026-03-14 16:41:30'),
+(26, 19, 5, 1, 27, 'NATURAL', 'DNI', '70333362', 'CRISTIAN SOTO SOL', '963332321', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 26, '2026-03-10 09:16:36', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-10 09:16:36', '2026-03-14 16:41:30'),
+(27, 19, 5, 1, 28, 'NATURAL', 'DNI', '70555542', 'JUAN LUIS VARGAS VARGAS', '963332142', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 27, '2026-03-10 09:27:00', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-10 09:27:00', '2026-03-14 16:41:30'),
+(28, 19, 5, 1, 29, 'NATURAL', 'DNI', '78888765', 'JUAN VARGAS VARGAS', '988887654', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 28, '2026-03-10 11:34:08', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-10 11:34:08', '2026-03-14 16:41:30'),
+(29, 19, 5, 1, 30, 'NATURAL', 'BREVETE', 'B76654543', 'JUANA GONZALES PEREZ', 'null', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 29, '2026-03-10 11:35:57', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-10 11:35:57', '2026-03-14 16:41:30'),
+(30, 19, 5, 1, 31, 'NATURAL', 'DNI', '78888876', 'LUIS VILLANUEVA', '964555532', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 30, '2026-03-10 11:43:19', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-10 11:43:19', '2026-03-14 16:41:30'),
+(31, 19, 6, 1, 32, 'NATURAL', 'DNI', '77889966', 'Luigi Villanueva', '964881842', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 31, '2026-03-12 22:37:03', 'PEN', 'EMITIDA', 1050.00, 0.00, 0.00, 1050.00, 0, NULL, 10, '2026-03-12 22:37:03', '2026-03-14 16:41:30'),
+(32, 19, 6, 1, 32, 'NATURAL', 'DNI', '77889966', 'Luigi Villanueva', '964881842', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 32, '2026-03-12 22:38:23', 'PEN', 'EMITIDA', 1050.00, 0.00, 0.00, 1050.00, 0, NULL, 10, '2026-03-12 22:38:23', '2026-03-14 16:41:30'),
+(33, 19, 6, 1, 33, 'NATURAL', 'DNI', '70444444', 'JUANA FLORES MARQUEZ', '964445124', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 33, '2026-03-12 22:39:15', 'PEN', 'EMITIDA', 500.00, 0.00, 0.00, 500.00, 0, NULL, 10, '2026-03-12 22:39:15', '2026-03-14 16:41:30'),
+(34, 19, 6, 1, 32, 'NATURAL', 'DNI', '77889966', 'Luigi Villanueva', '964881842', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 34, '2026-03-12 22:51:20', 'PEN', 'EMITIDA', 1200.00, 0.00, 0.00, 1200.00, 0, NULL, 10, '2026-03-12 22:51:20', '2026-03-14 16:41:30'),
+(35, 19, 6, 1, 32, 'NATURAL', 'DNI', '77889966', 'Luigi Villanueva', '964881842', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 35, '2026-03-12 22:51:22', 'PEN', 'EMITIDA', 1200.00, 0.00, 0.00, 1200.00, 0, NULL, 10, '2026-03-12 22:51:22', '2026-03-14 16:41:30'),
+(36, 19, 6, 1, 32, 'NATURAL', 'DNI', '77889966', 'Luigi Villanueva', '964881842', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 36, '2026-03-12 22:58:24', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-12 22:58:24', '2026-03-14 16:41:30'),
+(37, 19, 6, 1, 34, 'NATURAL', 'DNI', '70441336', 'Anastacia León León', '963332321', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 37, '2026-03-12 23:01:16', 'PEN', 'EMITIDA', 1050.00, 500.00, 0.00, 550.00, 1, NULL, 10, '2026-03-12 23:01:16', '2026-03-14 16:41:30'),
+(38, 19, 6, 1, 35, 'NATURAL', 'DNI', '70441212', 'LUIS GUERRA GUERRA', 'null', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 38, '2026-03-12 23:59:00', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-12 23:59:00', '2026-03-14 16:41:30'),
+(39, 19, 6, 1, 36, 'NATURAL', 'DNI', '70555523', 'LUIS GUERRA PAZ', 'null', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 39, '2026-03-13 00:00:06', 'PEN', 'EMITIDA', 1200.00, 0.00, 0.00, 1200.00, 0, NULL, 10, '2026-03-13 00:00:06', '2026-03-14 16:41:30'),
+(40, 19, 7, 1, 37, 'NATURAL', 'DNI', '70525142', 'DIANA PAZ', 'null', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 40, '2026-03-13 00:18:03', 'PEN', 'EMITIDA', 150.00, 150.00, 0.00, 0.00, 0, NULL, 10, '2026-03-13 00:18:03', '2026-03-14 16:41:30'),
+(41, 19, 7, 1, 38, 'NATURAL', 'DNI', '70123625', 'SANDRA ERIKA MONTOYA CAMARGO', '966635263', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 41, '2026-03-13 01:41:01', 'PEN', 'EMITIDA', 600.00, 500.00, 0.00, 100.00, 0, NULL, 10, '2026-03-13 01:41:01', '2026-03-14 16:41:30'),
+(42, 19, 7, 1, 39, 'NATURAL', 'DNI', '70455253', 'CYNTHIA MARIA CARMEN ROUILLON', '963323214', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 42, '2026-03-13 01:43:02', 'PEN', 'EMITIDA', 150.00, 150.00, 0.00, 0.00, 0, NULL, 10, '2026-03-13 01:43:02', '2026-03-14 16:41:30'),
+(43, 19, 7, 1, 40, 'NATURAL', 'DNI', '70379752', 'LUIGI ISRAEL VILLANUEVA PEREZ', '964881841', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 43, '2026-03-13 08:03:04', 'PEN', 'ANULADA', 150.00, 0.00, 150.00, 0.00, 0, ' | DEVOLUCIÓN: Su huella no pasa.', 10, '2026-03-13 08:03:04', '2026-03-15 07:37:08'),
+(44, 19, 7, 1, 41, 'NATURAL', 'DNI', '18198265', 'ROXANA MARILU TRELLES URQUIZA', '963632145', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 44, '2026-03-13 10:52:41', 'PEN', 'EMITIDA', 10.00, 10.00, 0.00, 0.00, 0, NULL, 10, '2026-03-13 10:52:41', '2026-03-14 16:41:30'),
+(45, 19, 7, 1, 42, 'NATURAL', 'DNI', '71252952', 'JHEFERSON ALESSANDRO RODRIGUEZ PAREDES', '963232142', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 45, '2026-03-13 10:56:42', 'PEN', 'ANULADA', 900.00, 0.00, 900.00, 0.00, 1, ' | DEVOLUCIÓN: La huella del cliente no pasaba', 10, '2026-03-13 10:56:42', '2026-03-15 07:37:08'),
+(46, 19, 7, 1, 43, 'NATURAL', 'DNI', '47305338', 'KARLA HELEN BELTRAN ARANDA', '964885412', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 46, '2026-03-13 11:04:41', 'PEN', 'EMITIDA', 150.00, 150.00, 0.00, 0.00, 0, NULL, 10, '2026-03-13 11:04:41', '2026-03-14 16:41:30'),
+(47, 19, 7, 1, 44, 'JURIDICA', 'RUC', '20482833811', 'ESCUELA DE CONDUCTORES INTEGRALES ALLAIN PROST E.I.R.L.', '965332321', 'CE', '7036365214', 'LUIS', 'PAREDES PAREDES', '965332321', 'TICKET', 'T018', 47, '2026-03-13 11:10:18', 'PEN', 'EMITIDA', 1100.00, 1100.00, 0.00, 0.00, 0, NULL, 10, '2026-03-13 11:10:18', '2026-03-14 16:41:30'),
+(48, 19, 7, 1, 45, 'NATURAL', 'DNI', '70352321', 'TATHIANA ALEXE MARIA CAMA CAMASCA', '963323214', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 48, '2026-03-13 15:27:42', 'PEN', 'EMITIDA', 150.00, 150.00, 0.00, 0.00, 0, NULL, 10, '2026-03-13 15:27:42', '2026-03-14 16:41:30'),
+(49, 19, 7, 1, 40, 'NATURAL', 'DNI', '70379752', 'LUIGI ISRAEL VILLANUEVA PEREZ', '964881841', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 49, '2026-03-13 21:31:29', 'PEN', 'EMITIDA', 150.00, 150.00, 0.00, 0.00, 0, NULL, 10, '2026-03-13 21:31:29', '2026-03-14 16:41:30'),
+(50, 19, 8, 1, 46, 'NATURAL', 'DNI', '70010001', 'Juan Perez', '900111111', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 50, '2026-03-14 11:53:21', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-14 11:53:21', '2026-03-14 11:53:21'),
+(51, 19, 8, 1, 47, 'NATURAL', 'CE', '70010002', 'Maria Loayza', '900111112', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 51, '2026-03-14 11:54:45', 'PEN', 'EMITIDA', 10.00, 10.00, 0.00, 0.00, 0, NULL, 10, '2026-03-14 11:54:45', '2026-03-14 11:54:45'),
+(52, 19, 8, 1, 48, 'NATURAL', 'DNI', '70010003', 'Luis Vargas', '900111113', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 52, '2026-03-14 11:57:54', 'PEN', 'EMITIDA', 1100.00, 1100.00, 0.00, 0.00, 0, NULL, 10, '2026-03-14 11:57:54', '2026-03-14 11:57:54'),
+(53, 19, 8, 1, 49, 'NATURAL', 'DNI', '70010005', 'Ana Ruiz', '900111115', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 53, '2026-03-14 12:14:13', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-14 12:14:13', '2026-03-14 12:14:13'),
+(54, 19, 8, 1, 50, 'NATURAL', 'CE', '70010006', 'Elena Paz', '900111116', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 54, '2026-03-14 12:34:19', 'PEN', 'EMITIDA', 1200.00, 1200.00, 0.00, 0.00, 0, NULL, 10, '2026-03-14 12:34:19', '2026-03-14 12:34:19'),
+(55, 19, 8, 1, 51, 'NATURAL', 'DNI', '52719384', 'Rocío Castro Luna Arce', '912345675', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 55, '2026-03-14 13:23:27', 'PEN', 'EMITIDA', 120.00, 120.00, 0.00, 0.00, 0, NULL, 10, '2026-03-14 13:23:27', '2026-03-14 13:23:27'),
+(56, 19, 8, 1, 52, 'NATURAL', 'DNI', '784512309', 'Matías Herrera Campos', '912345676', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 56, '2026-03-14 13:25:06', 'PEN', 'EMITIDA', 600.00, 600.00, 0.00, 0.00, 0, NULL, 10, '2026-03-14 13:25:06', '2026-03-14 13:25:06'),
+(57, 19, 8, 1, 53, 'NATURAL', 'DNI', '63917420', 'Fernanda Núñez Ramos', '912345677', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 57, '2026-03-14 13:28:30', 'PEN', 'EMITIDA', 1000.00, 1000.00, 0.00, 0.00, 0, NULL, 10, '2026-03-14 13:28:30', '2026-03-14 13:28:30'),
+(58, 19, 8, 1, 54, 'NATURAL', 'DNI', '47820563', 'Kevin Torres Mejía', '912345678', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 58, '2026-03-14 13:31:28', 'PEN', 'EMITIDA', 1500.00, 1500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-14 13:31:28', '2026-03-14 13:31:28'),
+(59, 19, 8, 1, 55, 'JURIDICA', 'RUC', '20574839216', 'Servicios Andinos UAT S.A.C.', '912345679', 'DNI', '71640258', 'Marcos', 'Cruz Valdivia', '912345679', 'TICKET', 'T018', 59, '2026-03-14 19:34:48', 'PEN', 'EMITIDA', 1100.00, 1100.00, 0.00, 0.00, 0, NULL, 10, '2026-03-14 19:34:48', '2026-03-14 19:34:48'),
+(60, 19, 8, 1, 56, 'JURIDICA', 'RUC', '20650173928', 'Constructora Nuevo Horizonte UAT S.R.L.', '912345681', 'DNI', '68492017', 'Renzo', 'Flores Castañeda', '912345681', 'TICKET', 'T018', 60, '2026-03-14 19:40:16', 'PEN', 'EMITIDA', 500.00, 500.00, 0.00, 0.00, 0, NULL, 10, '2026-03-14 19:40:16', '2026-03-14 19:40:16'),
+(61, 19, 8, 1, 57, 'JURIDICA', 'RUC', '20948573612', 'Grupo Ferretero Tambo UAT S.R.L.', '739201458', 'CE', '912345684', 'Elena', 'Navarro Cordero', '739201458', 'TICKET', 'T018', 61, '2026-03-14 19:45:37', 'PEN', 'EMITIDA', 1000.00, 1000.00, 0.00, 0.00, 0, NULL, 10, '2026-03-14 19:45:37', '2026-03-14 19:45:37'),
+(62, 19, 8, 1, 58, 'JURIDICA', 'RUC', '20173948526', 'Tecnored UAT Solutions S.A.C.', '912345686', 'BREVETE', 'A90371642', 'Nicolás', 'Ávila Sarmiento', '912345686', 'TICKET', 'T018', 62, '2026-03-14 19:52:18', 'PEN', 'EMITIDA', 600.00, 600.00, 0.00, 0.00, 0, NULL, 10, '2026-03-14 19:52:18', '2026-03-14 19:52:18'),
+(63, 19, 8, 1, 58, 'JURIDICA', 'RUC', '20173948526', 'Tecnored UAT Solutions S.A.C.', '912345686', 'BREVETE', 'A90371642', 'Nicolás', 'Ávila Sarmiento', '912345686', 'TICKET', 'T018', 63, '2026-03-14 19:56:31', 'PEN', 'EMITIDA', 150.00, 150.00, 0.00, 0.00, 0, NULL, 10, '2026-03-14 19:56:31', '2026-03-14 19:56:31'),
+(64, 19, 8, 1, 40, 'NATURAL', 'DNI', '70379752', 'LUIGI ISRAEL VILLANUEVA PEREZ', '964881842', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 64, '2026-03-14 20:00:17', 'PEN', 'EMITIDA', 10.00, 10.00, 0.00, 0.00, 0, NULL, 10, '2026-03-14 20:00:17', '2026-03-14 20:00:51'),
+(65, 19, 8, 1, 59, 'NATURAL', 'DNI', '70000001', 'JUAN PEREZ', '900111222', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 65, '2026-03-14 22:48:09', 'PEN', 'ANULADA', 1200.00, 0.00, 1200.00, 0.00, 0, ' | DEVOLUCIÓN: tyutyuytu', 10, '2026-03-14 22:48:09', '2026-03-15 07:37:08'),
+(66, 19, 8, 1, 60, 'NATURAL', 'DNI', '70212121', 'WILIE MARQUEZ', '963232142', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 66, '2026-03-14 22:54:53', 'PEN', 'ANULADA', 350.00, 0.00, 220.00, 0.00, 0, ' | DEVOLUCION TOTAL: asdasd', 10, '2026-03-14 22:54:53', '2026-03-15 02:41:45'),
+(67, 19, 8, 1, 40, 'NATURAL', 'DNI', '70379752', 'LUIGI ISRAEL VILLANUEVA PEREZ', '964881854', NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 67, '2026-03-15 01:24:18', 'PEN', 'ANULADA', 150.00, 0.00, 100.00, 0.00, 0, ' | ANULADA: tg', 10, '2026-03-15 01:24:18', '2026-03-15 07:37:08'),
+(68, 19, 9, 1, 40, 'NATURAL', 'DNI', '70379752', 'LUIGI ISRAEL VILLANUEVA PEREZ', NULL, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 68, '2026-03-15 10:02:46', 'PEN', 'ANULADA', 150.00, 0.00, 250.00, 0.00, 0, ' | DEVOLUCION TOTAL: gttrr', 10, '2026-03-15 10:02:46', '2026-03-15 10:08:23'),
+(69, 19, 9, 1, 40, 'NATURAL', 'DNI', '70379752', 'LUIGI ISRAEL VILLANUEVA PEREZ', NULL, NULL, NULL, NULL, NULL, NULL, 'TICKET', 'T018', 69, '2026-03-15 10:48:41', 'PEN', 'EMITIDA', 1100.00, 0.00, 1100.00, 1100.00, 0, NULL, 10, '2026-03-15 10:48:41', '2026-03-15 10:49:07');
 
 -- --------------------------------------------------------
 
@@ -3594,6 +3921,18 @@ CREATE TABLE `pos_ventas_anulaciones` (
   `anulado_en` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_spanish_ci;
 
+--
+-- Volcado de datos para la tabla `pos_ventas_anulaciones`
+--
+
+INSERT INTO `pos_ventas_anulaciones` (`id`, `venta_id`, `motivo`, `anulado_por`, `anulado_en`) VALUES
+(1, 43, 'Su huella no pasa.', 10, '2026-03-13 08:03:27'),
+(2, 45, 'La huella del cliente no pasaba', 10, '2026-03-13 10:59:26'),
+(3, 65, 'tyutyuytu', 10, '2026-03-14 22:50:06'),
+(4, 67, 'tg', 10, '2026-03-15 01:25:17'),
+(6, 66, 'asdasd', 10, '2026-03-15 02:41:45'),
+(7, 68, 'gttrr', 10, '2026-03-15 10:08:23');
+
 -- --------------------------------------------------------
 
 --
@@ -3605,11 +3944,20 @@ CREATE TABLE `pos_venta_conductores` (
   `venta_id` bigint(20) UNSIGNED NOT NULL,
   `conductor_tipo` enum('CLIENTE','REGISTRADO','PENDIENTE') NOT NULL,
   `conductor_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `conductor_doc_tipo` enum('DNI','CE','PAS','BREVETE') DEFAULT NULL,
+  `conductor_doc_numero` varchar(20) DEFAULT NULL,
+  `conductor_nombres` varchar(120) DEFAULT NULL,
+  `conductor_apellidos` varchar(120) DEFAULT NULL,
+  `conductor_telefono` varchar(30) DEFAULT NULL,
+  `conductor_es_mismo_cliente` tinyint(1) NOT NULL DEFAULT 0,
+  `conductor_origen` varchar(40) DEFAULT NULL,
   `estado` enum('ASIGNADO','PENDIENTE','ANULADO') NOT NULL DEFAULT 'ASIGNADO',
   `es_principal` tinyint(1) NOT NULL DEFAULT 0,
   `canal` varchar(30) DEFAULT NULL,
   `email_contacto` varchar(150) DEFAULT NULL,
   `nacimiento` date DEFAULT NULL,
+  `conductor_categoria_auto_id` smallint(5) UNSIGNED DEFAULT NULL,
+  `conductor_categoria_moto_id` smallint(5) UNSIGNED DEFAULT NULL,
   `nota` varchar(255) DEFAULT NULL,
   `creado` datetime NOT NULL DEFAULT current_timestamp(),
   `actualizado` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
@@ -3619,44 +3967,71 @@ CREATE TABLE `pos_venta_conductores` (
 -- Volcado de datos para la tabla `pos_venta_conductores`
 --
 
-INSERT INTO `pos_venta_conductores` (`id`, `venta_id`, `conductor_tipo`, `conductor_id`, `estado`, `es_principal`, `canal`, `email_contacto`, `nacimiento`, `nota`, `creado`, `actualizado`) VALUES
-(1, 1, 'REGISTRADO', 3, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-04 00:34:34', '2026-03-04 00:34:34'),
-(2, 2, 'REGISTRADO', 4, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-04 10:05:28', '2026-03-04 10:05:28'),
-(3, 3, 'REGISTRADO', 5, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-04 11:25:54', '2026-03-04 11:25:54'),
-(4, 4, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-04 13:29:25', '2026-03-04 13:29:25'),
-(5, 5, 'REGISTRADO', 6, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-04 13:32:25', '2026-03-04 13:32:25'),
-(6, 6, 'REGISTRADO', 7, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-04 13:35:38', '2026-03-04 13:35:38'),
-(7, 7, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-04 13:38:28', '2026-03-04 13:38:28'),
-(8, 8, 'REGISTRADO', 8, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-04 14:16:27', '2026-03-04 14:16:27'),
-(9, 9, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-04 15:15:37', '2026-03-04 15:15:37'),
-(10, 10, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-04 15:23:39', '2026-03-04 15:23:39'),
-(11, 11, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-04 15:53:20', '2026-03-04 15:53:20'),
-(12, 12, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-04 16:03:27', '2026-03-04 16:03:27'),
-(13, 13, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-04 16:04:52', '2026-03-04 16:04:52'),
-(14, 14, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-04 16:08:54', '2026-03-04 16:08:54'),
-(15, 15, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-04 16:16:37', '2026-03-04 16:16:37'),
-(16, 16, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-04 16:18:00', '2026-03-04 16:18:00'),
-(17, 17, 'REGISTRADO', 9, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-04 21:29:45', '2026-03-04 21:29:45'),
-(18, 18, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-05 09:42:20', '2026-03-05 09:42:20'),
-(19, 19, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-05 09:56:05', '2026-03-05 09:56:05'),
-(20, 20, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-05 13:40:04', '2026-03-05 13:40:04'),
-(21, 21, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-05 13:42:27', '2026-03-05 13:42:27'),
-(22, 22, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-05 15:23:03', '2026-03-05 15:23:03'),
-(23, 23, 'REGISTRADO', 10, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-05 16:09:22', '2026-03-05 16:09:22'),
-(24, 24, 'REGISTRADO', 11, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-05 16:19:50', '2026-03-05 16:19:50'),
-(25, 25, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-06 17:46:04', '2026-03-06 17:46:04'),
-(26, 26, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-10 09:16:36', '2026-03-10 09:16:36'),
-(27, 27, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-10 09:27:00', '2026-03-10 09:27:00'),
-(28, 28, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-10 11:34:08', '2026-03-10 11:34:08'),
-(29, 29, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-10 11:35:57', '2026-03-10 11:35:57'),
-(30, 30, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-10 11:43:19', '2026-03-10 11:43:19'),
-(31, 36, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-12 22:58:24', '2026-03-12 22:58:24'),
-(32, 37, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-12 23:01:16', '2026-03-12 23:01:16'),
-(33, 38, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-12 23:59:00', '2026-03-12 23:59:00'),
-(34, 39, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-13 00:00:06', '2026-03-13 00:00:06'),
-(35, 40, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-13 00:18:03', '2026-03-13 00:18:03'),
-(36, 41, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-13 01:41:01', '2026-03-13 01:41:01'),
-(37, 42, 'CLIENTE', NULL, 'ASIGNADO', 1, NULL, NULL, NULL, NULL, '2026-03-13 01:43:02', '2026-03-13 01:43:02');
+INSERT INTO `pos_venta_conductores` (`id`, `venta_id`, `conductor_tipo`, `conductor_id`, `conductor_doc_tipo`, `conductor_doc_numero`, `conductor_nombres`, `conductor_apellidos`, `conductor_telefono`, `conductor_es_mismo_cliente`, `conductor_origen`, `estado`, `es_principal`, `canal`, `email_contacto`, `nacimiento`, `conductor_categoria_auto_id`, `conductor_categoria_moto_id`, `nota`, `creado`, `actualizado`) VALUES
+(1, 1, 'REGISTRADO', 3, 'DNI', '70366365', 'JULIAN', 'ALVAREZ MANA', '965541421', 0, 'conductor_otra_persona', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-04 00:34:34', '2026-03-14 16:41:30'),
+(2, 2, 'REGISTRADO', 4, 'DNI', '72554145', 'MELISA', 'RODRIGUEZ', '966653254', 0, 'conductor_otra_persona', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-04 10:05:28', '2026-03-14 16:41:30'),
+(3, 3, 'REGISTRADO', 5, 'DNI', '48392015', 'Carlos', 'Mendoza Ríos', '987654321', 0, 'conductor_otra_persona', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-04 11:25:54', '2026-03-14 16:41:30'),
+(4, 4, 'CLIENTE', NULL, 'DNI', '52412514', 'KIMBERLY FLORES LOPEZ', 'FLORES LOPEZ', '965252145', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-04 13:29:25', '2026-03-14 16:41:30'),
+(5, 5, 'REGISTRADO', 6, 'DNI', '44556677', 'Juan', 'Perez', '966363623', 0, 'conductor_otra_persona', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-04 13:32:25', '2026-03-14 16:41:30'),
+(6, 6, 'REGISTRADO', 7, 'DNI', '70363636', 'Americo', 'Barrios Canto', '966366632', 0, 'conductor_otra_persona', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-04 13:35:38', '2026-03-14 16:41:30'),
+(7, 7, 'CLIENTE', NULL, 'CE', '48392716', 'Diego Ramírez Soto', 'Ramírez Soto', '912345678', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-04 13:38:28', '2026-03-14 16:41:30'),
+(8, 8, 'REGISTRADO', 8, 'DNI', '41414525', 'ANA LUCIA', 'JARA PEREZ', '966363636', 0, 'conductor_otra_persona', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-04 14:16:27', '2026-03-14 16:41:30'),
+(9, 9, 'CLIENTE', NULL, 'DNI', '70111141', 'Maricarmen Villalobos Alfaro', 'Villalobos Alfaro', '9633632541', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-04 15:15:37', '2026-03-14 16:41:30'),
+(10, 10, 'CLIENTE', NULL, 'BREVETE', 'B63635478', 'MARIA ELENA COBARRUBIAS ALVA', 'COBARRUBIAS ALVA', '966663574', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-04 15:23:39', '2026-03-14 16:41:30'),
+(11, 11, 'CLIENTE', NULL, 'DNI', '70414215', 'CAMILA PAREDES GONZALES', 'PAREDES GONZALES', '966565415', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-04 15:53:20', '2026-03-14 16:41:30'),
+(12, 12, 'CLIENTE', NULL, 'DNI', '41141251', 'CRISTIANM CASTRO CARRILLO', 'CASTRO CARRILLO', '965211412', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-04 16:03:27', '2026-03-14 16:41:30'),
+(13, 13, 'CLIENTE', NULL, 'DNI', '71114121', 'julian juarez juvenal', 'juarez juvenal', '963323214', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-04 16:04:52', '2026-03-14 16:41:30'),
+(14, 14, 'CLIENTE', NULL, 'DNI', '70414125', 'ALBERTO BARROS BAILON', 'BARROS BAILON', '966363251', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-04 16:08:54', '2026-03-14 16:41:30'),
+(15, 15, 'CLIENTE', NULL, 'DNI', '70252541', 'melisa perez juarez', 'perez juarez', '963323214', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-04 16:16:37', '2026-03-14 16:41:30'),
+(16, 16, 'CLIENTE', NULL, 'DNI', '70333236', 'ROBERTO BLADES JUAREZ', 'BLADES JUAREZ', '965554474', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-04 16:18:00', '2026-03-14 16:41:30'),
+(17, 17, 'REGISTRADO', 9, 'DNI', '50504012', 'ALEXANDRA', 'ALAMA VASQUEZ', '966363254', 0, 'conductor_otra_persona', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-04 21:29:45', '2026-03-14 16:41:30'),
+(18, 18, 'CLIENTE', NULL, 'BREVETE', 'Q34567891', 'Luis Vargas Soto', 'Vargas Soto', '965874123', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-05 09:42:20', '2026-03-14 16:41:30'),
+(19, 19, 'CLIENTE', NULL, 'DNI', '59201734', 'Andrea Torres Vega', 'Torres Vega', '944785236', 1, 'cliente_natural', 'ASIGNADO', 1, 'WHATSAPP', 'juan.ramirez@mail.com', '1995-05-12', 1, NULL, 'Interesado en curso básico', '2026-03-05 09:56:05', '2026-03-14 16:41:30'),
+(20, 20, 'CLIENTE', NULL, 'DNI', '52625214', 'VICENTE CARDENAS CARDENAS', 'CARDENAS CARDENAS', '963332145', 1, 'cliente_natural', 'ASIGNADO', 1, 'LLAMADA', 'a@gmail.com', '1999-09-06', 5, 9, 'El señor viajará pronto.', '2026-03-05 13:40:04', '2026-03-14 16:41:30'),
+(21, 21, 'CLIENTE', NULL, 'DNI', '50201214', 'Miguel Mariños Marcial', 'Mariños Marcial', '963323214', 1, 'cliente_natural', 'ASIGNADO', 1, 'LLAMADA', 'qqq@gmail.com', '1980-09-09', 3, 9, 'Señor interesado en revalidar.', '2026-03-05 13:42:27', '2026-03-14 16:41:30'),
+(22, 22, 'CLIENTE', NULL, 'DNI', '70555562', 'JUAN LUIS GUERRA PAZ', 'GUERRA PAZ', '963333632', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-05 15:23:03', '2026-03-14 16:41:30'),
+(23, 23, 'REGISTRADO', 10, 'CE', '90303060233', 'JULIAN', 'PEREZ PEREZ', '966636254', 0, 'conductor_otra_persona', 'ASIGNADO', 1, 'TIKTOK', 'aaa@gmail.com', '1975-08-08', 4, 9, 'Vio un tiktok y le dio risa, entonces vino al local.', '2026-03-05 16:09:22', '2026-03-14 16:41:30'),
+(24, 24, 'REGISTRADO', 11, 'DNI', '70000000', 'PEPITO', 'RUIZ JUAREZ', '965555555', 0, 'conductor_otra_persona', 'ASIGNADO', 1, 'TIKTOK', 'a@gmail.com', '1998-05-05', 4, 8, 'VIO UN TIKTOK Y LE GUSTÓ', '2026-03-05 16:19:50', '2026-03-14 16:41:30'),
+(25, 25, 'CLIENTE', NULL, 'DNI', '70554411', 'ELOISA MARTINEZ FERNANDEZ', 'MARTINEZ FERNANDEZ', '963323214', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-06 17:46:04', '2026-03-14 16:41:30'),
+(26, 26, 'CLIENTE', NULL, 'DNI', '70333362', 'CRISTIAN SOTO SOL', 'SOTO SOL', '963332321', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-10 09:16:36', '2026-03-14 16:41:30'),
+(27, 27, 'CLIENTE', NULL, 'DNI', '70555542', 'JUAN LUIS VARGAS VARGAS', 'VARGAS VARGAS', '963332142', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-10 09:27:00', '2026-03-14 16:41:30'),
+(28, 28, 'CLIENTE', NULL, 'DNI', '78888765', 'JUAN VARGAS VARGAS', 'VARGAS VARGAS', '988887654', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-10 11:34:08', '2026-03-14 16:41:30'),
+(29, 29, 'CLIENTE', NULL, 'BREVETE', 'B76654543', 'JUANA GONZALES PEREZ', 'GONZALES PEREZ', 'null', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-10 11:35:57', '2026-03-14 16:41:30'),
+(30, 30, 'CLIENTE', NULL, 'DNI', '78888876', 'LUIS VILLANUEVA', 'VILLANUEVA', '964555532', 1, 'cliente_natural', 'ASIGNADO', 1, 'FACEBOOK', 'null', '1999-03-04', 3, 10, 'El señor viene de una municipalidad posible convenio', '2026-03-10 11:43:19', '2026-03-14 16:41:30'),
+(31, 36, 'CLIENTE', NULL, 'DNI', '77889966', 'Luigi Villanueva', 'Villanueva', '964881842', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-12 22:58:24', '2026-03-14 16:41:30'),
+(32, 37, 'CLIENTE', NULL, 'DNI', '70441336', 'Anastacia León León', 'León León', '963332321', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-12 23:01:16', '2026-03-14 16:41:30'),
+(33, 38, 'CLIENTE', NULL, 'DNI', '70441212', 'LUIS GUERRA GUERRA', 'GUERRA GUERRA', 'null', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-12 23:59:00', '2026-03-14 16:41:30'),
+(34, 39, 'CLIENTE', NULL, 'DNI', '70555523', 'LUIS GUERRA PAZ', 'GUERRA PAZ', 'null', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-13 00:00:06', '2026-03-14 16:41:30'),
+(35, 40, 'CLIENTE', NULL, 'DNI', '70525142', 'DIANA PAZ', 'PAZ', 'null', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-13 00:18:03', '2026-03-14 16:41:30'),
+(36, 41, 'CLIENTE', NULL, 'DNI', '70123625', 'SANDRA ERIKA MONTOYA CAMARGO', 'MONTOYA CAMARGO', '966635263', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-13 01:41:01', '2026-03-14 16:41:30'),
+(37, 42, 'CLIENTE', NULL, 'DNI', '70455253', 'CYNTHIA MARIA CARMEN ROUILLON', 'CARMEN ROUILLON', '963323214', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-13 01:43:02', '2026-03-14 16:41:30'),
+(38, 43, 'CLIENTE', NULL, 'DNI', '70379752', 'LUIGI ISRAEL VILLANUEVA PEREZ', 'VILLANUEVA PEREZ', '964881841', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-13 08:03:04', '2026-03-14 16:41:30'),
+(39, 44, 'CLIENTE', NULL, 'DNI', '18198265', 'ROXANA MARILU TRELLES URQUIZA', 'TRELLES URQUIZA', '963632145', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-13 10:52:41', '2026-03-14 16:41:30'),
+(40, 45, 'CLIENTE', NULL, 'DNI', '71252952', 'JHEFERSON ALESSANDRO RODRIGUEZ PAREDES', 'RODRIGUEZ PAREDES', '963232142', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-13 10:56:42', '2026-03-14 16:41:30'),
+(41, 46, 'CLIENTE', NULL, 'DNI', '47305338', 'KARLA HELEN BELTRAN ARANDA', 'BELTRAN ARANDA', '964885412', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-13 11:04:41', '2026-03-14 16:41:30'),
+(42, 47, 'CLIENTE', NULL, 'CE', '7036365214', 'LUIS', 'PAREDES PAREDES', '965332321', 0, 'contratante_juridica', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-13 11:10:18', '2026-03-14 16:41:30'),
+(43, 48, 'CLIENTE', NULL, 'DNI', '70352321', 'TATHIANA ALEXE MARIA CAMA CAMASCA', 'CAMA CAMASCA', '963323214', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-13 15:27:42', '2026-03-14 16:41:30'),
+(44, 49, 'CLIENTE', NULL, 'DNI', '70379752', 'LUIGI ISRAEL VILLANUEVA PEREZ', 'VILLANUEVA PEREZ', '964881841', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-13 21:31:29', '2026-03-14 16:41:30'),
+(45, 50, 'CLIENTE', NULL, 'DNI', '70010001', 'Juan', 'Perez', '900111111', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-14 11:53:21', '2026-03-14 11:53:21'),
+(46, 51, 'CLIENTE', NULL, 'CE', '70010002', 'Maria', 'Loayza', '900111112', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-14 11:54:45', '2026-03-14 11:54:45'),
+(47, 52, 'CLIENTE', NULL, 'DNI', '70010003', 'Luis', 'Vargas', '900111113', 1, 'cliente_natural', 'ASIGNADO', 1, 'WHATSAPP', 'luis.test@demo.com', '1993-04-10', NULL, NULL, 'cliente satisfecho. Volverá.', '2026-03-14 11:57:54', '2026-03-14 11:57:54'),
+(48, 53, 'REGISTRADO', 12, 'DNI', '70020005', 'Pedro', 'Soto', '911222331', 0, 'conductor_otra_persona', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-14 12:14:13', '2026-03-14 12:14:13'),
+(49, 54, 'CLIENTE', NULL, 'CE', '70010006', 'Elena', 'Paz', '900111116', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-14 12:34:19', '2026-03-14 12:34:19'),
+(50, 55, 'REGISTRADO', 13, 'DNI', '46820517', 'Bruno', 'Soto Aguilar', '923456781', 0, 'conductor_otra_persona', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-14 13:23:27', '2026-03-14 13:23:27'),
+(51, 56, 'REGISTRADO', 14, 'BREVETE', 'B90817263', 'Andrea', 'Peña Cárdenas', '923456782', 0, 'conductor_otra_persona', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-14 13:25:06', '2026-03-14 13:25:06'),
+(52, 57, 'REGISTRADO', 15, 'DNI', '57284019', 'Santiago', 'Vega Lozano', '923456783', 0, 'conductor_otra_persona', 'ASIGNADO', 1, 'SMS', 'santiago.vega+uatf401@example.com', '1993-11-27', NULL, NULL, 'Enviar aviso por SMS', '2026-03-14 13:28:30', '2026-03-14 13:28:30'),
+(53, 58, 'REGISTRADO', 16, 'CE', '659301842', 'Lucía', 'Suárez Pinto', '923456784', 0, 'conductor_otra_persona', 'ASIGNADO', 1, 'SMS', 'lucia.suarez+uatf402@example.com', '2001-05-09', NULL, NULL, 'Correo de confirmación requerido', '2026-03-14 13:31:28', '2026-03-14 13:31:28'),
+(54, 59, 'CLIENTE', NULL, 'DNI', '71640258', 'Marcos', 'Cruz Valdivia', '912345679', 0, 'contratante_juridica', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-14 19:34:48', '2026-03-14 19:34:48'),
+(55, 60, 'CLIENTE', NULL, 'DNI', '68492017', 'Renzo', 'Flores Castañeda', '912345681', 0, 'contratante_juridica', 'ASIGNADO', 1, 'WHATSAPP', 'renzo.flores+uatf601@example.com', '1985-01-22', 2, NULL, 'Enviar constancia firmada', '2026-03-14 19:40:16', '2026-03-14 19:40:16'),
+(56, 61, 'REGISTRADO', 17, 'BREVETE', 'B61529407', 'Iván', 'Quinteros Ledesma', '923456786', 0, 'conductor_otra_persona', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-14 19:45:37', '2026-03-14 19:45:37'),
+(57, 62, 'REGISTRADO', 18, 'DNI', '54839271', 'Carla', 'Bautista Romero', '923456788', 0, 'conductor_otra_persona', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-14 19:52:18', '2026-03-14 19:52:18'),
+(58, 63, 'REGISTRADO', 18, 'DNI', '54839271', 'Carla', 'Bautista Romero', '923456788', 0, 'conductor_otra_persona', 'ASIGNADO', 1, 'SMS', 'carla.bautista+uatf802@example.com', '1998-05-12', 4, 9, 'Notificar por SMS al conductor', '2026-03-14 19:56:31', '2026-03-14 19:56:31'),
+(59, 64, 'CLIENTE', NULL, 'DNI', '70379752', 'LUIGI ISRAEL', 'VILLANUEVA PEREZ', '964881842', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-14 20:00:17', '2026-03-14 20:00:17'),
+(60, 65, 'CLIENTE', NULL, 'DNI', '70000001', 'JUAN', 'PEREZ', '900111222', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-14 22:48:09', '2026-03-14 22:48:09'),
+(61, 66, 'CLIENTE', NULL, 'DNI', '70212121', 'WILIE', 'MARQUEZ', '963232142', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-14 22:54:53', '2026-03-14 22:54:53'),
+(62, 67, 'CLIENTE', NULL, 'DNI', '70379752', 'LUIGI ISRAEL', 'VILLANUEVA PEREZ', '964881854', 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-15 01:24:18', '2026-03-15 01:24:18'),
+(63, 68, 'CLIENTE', NULL, 'DNI', '70379752', 'LUIGI ISRAEL', 'VILLANUEVA PEREZ', NULL, 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-15 10:02:46', '2026-03-15 10:02:46'),
+(64, 69, 'CLIENTE', NULL, 'DNI', '70379752', 'LUIGI ISRAEL', 'VILLANUEVA PEREZ', NULL, 1, 'cliente_natural', 'ASIGNADO', 1, NULL, NULL, NULL, NULL, NULL, NULL, '2026-03-15 10:48:41', '2026-03-15 10:48:41');
 
 -- --------------------------------------------------------
 
@@ -3724,7 +4099,34 @@ INSERT INTO `pos_venta_detalles` (`id`, `venta_id`, `servicio_id`, `servicio_nom
 (35, 39, 2, 'RECA AIIA', NULL, 1.000, 1200.00, 0.00, 1200.00, 'LISTA', 31, 1200.00, NULL, NULL, NULL),
 (36, 40, 12, 'Curso de actualización - Pasajeros', NULL, 1.000, 150.00, 0.00, 150.00, 'LISTA', 656, 150.00, NULL, NULL, NULL),
 (37, 41, 4, 'OBTENCIÓN A1', NULL, 1.000, 600.00, 0.00, 600.00, 'LISTA', 671, 600.00, NULL, NULL, NULL),
-(38, 42, 11, 'Curso de actualización - Carga', NULL, 1.000, 150.00, 0.00, 150.00, 'LISTA', 651, 150.00, NULL, NULL, NULL);
+(38, 42, 11, 'Curso de actualización - Carga', NULL, 1.000, 150.00, 0.00, 150.00, 'LISTA', 651, 150.00, NULL, NULL, NULL),
+(39, 43, 12, 'Curso de actualización - Pasajeros', NULL, 1.000, 150.00, 0.00, 150.00, 'LISTA', 656, 150.00, NULL, NULL, NULL),
+(40, 44, 13, 'BALOTARIO', NULL, 1.000, 10.00, 0.00, 10.00, 'LISTA', 831, 10.00, NULL, NULL, NULL),
+(41, 45, 7, 'RECA AIIIB', NULL, 1.000, 900.00, 0.00, 900.00, 'TEMPORAL', NULL, NULL, 10, 'coordinado con gerencia', '2026-03-13 10:56:42'),
+(42, 46, 11, 'Curso de actualización - Carga', NULL, 1.000, 150.00, 0.00, 150.00, 'LISTA', 651, 150.00, NULL, NULL, NULL),
+(43, 47, 3, 'RECA AIIB', NULL, 1.000, 1100.00, 0.00, 1100.00, 'LISTA', 131, 1100.00, NULL, NULL, NULL),
+(44, 48, 12, 'Curso de actualización - Pasajeros', NULL, 1.000, 150.00, 0.00, 150.00, 'LISTA', 656, 150.00, NULL, NULL, NULL),
+(45, 49, 11, 'Curso de actualización - Carga', NULL, 1.000, 150.00, 0.00, 150.00, 'LISTA', 651, 150.00, NULL, NULL, NULL),
+(46, 50, 1, 'MOTO BIIC', NULL, 1.000, 500.00, 0.00, 500.00, 'LISTA', 1, 500.00, NULL, NULL, NULL),
+(47, 51, 13, 'BALOTARIO', NULL, 1.000, 10.00, 0.00, 10.00, 'LISTA', 831, 10.00, NULL, NULL, NULL),
+(48, 52, 3, 'RECA AIIB', NULL, 1.000, 1100.00, 0.00, 1100.00, 'LISTA', 131, 1100.00, NULL, NULL, NULL),
+(49, 53, 1, 'MOTO BIIC', NULL, 1.000, 500.00, 0.00, 500.00, 'LISTA', 1, 500.00, NULL, NULL, NULL),
+(50, 54, 2, 'RECA AIIA', NULL, 1.000, 1200.00, 0.00, 1200.00, 'LISTA', 31, 1200.00, NULL, NULL, NULL),
+(51, 55, 10, 'Licencia especial AIV', NULL, 1.000, 120.00, 0.00, 120.00, 'LISTA', 661, 120.00, NULL, NULL, NULL),
+(52, 56, 4, 'OBTENCIÓN A1', NULL, 1.000, 600.00, 0.00, 600.00, 'LISTA', 671, 600.00, NULL, NULL, NULL),
+(53, 57, 8, 'RECA AIIIC', NULL, 1.000, 1000.00, 0.00, 1000.00, 'LISTA', 791, 1000.00, NULL, NULL, NULL),
+(54, 58, 7, 'RECA AIIIB', NULL, 1.000, 1500.00, 0.00, 1500.00, 'LISTA', 766, 1500.00, NULL, NULL, NULL),
+(55, 59, 3, 'RECA AIIB', NULL, 1.000, 1100.00, 0.00, 1100.00, 'LISTA', 131, 1100.00, NULL, NULL, NULL),
+(56, 60, 1, 'MOTO BIIC', NULL, 1.000, 500.00, 0.00, 500.00, 'LISTA', 1, 500.00, NULL, NULL, NULL),
+(57, 61, 6, 'RECA AIIIA', NULL, 1.000, 1000.00, 0.00, 1000.00, 'LISTA', 756, 1000.00, NULL, NULL, NULL),
+(58, 62, 4, 'OBTENCIÓN A1', NULL, 1.000, 600.00, 0.00, 600.00, 'LISTA', 671, 600.00, NULL, NULL, NULL),
+(59, 63, 11, 'Curso de actualización - Carga', NULL, 1.000, 150.00, 0.00, 150.00, 'LISTA', 651, 150.00, NULL, NULL, NULL),
+(60, 64, 13, 'BALOTARIO', NULL, 1.000, 10.00, 0.00, 10.00, 'LISTA', 831, 10.00, NULL, NULL, NULL),
+(61, 65, 2, 'RECA AIIA', NULL, 1.000, 1200.00, 0.00, 1200.00, 'LISTA', 31, 1200.00, NULL, NULL, NULL),
+(62, 66, 9, 'Taller Cambiemos de Actitud', NULL, 1.000, 350.00, 0.00, 350.00, 'LISTA', 811, 350.00, NULL, NULL, NULL),
+(63, 67, 11, 'Curso de actualización - Carga', NULL, 1.000, 150.00, 0.00, 150.00, 'LISTA', 651, 150.00, NULL, NULL, NULL),
+(64, 68, 12, 'Curso de actualización - Pasajeros', NULL, 1.000, 150.00, 0.00, 150.00, 'LISTA', 656, 150.00, NULL, NULL, NULL),
+(65, 69, 3, 'RECA AIIB', NULL, 1.000, 1100.00, 0.00, 1100.00, 'LISTA', 131, 1100.00, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -3941,7 +4343,7 @@ CREATE TABLE `web_carrusel_empresas_config` (
 --
 
 INSERT INTO `web_carrusel_empresas_config` (`id`, `titulo_base`, `titulo_resaltado`, `descripcion_general`, `actualizacion`) VALUES
-(1, 'Grupo', 'Génesis', 'En Grupo Génesis reunimos escuelas de conductores profesionales autorizadas por el MTC. Con Allain Prost, Vías Seguras y Guía Mis Rutas, te capacitamos y orientamos para que completes tu curso y sigas tu trámite con confianza.', '2026-03-10 07:34:15');
+(1, 'Grupo', 'Génesis', 'En Grupo Génesis reunimos escuelas de conductores profesionales autorizadas por el MTC. Con Allain Prost, Vías Seguras y Guía Mis Rutas, te capacitamos y orientamos para que completes tu curso y sigas tu trámite con confianza.', '2026-03-13 10:26:01');
 
 -- --------------------------------------------------------
 
@@ -3964,10 +4366,10 @@ CREATE TABLE `web_carrusel_empresas_items` (
 --
 
 INSERT INTO `web_carrusel_empresas_items` (`id`, `orden`, `titulo`, `profesion`, `imagen_path`, `redes_json`, `actualizacion`) VALUES
-(1, 1, 'GUIA MIS RUTAS', 'Escuela de Conductores', 'almacen/2026/03/09/img_carrusel_empresas/carrusel-empresa-carrusel_empresas-1-20260309T092914-cd85c5.png', '{\"whatsapp\":{\"visible\":1,\"link\":\"#\"},\"facebook\":{\"visible\":1,\"link\":\"#\"},\"instagram\":{\"visible\":0,\"link\":\"#\"},\"youtube\":{\"visible\":0,\"link\":\"#\"}}', '2026-03-10 07:34:15'),
-(2, 2, 'ALLAIN PROST', 'Escuela de Conductores', 'almacen/2026/03/09/img_carrusel_empresas/carrusel-empresa-carrusel_empresas-1-20260309T092914-5dd2a9.png', '{\"whatsapp\":{\"visible\":1,\"link\":\"#\"},\"facebook\":{\"visible\":1,\"link\":\"#\"},\"instagram\":{\"visible\":0,\"link\":\"#\"},\"youtube\":{\"visible\":0,\"link\":\"#\"}}', '2026-03-10 07:34:15'),
-(3, 3, 'VIAS SEGURAS', 'Escuela de Conductores', 'almacen/2026/03/09/img_carrusel_empresas/carrusel-empresa-carrusel_empresas-1-20260309T092914-37ba05.png', '{\"whatsapp\":{\"visible\":1,\"link\":\"#\"},\"facebook\":{\"visible\":1,\"link\":\"#\"},\"instagram\":{\"visible\":0,\"link\":\"#\"},\"youtube\":{\"visible\":0,\"link\":\"#\"}}', '2026-03-10 07:34:15'),
-(4, 4, 'GRUPO GENESIS', 'Escuela de Conductores', 'almacen/2026/03/09/img_carrusel_empresas/carrusel-empresa-carrusel_empresas-1-20260309T092914-ca19fe.png', '{\"whatsapp\":{\"visible\":1,\"link\":\"#\"},\"facebook\":{\"visible\":1,\"link\":\"#\"},\"instagram\":{\"visible\":0,\"link\":\"#\"},\"youtube\":{\"visible\":0,\"link\":\"#\"}}', '2026-03-10 07:34:15');
+(1, 1, 'GUIA MIS RUTAS - TRUJILLO', 'Escuela de Conductores', 'almacen/2026/03/09/img_carrusel_empresas/carrusel-empresa-carrusel_empresas-1-20260309T092914-cd85c5.png', '{\"whatsapp\":{\"visible\":1,\"link\":\"#\"},\"facebook\":{\"visible\":1,\"link\":\"#\"},\"instagram\":{\"visible\":0,\"link\":\"#\"},\"youtube\":{\"visible\":0,\"link\":\"#\"}}', '2026-03-13 10:26:01'),
+(2, 2, 'ALLAIN PROST', 'Escuela de Conductores', 'almacen/2026/03/09/img_carrusel_empresas/carrusel-empresa-carrusel_empresas-1-20260309T092914-5dd2a9.png', '{\"whatsapp\":{\"visible\":1,\"link\":\"#\"},\"facebook\":{\"visible\":1,\"link\":\"#\"},\"instagram\":{\"visible\":0,\"link\":\"#\"},\"youtube\":{\"visible\":0,\"link\":\"#\"}}', '2026-03-13 10:26:01'),
+(3, 3, 'VIAS SEGURAS', 'Escuela de Conductores', 'almacen/2026/03/09/img_carrusel_empresas/carrusel-empresa-carrusel_empresas-1-20260309T092914-37ba05.png', '{\"whatsapp\":{\"visible\":1,\"link\":\"#\"},\"facebook\":{\"visible\":1,\"link\":\"#\"},\"instagram\":{\"visible\":0,\"link\":\"#\"},\"youtube\":{\"visible\":0,\"link\":\"#\"}}', '2026-03-13 10:26:01'),
+(4, 4, 'GRUPO GENESIS', 'Escuela de Conductores', 'almacen/2026/03/09/img_carrusel_empresas/carrusel-empresa-carrusel_empresas-1-20260309T092914-ca19fe.png', '{\"whatsapp\":{\"visible\":1,\"link\":\"#\"},\"facebook\":{\"visible\":1,\"link\":\"#\"},\"instagram\":{\"visible\":0,\"link\":\"#\"},\"youtube\":{\"visible\":0,\"link\":\"#\"}}', '2026-03-13 10:26:01');
 
 -- --------------------------------------------------------
 
@@ -4106,7 +4508,10 @@ INSERT INTO `web_formulario_carrusel_mensajes` (`id`, `tipo_solicitante`, `servi
 (8, 'empresa', 'primeros_auxilios', 'Primeros auxilios en accidentes de transito', 'chiclayo_escuela_vias_seguras', 'Chiclayo', 'Escuela Vias Seguras', '20603336321', '', 'LLANTAS SAC', '966666666', '', '12_14', '12:00 pm a 2:00 pm', 'en_espera', '2026-03-08 23:39:19', '2026-03-08 23:39:19'),
 (9, 'persona', 'educacion_vial', 'Educacion vial', 'chiclayo_escuela_vias_seguras', 'Chiclayo', 'Escuela Vias Seguras', '70115235', 'MARTIN MENDOZA MARCIAL', '', '966363632', 'q@gmail.com', 'any', 'Cualquier horario', 'en_espera', '2026-03-08 23:39:57', '2026-03-08 23:39:57'),
 (10, 'persona', 'obtencion_moto_biic', 'Obtencion MOTO BIIC', 'huancayo_escuela_allain_prost', 'Huancayo', 'Escuela Allain Prost', '70000021', 'EUSEBIO RODRIGUEZ VASQUEZ', '', '964444451', '', '10_12', '10:00 am a 12:00 pm', 'en_espera', '2026-03-09 12:19:09', '2026-03-09 12:19:09'),
-(11, 'empresa', 'curso_actualizacion_personas', 'Curso de actualizacion normativa - Personas', 'piura_allain_prost', 'Piura', 'Allain Prost', '20609876789', '', 'LLANTAS SAC', '968878765', 'qqq@gmail.com', '14_17', '2:00 pm a 5:00 pm', 'contactado', '2026-03-10 11:24:43', '2026-03-10 11:25:36');
+(11, 'empresa', 'curso_actualizacion_personas', 'Curso de actualizacion normativa - Personas', 'piura_allain_prost', 'Piura', 'Allain Prost', '20609876789', '', 'LLANTAS SAC', '968878765', 'qqq@gmail.com', '14_17', '2:00 pm a 5:00 pm', 'contactado', '2026-03-10 11:24:43', '2026-03-10 11:25:36'),
+(12, 'persona', 'obtencion_moto_biic', 'Obtencion MOTO BIIC', 'trujillo_escuela_guia_mis_rutas', 'Trujillo', 'Escuela Guia mis Rutas', '70363632', 'LUIGI VILLANUEVA PEREZ', '', '964881523', 'Q@GMAIL.COM', '14_17', '2:00 pm a 5:00 pm', 'en_espera', '2026-03-13 10:21:28', '2026-03-13 10:21:28'),
+(13, 'empresa', 'obtencion_moto_biic', 'Obtencion MOTO BIIC', 'piura_allain_prost', 'Piura', 'Allain Prost', '20602536212', '', 'LLANTAS SA', '964886325', 'q@gmail.com', '10_12', '10:00 am a 12:00 pm', 'venta_cerrada', '2026-03-13 22:07:01', '2026-03-13 22:07:44'),
+(14, 'persona', 'curso_matpel_a4', 'Curso MATPEL / Licencia A4', 'trujillo_escuela_guia_mis_rutas', 'Trujillo', 'Escuela Guia mis Rutas', '76315077', 'malena', '', '975018100', 'mafesure301@gmail.com', '12_14', '12:00 pm a 2:00 pm', 'en_espera', '2026-03-14 10:39:03', '2026-03-14 10:39:03');
 
 -- --------------------------------------------------------
 
@@ -4630,6 +5035,17 @@ ALTER TABLE `egr_egresos`
   ADD KEY `idx_egr_anulado_por` (`anulado_por`);
 
 --
+-- Indices de la tabla `egr_egreso_fuentes`
+--
+ALTER TABLE `egr_egreso_fuentes`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `ux_egr_fuente_egreso_key` (`id_egreso`,`fuente_key`),
+  ADD KEY `idx_egr_fuente_emp_caja` (`id_empresa`,`id_caja_diaria`),
+  ADD KEY `idx_egr_fuente_key` (`fuente_key`),
+  ADD KEY `idx_egr_fuente_medio` (`medio_id`),
+  ADD KEY `fk_egr_fuente_caja_diaria` (`id_caja_diaria`);
+
+--
 -- Indices de la tabla `ferreteria_productos`
 --
 ALTER TABLE `ferreteria_productos`
@@ -4986,6 +5402,7 @@ ALTER TABLE `pos_abonos`
 --
 ALTER TABLE `pos_abono_aplicaciones`
   ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_pos_apl_abono_unico` (`abono_id`),
   ADD KEY `idx_pos_apl_abono` (`abono_id`),
   ADD KEY `idx_pos_apl_venta` (`venta_id`);
 
@@ -5006,6 +5423,26 @@ ALTER TABLE `pos_clientes`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `uk_pos_cli_doc` (`id_empresa`,`doc_tipo`,`doc_numero`),
   ADD KEY `idx_pos_cli_nombre` (`id_empresa`,`nombre`);
+
+--
+-- Indices de la tabla `pos_comprobantes`
+--
+ALTER TABLE `pos_comprobantes`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_pc_emp_tipo_venta` (`id_empresa`,`tipo`,`venta_id`),
+  ADD KEY `idx_pc_emp_ticket` (`id_empresa`,`ticket_serie`,`ticket_numero`),
+  ADD KEY `idx_pc_emitido_en` (`emitido_en`),
+  ADD KEY `idx_pc_emitido_por` (`emitido_por`),
+  ADD KEY `fk_pc_venta` (`venta_id`);
+
+--
+-- Indices de la tabla `pos_comprobante_abonos`
+--
+ALTER TABLE `pos_comprobante_abonos`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_pca_comp_abono` (`comprobante_id`,`abono_id`),
+  ADD KEY `idx_pca_abono` (`abono_id`),
+  ADD KEY `idx_pca_venta` (`venta_id`);
 
 --
 -- Indices de la tabla `pos_conductores`
@@ -5065,7 +5502,8 @@ ALTER TABLE `pos_ventas`
   ADD KEY `fk_pos_v_serie` (`serie_id`),
   ADD KEY `fk_pos_v_user` (`creado_por`),
   ADD KEY `idx_contratante_doc` (`contratante_doc_tipo`,`contratante_doc_numero`),
-  ADD KEY `idx_pos_ventas_tmp_fecha` (`tiene_precio_temporal`,`fecha_emision`);
+  ADD KEY `idx_pos_ventas_tmp_fecha` (`tiene_precio_temporal`,`fecha_emision`),
+  ADD KEY `idx_pos_v_cli_snap_doc` (`cliente_snapshot_doc_tipo`,`cliente_snapshot_doc_numero`);
 
 --
 -- Indices de la tabla `pos_ventas_anulaciones`
@@ -5084,7 +5522,11 @@ ALTER TABLE `pos_venta_conductores`
   ADD UNIQUE KEY `uk_pos_vc_reg` (`venta_id`,`conductor_id`),
   ADD KEY `idx_pos_vc_venta` (`venta_id`),
   ADD KEY `idx_pos_vc_cond` (`conductor_id`),
-  ADD KEY `idx_pos_vc_estado` (`estado`);
+  ADD KEY `idx_pos_vc_estado` (`estado`),
+  ADD KEY `idx_pos_vc_doc_snap` (`conductor_doc_tipo`,`conductor_doc_numero`),
+  ADD KEY `idx_pos_vc_mismo_cli` (`conductor_es_mismo_cliente`),
+  ADD KEY `idx_pos_vc_cat_auto_snap` (`conductor_categoria_auto_id`),
+  ADD KEY `idx_pos_vc_cat_moto_snap` (`conductor_categoria_moto_id`);
 
 --
 -- Indices de la tabla `pos_venta_detalles`
@@ -5295,13 +5737,13 @@ ALTER TABLE `web_topbar_config`
 -- AUTO_INCREMENT de la tabla `al_alertas`
 --
 ALTER TABLE `al_alertas`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT de la tabla `al_alertas_log`
 --
 ALTER TABLE `al_alertas_log`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT de la tabla `cam_camaras`
@@ -5373,7 +5815,7 @@ ALTER TABLE `cq_categorias_licencia`
 -- AUTO_INCREMENT de la tabla `cq_certificados`
 --
 ALTER TABLE `cq_certificados`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=55;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
 
 --
 -- AUTO_INCREMENT de la tabla `cq_plantillas_certificados`
@@ -5415,31 +5857,31 @@ ALTER TABLE `cr_etiquetas`
 -- AUTO_INCREMENT de la tabla `cr_formularios`
 --
 ALTER TABLE `cr_formularios`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT de la tabla `cr_formulario_intentos`
 --
 ALTER TABLE `cr_formulario_intentos`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT de la tabla `cr_formulario_opciones`
 --
 ALTER TABLE `cr_formulario_opciones`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT de la tabla `cr_formulario_preguntas`
 --
 ALTER TABLE `cr_formulario_preguntas`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT de la tabla `cr_formulario_respuestas`
 --
 ALTER TABLE `cr_formulario_respuestas`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=70;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=77;
 
 --
 -- AUTO_INCREMENT de la tabla `cr_grupos`
@@ -5451,7 +5893,7 @@ ALTER TABLE `cr_grupos`
 -- AUTO_INCREMENT de la tabla `cr_matriculas_grupo`
 --
 ALTER TABLE `cr_matriculas_grupo`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT de la tabla `cr_temas`
@@ -5463,13 +5905,19 @@ ALTER TABLE `cr_temas`
 -- AUTO_INCREMENT de la tabla `cr_usuario_curso`
 --
 ALTER TABLE `cr_usuario_curso`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
 
 --
 -- AUTO_INCREMENT de la tabla `egr_egresos`
 --
 ALTER TABLE `egr_egresos`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
+
+--
+-- AUTO_INCREMENT de la tabla `egr_egreso_fuentes`
+--
+ALTER TABLE `egr_egreso_fuentes`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT de la tabla `ferreteria_productos`
@@ -5547,19 +5995,19 @@ ALTER TABLE `iv_transmision`
 -- AUTO_INCREMENT de la tabla `mod_api_hub_uso_mensual`
 --
 ALTER TABLE `mod_api_hub_uso_mensual`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
 
 --
 -- AUTO_INCREMENT de la tabla `mod_caja_auditoria`
 --
 ALTER TABLE `mod_caja_auditoria`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT de la tabla `mod_caja_diaria`
 --
 ALTER TABLE `mod_caja_diaria`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT de la tabla `mod_caja_mensual`
@@ -5571,25 +6019,25 @@ ALTER TABLE `mod_caja_mensual`
 -- AUTO_INCREMENT de la tabla `mod_empresa_servicio`
 --
 ALTER TABLE `mod_empresa_servicio`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT de la tabla `mod_etiquetas`
 --
 ALTER TABLE `mod_etiquetas`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
 -- AUTO_INCREMENT de la tabla `mod_precios`
 --
 ALTER TABLE `mod_precios`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=831;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=841;
 
 --
 -- AUTO_INCREMENT de la tabla `mod_servicios`
 --
 ALTER TABLE `mod_servicios`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT de la tabla `mtp_alumnos`
@@ -5691,37 +6139,49 @@ ALTER TABLE `pb_publicidad_target`
 -- AUTO_INCREMENT de la tabla `pos_abonos`
 --
 ALTER TABLE `pos_abonos`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=85;
 
 --
 -- AUTO_INCREMENT de la tabla `pos_abono_aplicaciones`
 --
 ALTER TABLE `pos_abono_aplicaciones`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=85;
 
 --
 -- AUTO_INCREMENT de la tabla `pos_auditoria`
 --
 ALTER TABLE `pos_auditoria`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=65;
 
 --
 -- AUTO_INCREMENT de la tabla `pos_clientes`
 --
 ALTER TABLE `pos_clientes`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=61;
+
+--
+-- AUTO_INCREMENT de la tabla `pos_comprobantes`
+--
+ALTER TABLE `pos_comprobantes`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+
+--
+-- AUTO_INCREMENT de la tabla `pos_comprobante_abonos`
+--
+ALTER TABLE `pos_comprobante_abonos`
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT de la tabla `pos_conductores`
 --
 ALTER TABLE `pos_conductores`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT de la tabla `pos_devoluciones`
 --
 ALTER TABLE `pos_devoluciones`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT de la tabla `pos_medios_pago`
@@ -5733,7 +6193,7 @@ ALTER TABLE `pos_medios_pago`
 -- AUTO_INCREMENT de la tabla `pos_perfil_conductor`
 --
 ALTER TABLE `pos_perfil_conductor`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT de la tabla `pos_series`
@@ -5745,25 +6205,25 @@ ALTER TABLE `pos_series`
 -- AUTO_INCREMENT de la tabla `pos_ventas`
 --
 ALTER TABLE `pos_ventas`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=70;
 
 --
 -- AUTO_INCREMENT de la tabla `pos_ventas_anulaciones`
 --
 ALTER TABLE `pos_ventas_anulaciones`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT de la tabla `pos_venta_conductores`
 --
 ALTER TABLE `pos_venta_conductores`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=65;
 
 --
 -- AUTO_INCREMENT de la tabla `pos_venta_detalles`
 --
 ALTER TABLE `pos_venta_detalles`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=66;
 
 --
 -- AUTO_INCREMENT de la tabla `pos_venta_detalle_conductores`
@@ -5829,7 +6289,7 @@ ALTER TABLE `web_formulario_carrusel_items`
 -- AUTO_INCREMENT de la tabla `web_formulario_carrusel_mensajes`
 --
 ALTER TABLE `web_formulario_carrusel_mensajes`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT de la tabla `web_novedades_items`
@@ -6041,6 +6501,15 @@ ALTER TABLE `egr_egresos`
   ADD CONSTRAINT `fk_egr_caja_mensual` FOREIGN KEY (`id_caja_mensual`) REFERENCES `mod_caja_mensual` (`id`) ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_egr_creado_por` FOREIGN KEY (`creado_por`) REFERENCES `mtp_usuarios` (`id`) ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_egr_empresa` FOREIGN KEY (`id_empresa`) REFERENCES `mtp_empresas` (`id`) ON UPDATE CASCADE;
+
+--
+-- Filtros para la tabla `egr_egreso_fuentes`
+--
+ALTER TABLE `egr_egreso_fuentes`
+  ADD CONSTRAINT `fk_egr_fuente_caja_diaria` FOREIGN KEY (`id_caja_diaria`) REFERENCES `mod_caja_diaria` (`id`) ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_egr_fuente_egreso` FOREIGN KEY (`id_egreso`) REFERENCES `egr_egresos` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_egr_fuente_empresa` FOREIGN KEY (`id_empresa`) REFERENCES `mtp_empresas` (`id`) ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_egr_fuente_medio` FOREIGN KEY (`medio_id`) REFERENCES `pos_medios_pago` (`id`) ON UPDATE CASCADE;
 
 --
 -- Filtros para la tabla `inv_bienes`
@@ -6266,6 +6735,22 @@ ALTER TABLE `pos_clientes`
   ADD CONSTRAINT `fk_pos_cli_emp` FOREIGN KEY (`id_empresa`) REFERENCES `mtp_empresas` (`id`) ON UPDATE CASCADE;
 
 --
+-- Filtros para la tabla `pos_comprobantes`
+--
+ALTER TABLE `pos_comprobantes`
+  ADD CONSTRAINT `fk_pc_emp` FOREIGN KEY (`id_empresa`) REFERENCES `mtp_empresas` (`id`) ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_pc_user` FOREIGN KEY (`emitido_por`) REFERENCES `mtp_usuarios` (`id`) ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_pc_venta` FOREIGN KEY (`venta_id`) REFERENCES `pos_ventas` (`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+--
+-- Filtros para la tabla `pos_comprobante_abonos`
+--
+ALTER TABLE `pos_comprobante_abonos`
+  ADD CONSTRAINT `fk_pca_abono` FOREIGN KEY (`abono_id`) REFERENCES `pos_abonos` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_pca_comp` FOREIGN KEY (`comprobante_id`) REFERENCES `pos_comprobantes` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_pca_venta` FOREIGN KEY (`venta_id`) REFERENCES `pos_ventas` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
 -- Filtros para la tabla `pos_conductores`
 --
 ALTER TABLE `pos_conductores`
@@ -6317,6 +6802,8 @@ ALTER TABLE `pos_ventas_anulaciones`
 -- Filtros para la tabla `pos_venta_conductores`
 --
 ALTER TABLE `pos_venta_conductores`
+  ADD CONSTRAINT `fk_pos_vc_cat_auto_snap` FOREIGN KEY (`conductor_categoria_auto_id`) REFERENCES `cq_categorias_licencia` (`id`) ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_pos_vc_cat_moto_snap` FOREIGN KEY (`conductor_categoria_moto_id`) REFERENCES `cq_categorias_licencia` (`id`) ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_pos_vc_cond` FOREIGN KEY (`conductor_id`) REFERENCES `pos_conductores` (`id`) ON UPDATE CASCADE,
   ADD CONSTRAINT `fk_pos_vc_venta` FOREIGN KEY (`venta_id`) REFERENCES `pos_ventas` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 

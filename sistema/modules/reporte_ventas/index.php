@@ -95,7 +95,7 @@ $mediosPago  = listar_medios_pago_activos($db);
 $q          = trim($_GET['q'] ?? '');
 $servicioId = isset($_GET['servicio_id']) ? (int)$_GET['servicio_id'] : 0;
 $estado     = isset($_GET['estado']) ? (string)$_GET['estado'] : '';
-$estadoVals = ['pagado', 'pendiente', 'anulada'];
+$estadoVals = ['pagado', 'pendiente', 'devolucion_parcial', 'devolucion_total', 'anulada'];
 if (!in_array($estado, $estadoVals, true)) {
   $estado = '';
 }
@@ -333,7 +333,7 @@ include __DIR__ . '/../../includes/header.php';
                   <?php if ($resumenDiaria['total_ventas'] > 0): ?>
                     <span class="d-block text-muted mt-1">
                       Ventas: <?= (int)$resumenDiaria['total_ventas'] ?> ·
-                      Neto: <?= h(fmt_money($resumenDiaria['total_pagado'] - $resumenDiaria['total_devuelto'])) ?>
+                      Neto: <?= h(fmt_money($resumenDiaria['total_pagado'])) ?>
                     </span>
                   <?php else: ?>
                     <span class="d-block text-muted mt-1">Sin ventas en la caja actual</span>
@@ -360,7 +360,7 @@ include __DIR__ . '/../../includes/header.php';
               </span>
               <div class="small mt-1 text-muted">
                 Emitidas: <?= (int)$resumenVentas['total_emitidas'] ?> ·
-                Anuladas: <?= (int)$resumenVentas['total_anuladas'] ?><br>
+                Devolucion total: <?= (int)$resumenVentas['total_anuladas'] ?><br>
                 Bruto: <?= h(fmt_money($resumenVentas['total_bruto'])) ?><br>
                 Neto: <?= h(fmt_money($resumenVentas['total_neto'])) ?> ·
                 Saldo: <?= h(fmt_money($resumenVentas['total_saldo'])) ?>
@@ -461,7 +461,8 @@ include __DIR__ . '/../../includes/header.php';
                 <option value="">Todos</option>
                 <option value="pagado"   <?= $estado === 'pagado' ? 'selected' : '' ?>>Pagado</option>
                 <option value="pendiente"<?= $estado === 'pendiente' ? 'selected' : '' ?>>Pendiente</option>
-                <option value="anulada"  <?= $estado === 'anulada' ? 'selected' : '' ?>>Anulada</option>
+                <option value="devolucion_parcial" <?= $estado === 'devolucion_parcial' ? 'selected' : '' ?>>Devolucion parcial</option>
+                <option value="devolucion_total"   <?= ($estado === 'devolucion_total' || $estado === 'anulada') ? 'selected' : '' ?>>Devolucion total</option>
               </select>
             </div>
 
@@ -585,16 +586,19 @@ include __DIR__ . '/../../includes/header.php';
                     $servicio = trim((string)($r['servicio_principal'] ?? ''));
                     $fecha    = fmt_dt($r['fecha_emision'] ?? null);
                     $total    = fmt_money($r['total'] ?? 0);
-                    $ingNetoV = max(0.0, (float)($r['total_pagado'] ?? 0) - (float)($r['total_devuelto'] ?? 0));
+                    $ingNetoV = max(0.0, (float)($r['total_pagado'] ?? 0));
                     $ingNeto  = fmt_money($ingNetoV);
                     $saldoNum = (float)($r['saldo'] ?? 0);
                     $saldoFmt = fmt_money($saldoNum);
                     $estadoV  = (string)($r['estado'] ?? '');
+                    $devueltoNum = (float)($r['total_devuelto'] ?? 0);
                     $ventaId  = (int)$r['id'];
                     $canAbonar = ($estadoV !== 'ANULADA') && ($saldoNum > 0.000001);
 
                     if ($estadoV === 'ANULADA') {
-                      $badge = '<span class="badge badge-danger"><i class="fas fa-times-circle mr-1"></i>Anulada</span>';
+                      $badge = '<span class="badge badge-danger"><i class="fas fa-times-circle mr-1"></i>Devolucion total</span>';
+                    } elseif ($devueltoNum > 0.000001) {
+                      $badge = '<span class="badge badge-info"><i class="fas fa-undo-alt mr-1"></i>Devolucion parcial</span>';
                     } elseif ($saldoNum > 0) {
                       $badge = '<span class="badge badge-warning"><i class="fas fa-exclamation-triangle mr-1"></i>Pendiente</span>';
                     } else {
@@ -651,6 +655,18 @@ include __DIR__ . '/../../includes/header.php';
                                   data-id="<?= $ventaId ?>"
                                   data-ticket="<?= h($ticket) ?>">
                             <i class="fas fa-search mr-1"></i>Detalle
+                          </button>
+                          <button type="button"
+                                  class="btn btn-outline-dark js-voucher-original"
+                                  data-id="<?= $ventaId ?>"
+                                  title="Comprobante original">
+                            <i class="fas fa-receipt"></i>
+                          </button>
+                          <button type="button"
+                                  class="btn btn-outline-info js-voucher-actual"
+                                  data-id="<?= $ventaId ?>"
+                                  title="Comprobante actual">
+                            <i class="fas fa-sync-alt"></i>
                           </button>
                           <?php if ($canAbonar): ?>
                             <button type="button"

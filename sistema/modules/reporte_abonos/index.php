@@ -115,6 +115,24 @@ $empresaNombre = (string)($u['empresa']['nombre'] ?? '');
 $empresaRuc    = (string)($u['empresa']['ruc'] ?? '');
 $usuarioNombre = trim((string)($u['nombres'] ?? '') . ' ' . (string)($u['apellidos'] ?? ''));
 $usuarioUser   = (string)($u['usuario'] ?? '');
+$empLogoRel    = '';
+try {
+    $logoFromSession = isset($u['empresa']['logo_path']) ? trim((string)$u['empresa']['logo_path']) : '';
+    if ($logoFromSession === '' && $empId > 0) {
+        $stLogo = $db->prepare("SELECT logo_path FROM mtp_empresas WHERE id=? LIMIT 1");
+        $stLogo->bind_param('i', $empId);
+        $stLogo->execute();
+        if ($rLogo = $stLogo->get_result()->fetch_assoc()) {
+            $logoFromSession = trim((string)($rLogo['logo_path'] ?? ''));
+        }
+        $stLogo->close();
+    }
+    if ($logoFromSession !== '' && is_file(__DIR__ . '/../../' . ltrim($logoFromSession, '/'))) {
+        $empLogoRel = '../../' . ltrim($logoFromSession, '/');
+    }
+} catch (Throwable $e) {
+    $empLogoRel = '';
+}
 include __DIR__ . '/../../includes/header.php';
 ?>
 <div class="content-wrapper">
@@ -494,6 +512,10 @@ include __DIR__ . '/../../includes/header.php';
 
                     $estadoBadge = '';
                     $tol = 0.01;
+                    $ventaPrincipalId = 0;
+                    if (!empty($r['aplicaciones']) && !empty($r['aplicaciones'][0]['venta_id'])) {
+                        $ventaPrincipalId = (int)$r['aplicaciones'][0]['venta_id'];
+                    }
 
                     if ($devTot > 0 && $devTot + 0.0001 >= $monto) {
                         $estadoBadge = '<span class="badge badge-danger">Devuelto total</span>';
@@ -528,7 +550,27 @@ include __DIR__ . '/../../includes/header.php';
                       <td class="text-end"><?= h($aplFmt) ?></td>
                       <td class="text-end"><?= h($devFmt) ?></td>
                       <td class="text-end"><?= h($netoFmt) ?></td>
-                      <td><?= $estadoBadge ?></td>
+                      <td>
+                        <?= $estadoBadge ?><br>
+                        <?php if ($ventaPrincipalId > 0): ?>
+                          <button type="button"
+                                  class="btn btn-link btn-sm p-0 mr-1 js-voucher-original"
+                                  data-abono-id="<?= $abonoId ?>"
+                                  data-venta-id="<?= $ventaPrincipalId ?>"
+                                  title="Comprobante original">
+                            <i class="fas fa-receipt"></i>
+                          </button>
+                          <button type="button"
+                                  class="btn btn-link btn-sm p-0 js-voucher-actual"
+                                  data-abono-id="<?= $abonoId ?>"
+                                  data-venta-id="<?= $ventaPrincipalId ?>"
+                                  title="Comprobante actual">
+                            <i class="fas fa-sync-alt"></i>
+                          </button>
+                        <?php else: ?>
+                          <span class="text-muted small">—</span>
+                        <?php endif; ?>
+                      </td>
                     </tr>
 
                     <!-- Fila detalle -->
@@ -700,12 +742,68 @@ include __DIR__ . '/../../includes/header.php';
   </section>
 </div>
 
+<!-- ==== Modal: Voucher / Recibo ==== -->
+<div class="modal fade" id="voucherModal" tabindex="-1" role="dialog" aria-labelledby="voucherModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-dark text-white py-2">
+        <h5 class="modal-title" id="voucherModalTitle"><i class="fas fa-receipt mr-2"></i>Voucher</h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body bg-light">
+        <div id="voucherBody"><!-- render dinamico --></div>
+      </div>
+      <div class="modal-footer py-2">
+        <div class="d-flex align-items-center mr-auto">
+          <label for="voucherSize" class="small mb-0 mr-2">Tamano</label>
+          <select id="voucherSize" class="form-select form-select-sm" style="min-width:160px">
+            <option value="ticket80">Ticket 80mm</option>
+            <option value="ticket58">Ticket 58mm</option>
+            <option value="a4">A4</option>
+          </select>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="voucherPrint"><i class="fas fa-print mr-1"></i>Imprimir</button>
+        <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==== Modal de mensajes ==== -->
+<div class="modal fade" id="msgModal" tabindex="-1" role="dialog" aria-labelledby="msgModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h5 class="modal-title" id="msgModalTitle">Mensaje</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" id="msgModalBody">—</div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-primary btn-sm" data-dismiss="modal">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+window.RA_CTX = {
+  baseUrl: <?= json_encode(BASE_URL, JSON_UNESCAPED_UNICODE) ?>,
+  empresaNombre: <?= json_encode($empresaNombre, JSON_UNESCAPED_UNICODE) ?>,
+  usuarioNombre: <?= json_encode($usuarioNombre !== '' ? $usuarioNombre : $usuarioUser, JSON_UNESCAPED_UNICODE) ?>,
+  empresaLogo: <?= json_encode($empLogoRel, JSON_UNESCAPED_UNICODE) ?>
+};
+</script>
+
 <?php if (is_file(__DIR__ . '/index.js')): ?>
-  <script type="module" src="<?= h(rel('modules/' . basename(__DIR__) . '/index.js?v=1')) ?>"></script>
+  <script type="module" src="<?= h(rel('modules/' . basename(__DIR__) . '/index.js?v=2')) ?>"></script>
 <?php endif; ?>
 
 <?php if (is_file(__DIR__ . '/style.css')): ?>
-  <link rel="stylesheet" href="<?= h(rel('modules/' . basename(__DIR__) . '/style.css?v=1')) ?>">
+  <link rel="stylesheet" href="<?= h(rel('modules/' . basename(__DIR__) . '/style.css?v=2')) ?>">
 <?php endif; ?>
 
 <?php include __DIR__ . '/../../includes/footer.php'; ?>
