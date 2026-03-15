@@ -81,14 +81,17 @@ function row_has_any(array $row, array $keys): bool {
 }
 function resolve_conductor_payload(array $row): array {
   $tipoRelacion = strtoupper((string)row_pick($row, ['vc_conductor_tipo', 'conductor_tipo'], ''));
-  $hasConductorRegistrado = row_has_any($row, ['d_doc_tipo', 'd_doc_numero', 'd_nombres', 'd_apellidos', 'd_telefono']);
-  if (($tipoRelacion === 'REGISTRADO' || $tipoRelacion === '') && $hasConductorRegistrado) {
+  $hasConductorData = row_has_any($row, [
+    'vc_doc_tipo', 'vc_doc_numero', 'vc_nombres', 'vc_apellidos', 'vc_telefono',
+    'd_doc_tipo', 'd_doc_numero', 'd_nombres', 'd_apellidos', 'd_telefono'
+  ]);
+  if ($tipoRelacion !== 'PENDIENTE' && $hasConductorData) {
     return [
-      'doc_tipo'   => (string)row_pick($row, ['d_doc_tipo']),
-      'doc_numero' => (string)row_pick($row, ['d_doc_numero', 'd_doc_num']),
-      'nombres'    => (string)row_pick($row, ['d_nombres']),
-      'apellidos'  => (string)row_pick($row, ['d_apellidos']),
-      'telefono'   => (string)row_pick($row, ['d_telefono'])
+      'doc_tipo'   => (string)row_pick($row, ['vc_doc_tipo', 'd_doc_tipo']),
+      'doc_numero' => (string)row_pick($row, ['vc_doc_numero', 'd_doc_numero', 'd_doc_num']),
+      'nombres'    => (string)row_pick($row, ['vc_nombres', 'd_nombres']),
+      'apellidos'  => (string)row_pick($row, ['vc_apellidos', 'd_apellidos']),
+      'telefono'   => (string)row_pick($row, ['vc_telefono', 'd_telefono'])
     ];
   }
   if ($tipoRelacion === 'PENDIENTE') {
@@ -138,8 +141,12 @@ function fetch_venta_head(mysqli $db, int $empId, int $ventaId){
   $q = $db->prepare("SELECT
       v.id, v.id_empresa, v.cliente_id, v.serie, v.numero, v.fecha_emision, v.moneda,
       v.total, v.total_pagado, v.total_devuelto, v.saldo, v.estado,
+      v.cliente_snapshot_tipo_persona, v.cliente_snapshot_doc_tipo, v.cliente_snapshot_doc_numero, v.cliente_snapshot_nombre, v.cliente_snapshot_telefono,
       v.contratante_doc_tipo, v.contratante_doc_numero, v.contratante_nombres, v.contratante_apellidos, v.contratante_telefono,
-      c.doc_tipo AS c_doc_tipo, c.doc_numero AS c_doc_numero, c.nombre AS c_nombre, c.telefono AS c_telefono
+      COALESCE(v.cliente_snapshot_doc_tipo, c.doc_tipo) AS c_doc_tipo,
+      COALESCE(v.cliente_snapshot_doc_numero, c.doc_numero) AS c_doc_numero,
+      COALESCE(v.cliente_snapshot_nombre, c.nombre) AS c_nombre,
+      COALESCE(v.cliente_snapshot_telefono, c.telefono) AS c_telefono
     FROM pos_ventas v
     LEFT JOIN pos_clientes c ON c.id=v.cliente_id
     WHERE v.id_empresa=? AND v.id=? LIMIT 1");
@@ -149,8 +156,18 @@ function fetch_venta_head(mysqli $db, int $empId, int $ventaId){
 
 function fetch_principal_conductor(mysqli $db, int $ventaId){
   $q = $db->prepare("SELECT vc.conductor_tipo AS vc_conductor_tipo,
-                            d.doc_tipo AS d_doc_tipo, d.doc_numero AS d_doc_numero,
-                            d.nombres AS d_nombres, d.apellidos AS d_apellidos, d.telefono AS d_telefono
+                            vc.conductor_origen AS vc_conductor_origen,
+                            vc.conductor_es_mismo_cliente AS vc_conductor_es_mismo_cliente,
+                            vc.conductor_doc_tipo AS vc_doc_tipo,
+                            vc.conductor_doc_numero AS vc_doc_numero,
+                            vc.conductor_nombres AS vc_nombres,
+                            vc.conductor_apellidos AS vc_apellidos,
+                            vc.conductor_telefono AS vc_telefono,
+                            COALESCE(vc.conductor_doc_tipo, d.doc_tipo) AS d_doc_tipo,
+                            COALESCE(vc.conductor_doc_numero, d.doc_numero) AS d_doc_numero,
+                            COALESCE(vc.conductor_nombres, d.nombres) AS d_nombres,
+                            COALESCE(vc.conductor_apellidos, d.apellidos) AS d_apellidos,
+                            COALESCE(vc.conductor_telefono, d.telefono) AS d_telefono
                      FROM pos_venta_conductores vc
                      LEFT JOIN pos_conductores d ON d.id=vc.conductor_id
                      WHERE vc.venta_id=? AND vc.es_principal=1
@@ -882,11 +899,14 @@ try {
     // Búsqueda universal (solo si hay query)
     if ($q !== '') {
       $where[] = "("
-        . "c.doc_tipo LIKE ? OR c.doc_numero LIKE ? OR c.nombre LIKE ?"
+        . "COALESCE(v.cliente_snapshot_doc_tipo,c.doc_tipo) LIKE ?"
+        . " OR COALESCE(v.cliente_snapshot_doc_numero,c.doc_numero) LIKE ?"
+        . " OR COALESCE(v.cliente_snapshot_nombre,c.nombre) LIKE ?"
         . " OR v.contratante_doc_tipo LIKE ? OR v.contratante_doc_numero LIKE ?"
         . " OR CONCAT_WS(' ', v.contratante_nombres, v.contratante_apellidos) LIKE ?"
-        . " OR d.doc_tipo LIKE ? OR d.doc_numero LIKE ?"
-        . " OR CONCAT_WS(' ', d.nombres, d.apellidos) LIKE ?"
+        . " OR COALESCE(vc.conductor_doc_tipo,d.doc_tipo) LIKE ?"
+        . " OR COALESCE(vc.conductor_doc_numero,d.doc_numero) LIKE ?"
+        . " OR CONCAT_WS(' ', COALESCE(vc.conductor_nombres,d.nombres), COALESCE(vc.conductor_apellidos,d.apellidos)) LIKE ?"
         . " OR CONCAT(v.serie,'-',LPAD(v.numero,4,'0')) LIKE ?"
         . ")";
       $types .= "ssssssssss";
@@ -945,21 +965,28 @@ try {
               cd.fecha  AS caja_fecha,
               cd.estado AS caja_estado,
               COALESCE(r.devuelto_total,0) AS devuelto_total,
-              c.doc_tipo  AS c_doc_tipo,
-              c.doc_numero AS c_doc_num,
-              c.nombre     AS c_nombre,
-              c.telefono   AS c_telefono,
+              COALESCE(v.cliente_snapshot_doc_tipo, c.doc_tipo) AS c_doc_tipo,
+              COALESCE(v.cliente_snapshot_doc_numero, c.doc_numero) AS c_doc_num,
+              COALESCE(v.cliente_snapshot_nombre, c.nombre) AS c_nombre,
+              COALESCE(v.cliente_snapshot_telefono, c.telefono) AS c_telefono,
               v.contratante_doc_tipo   AS ct_doc_tipo,
               v.contratante_doc_numero AS ct_doc_num,
               v.contratante_nombres    AS ct_nombres,
               v.contratante_apellidos  AS ct_apellidos,
               v.contratante_telefono   AS ct_telefono,
               vc.conductor_tipo        AS vc_conductor_tipo,
-              d.doc_tipo   AS d_doc_tipo,
-              d.doc_numero AS d_doc_num,
-              d.nombres    AS d_nombres,
-              d.apellidos  AS d_apellidos,
-              d.telefono   AS d_telefono
+              vc.conductor_origen      AS vc_conductor_origen,
+              vc.conductor_es_mismo_cliente AS vc_conductor_es_mismo_cliente,
+              vc.conductor_doc_tipo    AS vc_doc_tipo,
+              vc.conductor_doc_numero  AS vc_doc_numero,
+              vc.conductor_nombres     AS vc_nombres,
+              vc.conductor_apellidos   AS vc_apellidos,
+              vc.conductor_telefono    AS vc_telefono,
+              COALESCE(vc.conductor_doc_tipo, d.doc_tipo)   AS d_doc_tipo,
+              COALESCE(vc.conductor_doc_numero, d.doc_numero) AS d_doc_num,
+              COALESCE(vc.conductor_nombres, d.nombres)    AS d_nombres,
+              COALESCE(vc.conductor_apellidos, d.apellidos)  AS d_apellidos,
+              COALESCE(vc.conductor_telefono, d.telefono)   AS d_telefono
             FROM pos_ventas v
             LEFT JOIN mod_caja_diaria cd ON cd.id=v.caja_diaria_id
             LEFT JOIN pos_clientes c ON c.id=v.cliente_id

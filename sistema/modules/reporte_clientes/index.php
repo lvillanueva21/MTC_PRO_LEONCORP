@@ -500,6 +500,30 @@ include __DIR__ . '/../../includes/header.php';
                     $perfilCatMoto = trim((string)($cli['perfil_categoria_moto'] ?? ''));
                     $perfilNota = trim((string)($cli['perfil_nota'] ?? ''));
                     $perfilActualizado = fmt_dt($cli['perfil_actualizado'] ?? null);
+                    $conductorDocTipo = trim((string)($cli['conductor_doc_tipo'] ?? ''));
+                    $conductorDocNum = trim((string)($cli['conductor_doc_numero'] ?? ''));
+                    $conductorNombres = trim((string)($cli['conductor_nombres'] ?? ''));
+                    $conductorApellidos = trim((string)($cli['conductor_apellidos'] ?? ''));
+                    $conductorTelefono = trim((string)($cli['conductor_telefono'] ?? ''));
+                    $conductorOrigenRaw = trim((string)($cli['conductor_origen'] ?? ''));
+                    $conductorEsMismo = (int)($cli['conductor_es_mismo_cliente'] ?? 0) === 1;
+                    $conductorUltVenta = fmt_date($cli['conductor_ultima_venta'] ?? null);
+                    $conductorNombreCompleto = trim($conductorNombres . ' ' . $conductorApellidos);
+                    $conductorDocCompleto = trim($conductorDocTipo . ' ' . $conductorDocNum);
+                    $conductorTieneDatos = ($conductorDocCompleto !== '' || $conductorNombreCompleto !== '' || $conductorTelefono !== '');
+                    if ($conductorDocCompleto !== '' && $conductorNombreCompleto !== '') {
+                      $conductorResumen = $conductorDocCompleto . ' - ' . $conductorNombreCompleto;
+                    } elseif ($conductorDocCompleto !== '') {
+                      $conductorResumen = $conductorDocCompleto;
+                    } else {
+                      $conductorResumen = $conductorNombreCompleto;
+                    }
+                    $mapOrigenConductor = [
+                      'cliente_natural' => 'Cliente natural',
+                      'contratante_juridica' => 'Contratante de juridica',
+                      'conductor_otra_persona' => 'Conductor diferente'
+                    ];
+                    $conductorOrigen = $mapOrigenConductor[$conductorOrigenRaw] ?? ($conductorOrigenRaw !== '' ? $conductorOrigenRaw : 'No definido');
                     $activo  = (int)($cli['activo'] ?? 0);
 
                     $ventasTotal    = (float)($cli['ventas_total'] ?? 0);
@@ -546,6 +570,9 @@ include __DIR__ . '/../../includes/header.php';
                       </div>
                       <div class="small text-muted">
                         Canal: <?= h($perfilCanal !== '' ? $perfilCanal : '—') ?>
+                      </div>
+                      <div class="small text-muted">
+                        Conductor ult.: <?= h($conductorResumen !== '' ? $conductorResumen : '-') ?>
                       </div>
                     </td>
                     <td class="text-end">
@@ -637,6 +664,30 @@ include __DIR__ . '/../../includes/header.php';
                               <strong>Perfil actualizado:</strong>
                               <?= $perfilActualizado !== '' ? h($perfilActualizado) : '—' ?>
                             </div>
+                            <hr class="my-2">
+                            <div class="small mb-1">
+                              <strong>Ultimo conductor asociado:</strong>
+                            </div>
+                            <?php if ($conductorTieneDatos): ?>
+                              <div class="small mb-1">
+                                <strong>Conductor:</strong> <?= h($conductorResumen !== '' ? $conductorResumen : '-') ?>
+                              </div>
+                              <div class="small mb-1">
+                                <strong>Telefono conductor:</strong> <?= h($conductorTelefono !== '' ? $conductorTelefono : '-') ?>
+                              </div>
+                              <div class="small mb-1">
+                                <strong>Origen:</strong> <?= h($conductorOrigen) ?>
+                              </div>
+                              <div class="small mb-1">
+                                <strong>Es el mismo cliente:</strong> <?= $conductorEsMismo ? 'Si' : 'No' ?>
+                              </div>
+                              <div class="small mb-1 text-muted">
+                                <strong>Ultima venta con este conductor:</strong>
+                                <?= $conductorUltVenta !== '' ? h($conductorUltVenta) : '-' ?>
+                              </div>
+                            <?php else: ?>
+                              <div class="small text-muted mb-1">Sin conductor asociado en ventas.</div>
+                            <?php endif; ?>
                           </div>
                         </div>
 

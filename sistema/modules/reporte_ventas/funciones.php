@@ -28,10 +28,10 @@ if (!function_exists('reporte_resolver_conductor')) {
   function reporte_resolver_conductor(array $venta, array $raw = []): array {
     $row = array_merge($venta, $raw);
     $tipoRelacion = strtoupper((string)reporte_row_pick($row, ['conductor_tipo', 'vc_conductor_tipo'], ''));
-    $hasRegistrado = reporte_row_has_any($row, ['doc_tipo', 'doc_numero', 'nombres', 'apellidos', 'telefono']);
-    if (($tipoRelacion === 'REGISTRADO' || $tipoRelacion === '') && $hasRegistrado) {
+    $hasConductor = reporte_row_has_any($row, ['doc_tipo', 'doc_numero', 'nombres', 'apellidos', 'telefono']);
+    if ($tipoRelacion !== 'PENDIENTE' && $hasConductor) {
       return [
-        'conductor_tipo' => 'REGISTRADO',
+        'conductor_tipo' => ($tipoRelacion !== '' ? $tipoRelacion : 'REGISTRADO'),
         'doc_tipo'       => (string)reporte_row_pick($row, ['doc_tipo']),
         'doc_numero'     => (string)reporte_row_pick($row, ['doc_numero']),
         'nombres'        => (string)reporte_row_pick($row, ['nombres']),
@@ -99,10 +99,11 @@ if (!function_exists('listar_ventas_con_detalles')) {
               v.contratante_telefono,
               v.observacion,
               v.creado_por,
-              c.nombre      AS cliente,
-              c.doc_tipo    AS cliente_doc_tipo,
-              c.doc_numero  AS cliente_doc_numero,
-              c.telefono    AS cliente_telefono
+              v.cliente_snapshot_tipo_persona AS cliente_tipo_persona,
+              COALESCE(v.cliente_snapshot_nombre, c.nombre) AS cliente,
+              COALESCE(v.cliente_snapshot_doc_tipo, c.doc_tipo) AS cliente_doc_tipo,
+              COALESCE(v.cliente_snapshot_doc_numero, c.doc_numero) AS cliente_doc_numero,
+              COALESCE(v.cliente_snapshot_telefono, c.telefono) AS cliente_telefono
             FROM pos_ventas v
             LEFT JOIN pos_clientes c ON c.id = v.cliente_id
             WHERE v.id_empresa = ?
@@ -194,7 +195,13 @@ if (!function_exists('reporte_cargar_detalles_ventas')) {
     // ---------- Conductores ----------
     $sqlC = "SELECT vc.venta_id, vc.es_principal,
                     vc.conductor_tipo,
-                    co.doc_tipo, co.doc_numero, co.nombres, co.apellidos, co.telefono
+                    vc.conductor_origen,
+                    vc.conductor_es_mismo_cliente,
+                    COALESCE(vc.conductor_doc_tipo, co.doc_tipo) AS doc_tipo,
+                    COALESCE(vc.conductor_doc_numero, co.doc_numero) AS doc_numero,
+                    COALESCE(vc.conductor_nombres, co.nombres) AS nombres,
+                    COALESCE(vc.conductor_apellidos, co.apellidos) AS apellidos,
+                    COALESCE(vc.conductor_telefono, co.telefono) AS telefono
              FROM pos_venta_conductores vc
              LEFT JOIN pos_conductores co ON co.id = vc.conductor_id
              WHERE vc.venta_id IN ($in)
@@ -362,11 +369,13 @@ if (!function_exists('reporte_build_ventas_where')) {
     // Nombre & Documento (cliente o contratante)
     if ($q !== '') {
       $like = '%' . $q . '%';
-      $where[] = '(c.nombre LIKE ?
-                   OR c.doc_numero LIKE ?
+      $where[] = '(COALESCE(v.cliente_snapshot_nombre, c.nombre) LIKE ?
+                   OR COALESCE(v.cliente_snapshot_doc_numero, c.doc_numero) LIKE ?
+                   OR COALESCE(v.cliente_snapshot_doc_tipo, c.doc_tipo) LIKE ?
                    OR v.contratante_doc_numero LIKE ?
                    OR CONCAT_WS(" ", v.contratante_nombres, v.contratante_apellidos) LIKE ?)';
-      $types .= 'ssss';
+      $types .= 'sssss';
+      $vals[] = $like;
       $vals[] = $like;
       $vals[] = $like;
       $vals[] = $like;
@@ -539,10 +548,11 @@ if (!function_exists('buscar_ventas_con_detalles')) {
               v.contratante_telefono,
               v.observacion,
               v.creado_por,
-              c.nombre      AS cliente,
-              c.doc_tipo    AS cliente_doc_tipo,
-              c.doc_numero  AS cliente_doc_numero,
-              c.telefono    AS cliente_telefono
+              v.cliente_snapshot_tipo_persona AS cliente_tipo_persona,
+              COALESCE(v.cliente_snapshot_nombre, c.nombre) AS cliente,
+              COALESCE(v.cliente_snapshot_doc_tipo, c.doc_tipo) AS cliente_doc_tipo,
+              COALESCE(v.cliente_snapshot_doc_numero, c.doc_numero) AS cliente_doc_numero,
+              COALESCE(v.cliente_snapshot_telefono, c.telefono) AS cliente_telefono
             FROM pos_ventas v
             LEFT JOIN pos_clientes c ON c.id = v.cliente_id
             WHERE $whereSql
@@ -613,7 +623,7 @@ if (!function_exists('listar_ventas_basico')) {
               v.total,
               v.saldo,
               v.estado,
-              c.nombre AS cliente
+              COALESCE(v.cliente_snapshot_nombre, c.nombre) AS cliente
             FROM pos_ventas v
             LEFT JOIN pos_clientes c ON c.id = v.cliente_id
             WHERE v.id_empresa = ?

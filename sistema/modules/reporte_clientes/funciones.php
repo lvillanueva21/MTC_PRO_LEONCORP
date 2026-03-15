@@ -83,6 +83,48 @@ if (!function_exists('reporte_clientes_soporta_perfil_conductor')) {
 }
 
 /**
+ * JOIN reutilizable para traer el ultimo conductor principal asociado
+ * a cada cliente (por ultima venta id de ese cliente en la empresa).
+ */
+if (!function_exists('reporte_clientes_join_conductor_reciente_sql')) {
+    function reporte_clientes_join_conductor_reciente_sql() {
+        return "LEFT JOIN (
+                    SELECT x.cliente_id,
+                           COALESCE(vc.conductor_doc_tipo, co.doc_tipo) AS conductor_doc_tipo,
+                           COALESCE(vc.conductor_doc_numero, co.doc_numero) AS conductor_doc_numero,
+                           COALESCE(vc.conductor_nombres, co.nombres) AS conductor_nombres,
+                           COALESCE(vc.conductor_apellidos, co.apellidos) AS conductor_apellidos,
+                           COALESCE(vc.conductor_telefono, co.telefono) AS conductor_telefono,
+                           COALESCE(
+                             vc.conductor_origen,
+                             CASE
+                               WHEN vc.conductor_id IS NOT NULL THEN 'conductor_otra_persona'
+                               WHEN v.contratante_doc_tipo IS NOT NULL THEN 'contratante_juridica'
+                               ELSE 'cliente_natural'
+                             END
+                           ) AS conductor_origen,
+                           COALESCE(
+                             vc.conductor_es_mismo_cliente,
+                             CASE
+                               WHEN vc.conductor_id IS NULL AND v.contratante_doc_tipo IS NULL THEN 1
+                               ELSE 0
+                             END
+                           ) AS conductor_es_mismo_cliente,
+                           v.fecha_emision AS conductor_ultima_venta
+                    FROM (
+                        SELECT v.cliente_id, MAX(v.id) AS venta_id
+                        FROM pos_ventas v
+                        WHERE v.id_empresa = ?
+                        GROUP BY v.cliente_id
+                    ) x
+                    INNER JOIN pos_ventas v ON v.id = x.venta_id
+                    LEFT JOIN pos_venta_conductores vc ON vc.venta_id = v.id AND vc.es_principal = 1
+                    LEFT JOIN pos_conductores co ON co.id = vc.conductor_id
+                ) lc ON lc.cliente_id = c.id";
+    }
+}
+
+/**
  * Construye el WHERE y los parámetros de filtros para clientes.
  * Deja en $whereSql la cadena WHERE (sin la palabra WHERE),
  * en $types la cadena de tipos para bind_param
@@ -119,8 +161,18 @@ if (!function_exists('armar_filtros_clientes')) {
         // Búsqueda textual
         if ($q !== '') {
             $like = '%' . $q . '%';
-            $parts = ['c.nombre LIKE ?', 'c.doc_numero LIKE ?', 'c.telefono LIKE ?'];
-            $types .= 'sss';
+            $parts = [
+                'c.nombre LIKE ?',
+                'c.doc_numero LIKE ?',
+                'c.telefono LIKE ?',
+                'lc.conductor_doc_numero LIKE ?',
+                'CONCAT_WS(" ", lc.conductor_nombres, lc.conductor_apellidos) LIKE ?',
+                'lc.conductor_telefono LIKE ?'
+            ];
+            $types .= 'ssssss';
+            $vals[] = $like;
+            $vals[] = $like;
+            $vals[] = $like;
             $vals[] = $like;
             $vals[] = $like;
             $vals[] = $like;
@@ -208,14 +260,15 @@ if (!function_exists('obtener_resumen_clientes')) {
 
         armar_filtros_clientes($empresaId, $optsConPerfil, $whereSql, $typesFilter, $valsFilter, $tieneVentas, $tieneAbonos);
 
+        $joinConductor = reporte_clientes_join_conductor_reciente_sql();
         $joinPerfil = '';
         if ($usarPerfil) {
             $joinPerfil = "LEFT JOIN pos_perfil_conductor pc
                                ON pc.id_empresa = c.id_empresa
-                              AND pc.doc_tipo   = c.doc_tipo
-                              AND pc.doc_numero = c.doc_numero
-                           LEFT JOIN cq_categorias_licencia ca ON ca.id = pc.categoria_auto_id
-                           LEFT JOIN cq_categorias_licencia cm ON cm.id = pc.categoria_moto_id";
+                               AND pc.doc_tipo   = COALESCE(lc.conductor_doc_tipo, c.doc_tipo)
+                               AND pc.doc_numero = COALESCE(lc.conductor_doc_numero, c.doc_numero)
+                            LEFT JOIN cq_categorias_licencia ca ON ca.id = pc.categoria_auto_id
+                            LEFT JOIN cq_categorias_licencia cm ON cm.id = pc.categoria_moto_id";
         }
 
         $sql = "SELECT
@@ -228,6 +281,7 @@ if (!function_exists('obtener_resumen_clientes')) {
                     SUM(COALESCE(v.ventas_saldo,0))        AS total_saldo,
                     SUM(COALESCE(a.abonos_total,0))        AS total_abonos
                 FROM pos_clientes c
+                " . $joinConductor . "
                 " . $joinPerfil . "
                 LEFT JOIN (
                     SELECT v.cliente_id,
@@ -251,8 +305,8 @@ if (!function_exists('obtener_resumen_clientes')) {
                 WHERE " . $whereSql;
 
         $st = $db->prepare($sql);
-        $typesAll  = 'ii' . $typesFilter;
-        $paramsAll = array_merge([$typesAll], [$empresaId, $empresaId], $valsFilter);
+        $typesAll  = 'iii' . $typesFilter;
+        $paramsAll = array_merge([$typesAll], [$empresaId, $empresaId, $empresaId], $valsFilter);
 
         $refs = [];
         foreach ($paramsAll as $k => $v) {
@@ -321,19 +375,21 @@ if (!function_exists('buscar_clientes_con_metricas')) {
 
         armar_filtros_clientes($empresaId, $optsConPerfil, $whereSql, $typesFilter, $valsFilter, $tieneVentas, $tieneAbonos);
 
+        $joinConductor = reporte_clientes_join_conductor_reciente_sql();
         $joinPerfil = '';
         if ($usarPerfil) {
             $joinPerfil = "LEFT JOIN pos_perfil_conductor pc
                                ON pc.id_empresa = c.id_empresa
-                              AND pc.doc_tipo   = c.doc_tipo
-                              AND pc.doc_numero = c.doc_numero
-                           LEFT JOIN cq_categorias_licencia ca ON ca.id = pc.categoria_auto_id
-                           LEFT JOIN cq_categorias_licencia cm ON cm.id = pc.categoria_moto_id";
+                               AND pc.doc_tipo   = COALESCE(lc.conductor_doc_tipo, c.doc_tipo)
+                               AND pc.doc_numero = COALESCE(lc.conductor_doc_numero, c.doc_numero)
+                            LEFT JOIN cq_categorias_licencia ca ON ca.id = pc.categoria_auto_id
+                            LEFT JOIN cq_categorias_licencia cm ON cm.id = pc.categoria_moto_id";
         }
 
         // Total de filas
         $sqlCount = "SELECT COUNT(*) AS total
                      FROM pos_clientes c
+                     " . $joinConductor . "
                      " . $joinPerfil . "
                      LEFT JOIN (
                          SELECT v.cliente_id,
@@ -352,8 +408,8 @@ if (!function_exists('buscar_clientes_con_metricas')) {
                      WHERE " . $whereSql;
 
         $stCount   = $db->prepare($sqlCount);
-        $typesCnt  = 'ii' . $typesFilter;
-        $paramsCnt = array_merge([$typesCnt], [$empresaId, $empresaId], $valsFilter);
+        $typesCnt  = 'iii' . $typesFilter;
+        $paramsCnt = array_merge([$typesCnt], [$empresaId, $empresaId, $empresaId], $valsFilter);
 
         $refsCnt = [];
         foreach ($paramsCnt as $k => $v) {
@@ -408,6 +464,14 @@ if (!function_exists('buscar_clientes_con_metricas')) {
                     c.doc_numero,
                     c.nombre,
                     c.telefono,
+                    lc.conductor_doc_tipo,
+                    lc.conductor_doc_numero,
+                    lc.conductor_nombres,
+                    lc.conductor_apellidos,
+                    lc.conductor_telefono,
+                    lc.conductor_origen,
+                    lc.conductor_es_mismo_cliente,
+                    lc.conductor_ultima_venta,
                     " . $selectPerfil . "
                     c.activo,
                     c.creado,
@@ -422,6 +486,7 @@ if (!function_exists('buscar_clientes_con_metricas')) {
                     COALESCE(a.abonos_total,0.0)    AS abonos_total,
                     a.ultimo_abono
                 FROM pos_clientes c
+                " . $joinConductor . "
                 " . $joinPerfil . "
                 LEFT JOIN (
                     SELECT v.cliente_id,
@@ -456,8 +521,8 @@ if (!function_exists('buscar_clientes_con_metricas')) {
                 LIMIT ? OFFSET ?";
 
         $stMain   = $db->prepare($sql);
-        $typesAll = 'ii' . $typesFilter . 'ii';
-        $params   = array_merge([$typesAll], [$empresaId, $empresaId], $valsFilter, [$perPage, $offset]);
+        $typesAll = 'iii' . $typesFilter . 'ii';
+        $params   = array_merge([$typesAll], [$empresaId, $empresaId, $empresaId], $valsFilter, [$perPage, $offset]);
 
         $refs = [];
         foreach ($params as $k => $v) {

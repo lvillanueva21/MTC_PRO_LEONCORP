@@ -1102,6 +1102,11 @@ $ct_doc_num   = trim($_POST['contratante_doc_numero'] ?? '');
         'nombre'       => $cliente_nombre,
         'telefono'     => $cli_telefono?:null
       ]);
+      $cliente_snapshot_tipo_persona = $cliente_tipo;
+      $cliente_snapshot_doc_tipo     = $cli_doc_tipo;
+      $cliente_snapshot_doc_numero   = $cli_doc_num;
+      $cliente_snapshot_nombre       = $cliente_nombre;
+      $cliente_snapshot_telefono     = $cli_telefono ?: null;
 
       // 7) Resolver conductor principal
       $conductor_rel_tipo = 'CLIENTE';
@@ -1163,6 +1168,30 @@ $ct_doc_num   = trim($_POST['contratante_doc_numero'] ?? '');
         pos_perfil_upsert($db, $empId, $perfil_doc_tipo, $perfil_doc_num, $conductor_extra_data);
         $conductor_extra_guardado = true;
       }
+      $conductor_extra_venta = [
+        'canal'             => null,
+        'email_contacto'    => null,
+        'nacimiento'        => null,
+        'categoria_auto_id' => null,
+        'categoria_moto_id' => null,
+        'nota'              => null
+      ];
+      if ($conductor_extra_enabled && $conductor_extra_data !== null) {
+        $conductor_extra_venta = [
+          'canal'             => $conductor_extra_data['canal'],
+          'email_contacto'    => $conductor_extra_data['email'],
+          'nacimiento'        => $conductor_extra_data['nacimiento'],
+          'categoria_auto_id' => $conductor_extra_data['categoria_auto_id'] !== null ? (string)(int)$conductor_extra_data['categoria_auto_id'] : null,
+          'categoria_moto_id' => $conductor_extra_data['categoria_moto_id'] !== null ? (string)(int)$conductor_extra_data['categoria_moto_id'] : null,
+          'nota'              => $conductor_extra_data['nota']
+        ];
+      }
+      $conductor_es_mismo_cliente = (
+        !$conductor_otro
+        && $cliente_tipo === 'NATURAL'
+        && $conductor_snapshot['doc_tipo'] === $cli_doc_tipo
+        && $conductor_snapshot['doc_numero'] === $cli_doc_num
+      ) ? 1 : 0;
 
       // Snapshot del contratante solo si el cliente es JURIDICA
       $contr_doc_tipo  = ($cliente_tipo === 'JURIDICA') ? $ct_doc_tipo : null;
@@ -1177,21 +1206,28 @@ $ct_doc_num   = trim($_POST['contratante_doc_numero'] ?? '');
 
       $insV = $db->prepare("INSERT INTO pos_ventas(
         id_empresa, caja_diaria_id, serie_id, cliente_id,
+        cliente_snapshot_tipo_persona, cliente_snapshot_doc_tipo, cliente_snapshot_doc_numero, cliente_snapshot_nombre, cliente_snapshot_telefono,
         contratante_doc_tipo, contratante_doc_numero, contratante_nombres, contratante_apellidos, contratante_telefono,
         tipo_comprobante, serie, numero, fecha_emision,
         moneda, estado, total, total_pagado, total_devuelto, saldo, creado_por
       ) VALUES (
         ?, ?, ?, ?,
         ?, ?, ?, ?, ?,
+        ?, ?, ?, ?, ?,
         'TICKET', ?, ?, NOW(),
         'PEN', 'EMITIDA', ?, 0.00, 0.00, ?, ?
       )");
       $insV->bind_param(
-        'iiiissssssiddi',
+        'iiiisssssssssssiddi',
         $empId,               // i
         $caja_diaria_id,      // i
         $ticket['serie_id'],  // i
         $cliente_id,          // i
+        $cliente_snapshot_tipo_persona, // s
+        $cliente_snapshot_doc_tipo,     // s
+        $cliente_snapshot_doc_numero,   // s
+        $cliente_snapshot_nombre,       // s
+        $cliente_snapshot_telefono,     // s
         $contr_doc_tipo,      // s
         $contr_doc_num,       // s
         $contr_nombres,       // s
@@ -1273,13 +1309,70 @@ $ct_doc_num   = trim($_POST['contratante_doc_numero'] ?? '');
 
       // 10) Conductor principal
       if ($conductor_rel_id === null) {
-        $insC = $db->prepare("INSERT INTO pos_venta_conductores(venta_id, conductor_tipo, conductor_id, estado, es_principal)
-                              VALUES (?, ?, NULL, 'ASIGNADO', 1)");
-        $insC->bind_param('is', $venta_id, $conductor_rel_tipo);
+        $insC = $db->prepare("INSERT INTO pos_venta_conductores(
+                                venta_id, conductor_tipo, conductor_id,
+                                conductor_doc_tipo, conductor_doc_numero, conductor_nombres, conductor_apellidos, conductor_telefono,
+                                conductor_es_mismo_cliente, conductor_origen,
+                                estado, es_principal,
+                                canal, email_contacto, nacimiento, conductor_categoria_auto_id, conductor_categoria_moto_id, nota
+                              ) VALUES (
+                                ?, ?, NULL,
+                                ?, ?, ?, ?, ?,
+                                ?, ?,
+                                'ASIGNADO', 1,
+                                ?, ?, ?, ?, ?, ?
+                              )");
+        $insC->bind_param(
+          'issssssisssssss',
+          $venta_id,
+          $conductor_rel_tipo,
+          $conductor_snapshot['doc_tipo'],
+          $conductor_snapshot['doc_numero'],
+          $conductor_snapshot['nombres'],
+          $conductor_snapshot['apellidos'],
+          $conductor_snapshot['telefono'],
+          $conductor_es_mismo_cliente,
+          $conductor_origen,
+          $conductor_extra_venta['canal'],
+          $conductor_extra_venta['email_contacto'],
+          $conductor_extra_venta['nacimiento'],
+          $conductor_extra_venta['categoria_auto_id'],
+          $conductor_extra_venta['categoria_moto_id'],
+          $conductor_extra_venta['nota']
+        );
       } else {
-        $insC = $db->prepare("INSERT INTO pos_venta_conductores(venta_id, conductor_tipo, conductor_id, estado, es_principal)
-                              VALUES (?, ?, ?, 'ASIGNADO', 1)");
-        $insC->bind_param('isi', $venta_id, $conductor_rel_tipo, $conductor_rel_id);
+        $insC = $db->prepare("INSERT INTO pos_venta_conductores(
+                                venta_id, conductor_tipo, conductor_id,
+                                conductor_doc_tipo, conductor_doc_numero, conductor_nombres, conductor_apellidos, conductor_telefono,
+                                conductor_es_mismo_cliente, conductor_origen,
+                                estado, es_principal,
+                                canal, email_contacto, nacimiento, conductor_categoria_auto_id, conductor_categoria_moto_id, nota
+                              ) VALUES (
+                                ?, ?, ?,
+                                ?, ?, ?, ?, ?,
+                                ?, ?,
+                                'ASIGNADO', 1,
+                                ?, ?, ?, ?, ?, ?
+                              )");
+        $insC->bind_param(
+          'isisssssisssssss',
+          $venta_id,
+          $conductor_rel_tipo,
+          $conductor_rel_id,
+          $conductor_snapshot['doc_tipo'],
+          $conductor_snapshot['doc_numero'],
+          $conductor_snapshot['nombres'],
+          $conductor_snapshot['apellidos'],
+          $conductor_snapshot['telefono'],
+          $conductor_es_mismo_cliente,
+          $conductor_origen,
+          $conductor_extra_venta['canal'],
+          $conductor_extra_venta['email_contacto'],
+          $conductor_extra_venta['nacimiento'],
+          $conductor_extra_venta['categoria_auto_id'],
+          $conductor_extra_venta['categoria_moto_id'],
+          $conductor_extra_venta['nota']
+        );
       }
       $insC->execute();
 
