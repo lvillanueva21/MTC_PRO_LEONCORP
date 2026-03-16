@@ -539,6 +539,143 @@ function eg_fmt_dt(string $dt): string
     return date('d/m/Y H:i', $ts);
 }
 
+function eg_pdf_clean_text(?string $value): string
+{
+    $text = trim((string)$value);
+    if ($text === '') {
+        return '';
+    }
+    $text = preg_replace('/\s+/u', ' ', $text);
+    return trim((string)$text);
+}
+
+function eg_pdf_comprobante_text(array $eg): string
+{
+    $tipo = strtoupper(trim((string)($eg['tipo_comprobante'] ?? 'RECIBO')));
+    $referencia = eg_pdf_clean_text((string)($eg['referencia'] ?? ''));
+    $serie = trim((string)($eg['serie'] ?? ''));
+    $numero = trim((string)($eg['numero'] ?? ''));
+
+    if ($tipo === 'RECIBO') {
+        return $referencia !== '' ? $referencia : 'RECIBO INTERNO';
+    }
+
+    $doc = trim($serie . '-' . $numero, '-');
+    if ($doc === '') {
+        $doc = '-';
+    }
+
+    return $tipo . ' ' . $doc;
+}
+
+function eg_pdf_responsable_text(array $eg): string
+{
+    $responsable = eg_pdf_clean_text((string)($eg['creado_nombre'] ?? ''));
+    if ($responsable === '') {
+        $responsable = eg_pdf_clean_text((string)($eg['creado_usuario'] ?? ''));
+    }
+    return $responsable !== '' ? $responsable : 'Responsable';
+}
+
+function eg_pdf_fit_ellipsis($pdf, string $text, float $maxWidth): string
+{
+    $text = eg_pdf_clean_text($text);
+    if ($text === '') {
+        return '';
+    }
+
+    if ($pdf->GetStringWidth($text) <= $maxWidth) {
+        return $text;
+    }
+
+    $ellipsis = '...';
+
+    if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+        while (mb_strlen($text, 'UTF-8') > 0 && $pdf->GetStringWidth($text . $ellipsis) > $maxWidth) {
+            $text = rtrim(mb_substr($text, 0, mb_strlen($text, 'UTF-8') - 1, 'UTF-8'));
+        }
+    } else {
+        while (strlen($text) > 0 && $pdf->GetStringWidth($text . $ellipsis) > $maxWidth) {
+            $text = rtrim(substr($text, 0, -1));
+        }
+    }
+
+    $text = rtrim($text, " \t\n\r\0\x0B,.;:-");
+
+    return $text === '' ? $ellipsis : ($text . $ellipsis);
+}
+
+function eg_pdf_wrap_lines($pdf, string $text, float $maxWidth, int $maxLines): array
+{
+    $text = eg_pdf_clean_text($text);
+    if ($text === '') {
+        return array_pad(['-'], $maxLines, '');
+    }
+
+    $words = preg_split('/\s+/u', $text) ?: [$text];
+    $lines = [];
+    $current = '';
+    $i = 0;
+    $count = count($words);
+    $overflow = false;
+
+    while ($i < $count) {
+        $word = (string)$words[$i];
+        $candidate = ($current === '') ? $word : ($current . ' ' . $word);
+
+        if ($pdf->GetStringWidth($candidate) <= $maxWidth) {
+            $current = $candidate;
+            $i++;
+            continue;
+        }
+
+        if ($current === '') {
+            $current = eg_pdf_fit_ellipsis($pdf, $word, $maxWidth);
+            $i++;
+        }
+
+        $lines[] = $current;
+        $current = '';
+
+        if (count($lines) >= $maxLines) {
+            $overflow = ($i < $count);
+            break;
+        }
+    }
+
+    if (count($lines) < $maxLines && $current !== '') {
+        $lines[] = $current;
+    }
+
+    if (!$overflow && $i < $count) {
+        $overflow = true;
+    }
+
+    if ($overflow && count($lines) > 0) {
+        $last = count($lines) - 1;
+        $line = rtrim($lines[$last]);
+        if (substr($line, -3) !== '...') {
+            $lines[$last] = eg_pdf_fit_ellipsis($pdf, $line . '...', $maxWidth);
+        }
+    }
+
+    while (count($lines) < $maxLines) {
+        $lines[] = '';
+    }
+
+    return array_slice($lines, 0, $maxLines);
+}
+
+function eg_pdf_round_rect($pdf, float $x, float $y, float $w, float $h, float $r = 2.5, string $style = 'D'): void
+{
+    if (method_exists($pdf, 'RoundedRect')) {
+        $pdf->RoundedRect($x, $y, $w, $h, $r, '1111', $style);
+        return;
+    }
+
+    $pdf->Rect($x, $y, $w, $h, $style);
+}
+
 function eg_select_one(mysqli $db, int $empId, int $id): ?array
 {
     $sql = "SELECT
@@ -1015,267 +1152,276 @@ try {
     }
 
     if ($accion === 'egreso_pdf') {
-        $id = (int)($_GET['id'] ?? 0);
-        if ($id <= 0) {
-            http_response_code(400);
-            echo 'ID de egreso invalido.';
-            exit;
-        }
-
-        $eg = eg_select_one($db, $empId, $id);
-        if (!$eg) {
-            http_response_code(404);
-            echo 'Egreso no encontrado.';
-            exit;
-        }
-        $egFuentes = eg_select_fuentes($db, $empId, $id);
-
-        require_once __DIR__ . '/../TCPDF/tcpdf.php';
-
-        $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
-        $pdf->SetCreator('MTC Pro');
-        $pdf->SetAuthor('MTC Pro');
-        $pdf->SetTitle('Recibo de egreso ' . $eg['codigo']);
-        $pdf->SetMargins(3, 3, 3);
-        $pdf->SetAutoPageBreak(true, 3);
-        $pdf->setPrintHeader(false);
-        $pdf->setPrintFooter(false);
-        $pdf->SetFont('dejavusans', '', 10);
-        $pdf->AddPage();
-
-        $logoAbs = eg_logo_abs_fs($eg['empresa_logo_path'] ?? '');
-        $logoDataUri = '';
-        if ($logoAbs && is_file($logoAbs)) {
-            $logoBin = @file_get_contents($logoAbs);
-            if ($logoBin !== false && $logoBin !== '') {
-                $logoMime = 'image/png';
-                if (function_exists('finfo_open')) {
-                    $fi = @finfo_open(FILEINFO_MIME_TYPE);
-                    if ($fi) {
-                        $detected = @finfo_file($fi, $logoAbs);
-                        if (is_string($detected) && strpos($detected, 'image/') === 0) {
-                            $logoMime = $detected;
-                        }
-                        @finfo_close($fi);
-                    }
-                }
-                $logoDataUri = 'data:' . $logoMime . ';base64,' . base64_encode($logoBin);
-            }
-        }
-
-        $referenciaRaw = trim((string)($eg['referencia'] ?? ''));
-        $isReciboInterno = ((string)$eg['tipo_comprobante'] === 'RECIBO')
-            && ($referenciaRaw === '' || strtoupper($referenciaRaw) === 'INTERNO');
-
-        $compText = ($eg['tipo_comprobante'] === 'RECIBO')
-            ? ('RECIBO ' . ($referenciaRaw !== '' ? $referenciaRaw : 'INTERNO'))
-            : ($eg['tipo_comprobante'] . ' ' . trim((string)$eg['serie'] . '-' . (string)$eg['numero'], '-'));
-
-        $estadoTxt = ((string)$eg['estado'] === 'ANULADO') ? 'ANULADO' : 'EMITIDO';
-        $montoTxt = number_format((float)$eg['monto'], 2, '.', ',');
-        $empresa = trim((string)($eg['empresa_nombre'] ?? ''));
-        $fechaTxt = eg_fmt_dt((string)$eg['fecha_emision']);
-        $responsable = trim((string)($eg['creado_nombre'] ?? ''));
-        if ($responsable === '') {
-            $responsable = trim((string)($eg['creado_usuario'] ?? ''));
-        }
-        if ($responsable === '') {
-            $responsable = 'Responsable';
-        }
-
-        $beneficiario = htmlspecialchars((string)($eg['beneficiario'] ?? ''));
-        $documento = htmlspecialchars((string)($eg['documento'] ?? ''));
-        $concepto = nl2br(htmlspecialchars((string)($eg['concepto'] ?? '')));
-        $codigo = htmlspecialchars((string)$eg['codigo']);
-        $compTextEsc = htmlspecialchars($compText);
-        $estadoEsc = htmlspecialchars($estadoTxt);
-        $empresaEsc = htmlspecialchars($empresa);
-        $fechaEsc = htmlspecialchars($fechaTxt);
-        $responsableEsc = htmlspecialchars($responsable);
-        $montoEsc = htmlspecialchars($montoTxt);
-
-        $logoHtml = ($logoDataUri !== '')
-            ? '<img src="' . htmlspecialchars($logoDataUri, ENT_QUOTES, 'UTF-8') . '" class="logo-img" alt="Logo">'
-            : '<div class="logo-empty">SIN LOGO</div>';
-
-        $beneficiarioFirmaEsc = ($beneficiario !== '' ? $beneficiario : 'BENEFICIARIO');
-
-        $fuentesRowsHtml = '';
-        foreach ($egFuentes as $f) {
-            $fLabel = htmlspecialchars((string)($f['label'] ?? $f['key'] ?? ''));
-            $fMonto = htmlspecialchars(eg_fmt_money((float)($f['monto'] ?? 0)));
-            $fuentesRowsHtml .= '<tr>
-              <td style="padding:0.7mm 1mm;">' . $fLabel . '</td>
-              <td style="padding:0.7mm 1mm; text-align:right; font-weight:bold;">' . $fMonto . '</td>
-            </tr>';
-        }
-        if ($fuentesRowsHtml === '') {
-            $fuentesRowsHtml = '<tr><td colspan="2" style="padding:0.7mm 1mm;">Sin distribucion registrada</td></tr>';
-        }
-
-        $fuentesSectionHtml = '
-      <div class="space-2"></div>
-      <div class="rule"></div>
-      <div class="space-1"></div>
-      <div class="lbl">Fuentes de salida</div>
-      <table width="100%" cellpadding="0" cellspacing="0" border="0" style="font-size:9px;">
-        <thead>
-          <tr>
-            <th align="left" style="padding:0.7mm 1mm; border-bottom:1px solid #b7b7b7;">Fuente</th>
-            <th align="right" style="padding:0.7mm 1mm; border-bottom:1px solid #b7b7b7;">Monto</th>
-          </tr>
-        </thead>
-        <tbody>' . $fuentesRowsHtml . '</tbody>
-      </table>';
-
-        $firmaResponsableHtml = '
-          <div class="sig-wrap">
-            <div class="sig-space"></div>
-            <div class="sig-line"></div>
-            <div class="sig-note">Espacio para firma</div>
-            <div class="sig-name">' . $responsableEsc . '</div>
-            <div class="sig-role">Responsable</div>
-          </div>';
-
-        if ($isReciboInterno) {
-            $firmaSectionHtml = '
-      <table width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr>
-          <td width="49%" style="padding-right:2mm;" valign="top">
-            <div class="sig-wrap">
-              <div class="sig-space"></div>
-              <div class="sig-line"></div>
-              <div class="sig-note">Espacio para firma</div>
-              <div class="sig-name">' . $beneficiarioFirmaEsc . '</div>
-              <div class="sig-role">Beneficiario</div>
-            </div>
-          </td>
-          <td width="2%"></td>
-          <td width="49%" style="padding-left:2mm;" valign="top">
-            ' . $firmaResponsableHtml . '
-          </td>
-        </tr>
-      </table>';
-        } else {
-            $firmaSectionHtml = '
-      <table width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr>
-          <td width="51%"></td>
-          <td width="49%" style="padding-left:2mm;" valign="top">
-            ' . $firmaResponsableHtml . '
-          </td>
-        </tr>
-      </table>';
-        }
-
-        $html = '
-<style>
-  * { font-family: dejavusans, sans-serif; color: #111; }
-  .doc { font-size: 9.4px; }
-  .head-wrap { border: 1px solid #cfcfcf; border-radius: 2mm; overflow: hidden; }
-  .head-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-  .head-logo { text-align: center; vertical-align: middle; padding: 0.45mm; }
-  .head-company { text-align: center; vertical-align: middle; padding: 0.7mm 1mm; }
-  .head-money { text-align: center; vertical-align: middle; padding: 0.65mm 0.9mm; }
-  .head-meta { text-align: center; vertical-align: middle; padding: 0.5mm 0.7mm; }
-  .sep-r { border-right: 1px solid #cfcfcf; }
-  .sep-t { border-top: 1px solid #cfcfcf; }
-  .empresa { font-size: 14px; font-weight: bold; text-align: center; letter-spacing: 0.15px; line-height: 1.04; }
-  .subtitulo { font-size: 8.3px; text-align: center; color: #4b5563; margin-top: 0.15mm; }
-  .logo-wrap { width: 16mm; height: 16mm; text-align: center; vertical-align: middle; }
-  .logo-img { width: 15.5mm; height: 15.5mm; }
-  .logo-empty { font-size: 7.2px; color: #6b7280; text-align: center; }
-  .monto-lbl { font-size: 7.5px; color: #374151; text-align: center; font-weight: bold; letter-spacing: 0.25px; }
-  .monto-val { font-size: 16px; font-weight: bold; text-align: center; line-height: 1.0; }
-  .codigo-top { font-size: 7.4px; color: #374151; text-align: center; margin-top: 0.15mm; }
-  .meta-lbl { font-size: 7.1px; color: #4b5563; font-weight: bold; letter-spacing: 0.1px; text-transform: uppercase; }
-  .meta-val { font-size: 9px; color: #111; line-height: 1.1; margin-top: 0.12mm; text-align: center; }
-  .rule { border-top: 1px solid #8f8f8f; }
-  .space-1 { height: 0.35mm; }
-  .space-2 { height: 0.55mm; }
-  .lbl { font-size: 7.7px; color: #4b5563; font-weight: bold; letter-spacing: 0.15px; text-transform: uppercase; }
-  .val { font-size: 10px; color: #111; line-height: 1.1; margin-top: 0.12mm; }
-  .val-strong { font-size: 10px; color: #111; line-height: 1.1; margin-top: 0.12mm; font-weight: bold; }
-  .concepto { font-size: 10px; line-height: 1.16; min-height: 4.5mm; margin-top: 0.2mm; }
-  .sig-wrap { width: 100%; }
-  .sig-space { height: 4.2mm; }
-  .sig-line { border-top: 1px solid #333; }
-  .sig-note { font-size: 7.4px; color: #4b5563; text-align: center; margin-top: 0.3mm; }
-  .sig-name { font-size: 9.8px; font-weight: bold; text-align: center; margin-top: 0.42mm; }
-  .sig-role { font-size: 8.2px; color: #374151; text-align: center; margin-top: 0.15mm; }
-</style>
-<table class="doc" width="100%" cellpadding="0" cellspacing="0" border="0">
-  <tr>
-    <td>
-      <div class="head-wrap">
-        <table class="head-table" width="100%" cellpadding="0" cellspacing="0" border="0">
-          <tr>
-            <td class="head-logo sep-r" rowspan="2" width="13%" valign="middle">
-              <div class="logo-wrap">' . $logoHtml . '</div>
-            </td>
-            <td class="head-company sep-r" colspan="3" width="61%" valign="middle">
-              <div class="empresa">' . $empresaEsc . '</div>
-              <div class="subtitulo">RECIBO DE EGRESO</div>
-            </td>
-            <td class="head-money" rowspan="2" width="26%" valign="middle">
-              <div class="monto-lbl">MONTO (S/)</div>
-              <div class="monto-val">' . $montoEsc . '</div>
-              <div class="codigo-top">Codigo: ' . $codigo . '</div>
-            </td>
-          </tr>
-          <tr>
-            <td class="head-meta sep-t sep-r" width="20%" valign="middle">
-              <div class="meta-lbl">Fecha y hora</div>
-              <div class="meta-val">' . $fechaEsc . '</div>
-            </td>
-            <td class="head-meta sep-t sep-r" width="24%" valign="middle">
-              <div class="meta-lbl">Comprobante</div>
-              <div class="meta-val">' . $compTextEsc . '</div>
-            </td>
-            <td class="head-meta sep-t sep-r" width="17%" valign="middle">
-              <div class="meta-lbl">Estado</div>
-              <div class="meta-val">' . $estadoEsc . '</div>
-            </td>
-          </tr>
-        </table>
-      </div>
-
-      <div class="space-1"></div>
-      <div class="rule"></div>
-      <div class="space-1"></div>
-
-      <table width="100%" cellpadding="0" cellspacing="0" border="0">
-        <tr>
-          <td width="68%" style="padding-right:1.2mm;" valign="top">
-            <div class="lbl">Beneficiario</div>
-            <div class="val-strong">' . ($beneficiario !== '' ? $beneficiario : '---') . '</div>
-          </td>
-          <td width="32%" valign="top">
-            <div class="lbl">Documento</div>
-            <div class="val">' . ($documento !== '' ? $documento : '---') . '</div>
-          </td>
-        </tr>
-      </table>
-
-      <div class="space-2"></div>
-      <div class="rule"></div>
-      <div class="space-1"></div>
-
-      <div class="lbl">Concepto</div>
-      <div class="concepto">' . ($concepto !== '' ? $concepto : '---') . '</div>
-      ' . $fuentesSectionHtml . '
-      <div class="space-2"></div>
-      <div class="rule"></div>
-      <div class="space-1"></div>
-      ' . $firmaSectionHtml . '
-    </td>
-  </tr>
-</table>';
-
-        $pdf->writeHTML($html, true, false, true, false, '');
-        $pdf->Output('egreso_' . $eg['codigo'] . '.pdf', 'I');
+    $id = (int)($_GET['id'] ?? 0);
+    if ($id <= 0) {
+        http_response_code(400);
+        echo 'ID de egreso invalido.';
         exit;
     }
+
+    $eg = eg_select_one($db, $empId, $id);
+    if (!$eg) {
+        http_response_code(404);
+        echo 'Egreso no encontrado.';
+        exit;
+    }
+
+    $egFuentes = eg_select_fuentes($db, $empId, $id);
+
+    require_once __DIR__ . '/../TCPDF/tcpdf.php';
+
+    $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf->SetCreator('MTC Pro');
+    $pdf->SetAuthor('MTC Pro');
+    $pdf->SetTitle('Recibo de egreso ' . (string)$eg['codigo']);
+    $pdf->SetMargins(0, 0, 0);
+    $pdf->SetAutoPageBreak(false, 0);
+    $pdf->setPrintHeader(false);
+    $pdf->setPrintFooter(false);
+    $pdf->AddPage();
+    $pdf->SetFont('dejavusans', '', 10);
+
+    $receiptX = 8.0;
+    $receiptY = 10.0;
+    $receiptW = 194.0;
+    $receiptH = 132.0;
+
+    $colInk = [20, 20, 20];
+    $colBrand = [53, 70, 94];
+    $colSoft = [145, 151, 158];
+    $colBg = [246, 246, 244];
+
+    $empresa = eg_pdf_clean_text((string)($eg['empresa_nombre'] ?? ''));
+    if ($empresa === '') {
+        $empresa = eg_pdf_clean_text((string)($eg['empresa_razon_social'] ?? ''));
+    }
+    if ($empresa === '') {
+        $empresa = 'EMPRESA';
+    }
+
+    $codigo = eg_pdf_clean_text((string)($eg['codigo'] ?? ''));
+    $comprobante = eg_pdf_comprobante_text($eg);
+    $estado = ((string)($eg['estado'] ?? '') === 'ANULADO') ? 'ANULADO' : 'EMITIDO';
+    $monto = number_format((float)($eg['monto'] ?? 0), 2, '.', ',');
+    $responsable = eg_pdf_responsable_text($eg);
+    $beneficiario = eg_pdf_clean_text((string)($eg['beneficiario'] ?? ''));
+    $documento = eg_pdf_clean_text((string)($eg['documento'] ?? ''));
+    $conceptoRaw = eg_pdf_clean_text((string)($eg['concepto'] ?? ''));
+
+    if ($beneficiario === '') {
+        $beneficiario = '-';
+    }
+    if ($documento === '') {
+        $documento = '-';
+    }
+    if ($conceptoRaw === '') {
+        $conceptoRaw = '-';
+    }
+
+    $tsFecha = strtotime((string)($eg['fecha_emision'] ?? ''));
+    if ($tsFecha === false) {
+        $fechaHora = eg_fmt_dt((string)($eg['fecha_emision'] ?? ''));
+    } else {
+        $fechaHora = date('d/m/Y H:i', $tsFecha);
+    }
+
+    $conceptoFontSize = 9.6;
+    $conceptoX = $receiptX + 32.0;
+    $conceptoY = $receiptY + 58.0;
+    $conceptoW = 151.0;
+
+    $pdf->SetFont('dejavusans', '', $conceptoFontSize);
+    $conceptoLines = eg_pdf_wrap_lines($pdf, $conceptoRaw, $conceptoW - 1.5, 3);
+
+    $logoAbs = eg_logo_abs_fs($eg['empresa_logo_path'] ?? '');
+
+    $pdf->SetLineWidth(0.35);
+    $pdf->SetDrawColor($colInk[0], $colInk[1], $colInk[2]);
+    $pdf->SetFillColor($colBg[0], $colBg[1], $colBg[2]);
+    eg_pdf_round_rect($pdf, $receiptX, $receiptY, $receiptW, $receiptH, 8.5, 'DF');
+
+    // Logo
+    $logoCircleCx = $receiptX + 14.0;
+    $logoCircleCy = $receiptY + 13.0;
+    $logoCircleR = 7.5;
+
+    $pdf->SetDrawColor($colInk[0], $colInk[1], $colInk[2]);
+    if (method_exists($pdf, 'Circle')) {
+        $pdf->Circle($logoCircleCx, $logoCircleCy, $logoCircleR, 0, 360, 'D');
+    } else {
+        $pdf->Ellipse($logoCircleCx, $logoCircleCy, $logoCircleR, $logoCircleR, 0, 0, 360, 'D');
+    }
+
+    if ($logoAbs && is_file($logoAbs)) {
+        try {
+            $pdf->Image($logoAbs, $receiptX + 6.8, $receiptY + 5.8, 14.4, 14.4, '', '', '', false, 300);
+        } catch (Throwable $e) {
+            $pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
+            $pdf->SetFont('dejavusans', '', 8.5);
+            $pdf->SetXY($receiptX + 6.2, $receiptY + 10.1);
+            $pdf->Cell(15.6, 4, 'LOGO', 0, 0, 'C');
+        }
+    } else {
+        $pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
+        $pdf->SetFont('dejavusans', '', 8.5);
+        $pdf->SetXY($receiptX + 6.2, $receiptY + 10.1);
+        $pdf->Cell(15.6, 4, 'LOGO', 0, 0, 'C');
+    }
+
+    // Cabecera
+    $pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
+    $pdf->SetFont('dejavusans', 'B', 17);
+    $pdf->SetXY($receiptX + 33.0, $receiptY + 7.0);
+    $pdf->Cell(96.0, 8.0, eg_pdf_fit_ellipsis($pdf, $empresa, 96.0), 0, 0, 'C');
+
+    $pdf->SetFont('dejavusans', '', 10.5);
+    $pdf->SetXY($receiptX + 33.0, $receiptY + 16.0);
+    $pdf->Cell(96.0, 6.0, 'RECIBO DE EGRESO - ' . $codigo, 0, 0, 'C');
+
+    // Monto
+    $pdf->SetFont('dejavusans', 'B', 15.2);
+    $pdf->SetXY($receiptX + 138.0, $receiptY + 8.0);
+    $pdf->Cell(12.0, 8.0, 'S/.', 0, 0, 'R');
+
+    eg_pdf_round_rect($pdf, $receiptX + 152.0, $receiptY + 7.2, 30.0, 12.2, 2.4, 'D');
+    $pdf->SetXY($receiptX + 152.0, $receiptY + 7.8);
+    $pdf->Cell(30.0, 10.8, $monto, 0, 0, 'C');
+
+    // Banda superior
+    $bandX = $receiptX + 8.0;
+    $bandY = $receiptY + 26.0;
+    $bandW = $receiptW - 16.0;
+    $bandH = 11.5;
+
+    $pdf->SetFillColor($colSoft[0], $colSoft[1], $colSoft[2]);
+    $pdf->SetDrawColor($colBrand[0], $colBrand[1], $colBrand[2]);
+    eg_pdf_round_rect($pdf, $bandX, $bandY, $bandW, $bandH, 2.0, 'DF');
+
+    $pdf->SetTextColor(255, 255, 255);
+    $pdf->SetFont('dejavusans', 'B', 8.8);
+    $pdf->SetXY($bandX + 2.8, $bandY + 2.9);
+    $pdf->Cell(62.0, 5.0, 'Fecha y hora: ' . $fechaHora, 0, 0, 'L');
+
+    $pdf->SetXY($bandX + 69.0, $bandY + 2.9);
+    $pdf->Cell(74.0, 5.0, 'Comprobante: ' . $comprobante, 0, 0, 'L');
+
+    $pdf->SetXY($bandX + 146.0, $bandY + 2.9);
+    $pdf->Cell(28.0, 5.0, 'Estado: ' . $estado, 0, 0, 'L');
+
+    // Datos principales
+    $pdf->SetTextColor($colBrand[0], $colBrand[1], $colBrand[2]);
+    $pdf->SetFont('dejavusans', 'B', 9.8);
+    $pdf->SetXY($receiptX + 8.0, $receiptY + 46.0);
+    $pdf->Cell(24.0, 6.0, 'BENEFICIARIO:', 0, 0, 'L');
+
+    $pdf->SetXY($receiptX + 94.0, $receiptY + 46.0);
+    $pdf->Cell(22.0, 6.0, 'DOCUMENTO:', 0, 0, 'L');
+
+    $pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
+    $pdf->SetFont('dejavusans', '', 8.8);
+    $pdf->SetXY($receiptX + 33.0, $receiptY + 46.0);
+    $pdf->Cell(52.0, 6.0, eg_pdf_fit_ellipsis($pdf, $beneficiario, 52.0), 0, 0, 'L');
+
+    $pdf->SetXY($receiptX + 118.0, $receiptY + 46.0);
+    $pdf->Cell(38.0, 6.0, eg_pdf_fit_ellipsis($pdf, $documento, 38.0), 0, 0, 'L');
+
+    // Concepto
+    $pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
+    $pdf->SetFont('dejavusans', 'B', 10.0);
+    $pdf->SetXY($receiptX + 8.0, $receiptY + 58.0);
+    $pdf->Cell(22.0, 6.0, 'CONCEPTO:', 0, 0, 'L');
+
+    $pdf->SetFont('dejavusans', '', $conceptoFontSize);
+    $pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
+
+    for ($i = 0; $i < 3; $i++) {
+        $lineY = $conceptoY + ($i * 12.0);
+        $pdf->SetXY($conceptoX, $lineY);
+        $pdf->Cell($conceptoW, 6.0, $conceptoLines[$i], 0, 0, 'L');
+
+        $pdf->SetDrawColor($colInk[0], $colInk[1], $colInk[2]);
+        $pdf->Line($conceptoX, $lineY + 7.0, $conceptoX + $conceptoW, $lineY + 7.0);
+    }
+
+    // Fuentes
+    $fuenteBoxX = $receiptX + 10.0;
+    $fuenteBoxY = $receiptY + 97.0;
+    $fuenteBoxW = 50.0;
+
+    $pdf->SetFillColor($colSoft[0], $colSoft[1], $colSoft[2]);
+    $pdf->SetDrawColor($colBrand[0], $colBrand[1], $colBrand[2]);
+    eg_pdf_round_rect($pdf, $fuenteBoxX, $fuenteBoxY, $fuenteBoxW, 8.0, 2.0, 'DF');
+
+    $pdf->SetTextColor(255, 255, 255);
+    $pdf->SetFont('dejavusans', 'B', 9.8);
+    $pdf->SetXY($fuenteBoxX, $fuenteBoxY + 1.6);
+    $pdf->Cell($fuenteBoxW, 5.0, 'FUENTES DE SALIDA', 0, 0, 'C');
+
+    $rowsFuentes = is_array($egFuentes) ? array_values($egFuentes) : [];
+    if (!$rowsFuentes) {
+        $rowsFuentes = [
+            ['label' => 'Sin fuentes', 'monto' => 0],
+        ];
+    }
+
+    $pdf->SetFont('dejavusans', '', 9.2);
+    $pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
+
+    $rowY = $fuenteBoxY + 11.5;
+    $printed = 0;
+
+    foreach ($rowsFuentes as $f) {
+        if ($printed >= 5) {
+            break;
+        }
+
+        $label = eg_pdf_clean_text((string)($f['label'] ?? $f['medio'] ?? $f['key'] ?? 'Fuente'));
+        $amount = 'S/. ' . number_format((float)($f['monto'] ?? 0), 2, '.', ',');
+
+        $pdf->SetXY($fuenteBoxX + 2.0, $rowY);
+        $pdf->Cell(26.0, 5.0, eg_pdf_fit_ellipsis($pdf, $label, 26.0), 0, 0, 'L');
+
+        $pdf->SetXY($fuenteBoxX + 28.5, $rowY);
+        $pdf->Cell(19.0, 5.0, $amount, 0, 0, 'R');
+
+        $pdf->SetDrawColor($colInk[0], $colInk[1], $colInk[2]);
+        $pdf->Line($fuenteBoxX + 1.0, $rowY + 6.0, $fuenteBoxX + $fuenteBoxW - 1.0, $rowY + 6.0);
+
+        $rowY += 7.5;
+        $printed++;
+    }
+
+    // Firmas
+    $signY = $receiptY + 112.0;
+    $leftSignX = $receiptX + 78.0;
+    $rightSignX = $receiptX + 140.0;
+    $signW = 42.0;
+
+    $pdf->SetDrawColor($colInk[0], $colInk[1], $colInk[2]);
+    $pdf->Line($leftSignX, $signY, $leftSignX + $signW, $signY);
+    $pdf->Line($rightSignX, $signY, $rightSignX + $signW, $signY);
+
+    $pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
+    $pdf->SetFont('dejavusans', '', 9.4);
+
+    $pdf->SetXY($leftSignX - 5.0, $signY + 3.0);
+    $pdf->Cell($signW + 10.0, 5.0, eg_pdf_fit_ellipsis($pdf, $beneficiario, $signW + 8.0), 0, 0, 'C');
+
+    $pdf->SetXY($rightSignX - 5.0, $signY + 3.0);
+    $pdf->Cell($signW + 10.0, 5.0, eg_pdf_fit_ellipsis($pdf, $responsable, $signW + 8.0), 0, 0, 'C');
+
+    $pdf->SetTextColor($colBrand[0], $colBrand[1], $colBrand[2]);
+    $pdf->SetFont('dejavusans', '', 8.8);
+
+    $pdf->SetXY($leftSignX - 5.0, $signY + 12.0);
+    $pdf->Cell($signW + 10.0, 5.0, 'Beneficiario', 0, 0, 'C');
+
+    $pdf->SetXY($rightSignX - 5.0, $signY + 12.0);
+    $pdf->Cell($signW + 10.0, 5.0, 'Responsable', 0, 0, 'C');
+
+    $pdf->Output('recibo_egreso_' . $codigo . '.pdf', 'I');
+    exit;
+}
 
     eg_json_err('Accion no reconocida.');
 } catch (Throwable $e) {
