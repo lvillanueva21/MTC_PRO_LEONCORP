@@ -1360,177 +1360,179 @@ try {
     $sourcesH = $sourceTitleH + 2.0 + $sourcesRowsH;
 
     $pdf->SetFont('dejavusans', '', 9.0);
+
+$showBeneficiarioFirma = strtoupper(trim((string)($eg['tipo_comprobante'] ?? 'RECIBO'))) === 'RECIBO';
+$signNameLineH = 4.2;
+
+if ($showBeneficiarioFirma) {
     $benefSignLines = eg_pdf_wrap_text_lines($pdf, $beneficiario, $signColW - 2.0);
     $respSignLines = eg_pdf_wrap_text_lines($pdf, $responsable, $signColW - 2.0);
-    $signNameLineH = 4.2;
     $signNamesH = max(count($benefSignLines), count($respSignLines)) * $signNameLineH;
-    $signBlockH = 12.0 + $signNamesH + 7.0;
+} else {
+    $benefSignLines = [];
+    $respSignLines = eg_pdf_wrap_text_lines($pdf, $responsable, $signAreaW - 12.0);
+    $signNamesH = count($respSignLines) * $signNameLineH;
+}
 
-    $bottomSectionH = max($sourcesH, $signBlockH);
-    $receiptH = ($bottomY - $receiptY) + $bottomSectionH + 10.0;
-    $receiptH = max($receiptH, 126.0);
+$signBlockH = 12.0 + $signNamesH + 7.0;
+$bottomSectionH = max($sourcesH, $signBlockH);
+$receiptH = ($bottomY - $receiptY) + $bottomSectionH + 10.0;
+$receiptH = max($receiptH, 126.0);
 
-    /*
-     * ===== DIBUJO =====
-     */
+/*
+ * ===== DIBUJO =====
+ */
 
-    $pdf->SetLineWidth(0.35);
-    $pdf->SetDrawColor($colInk[0], $colInk[1], $colInk[2]);
-    $pdf->SetFillColor($colBg[0], $colBg[1], $colBg[2]);
-    eg_pdf_round_rect($pdf, $receiptX, $receiptY, $receiptW, $receiptH, 8.0, 'DF');
+$pdf->SetLineWidth(0.35);
+$pdf->SetDrawColor($colInk[0], $colInk[1], $colInk[2]);
+$pdf->SetFillColor($colBg[0], $colBg[1], $colBg[2]);
+eg_pdf_round_rect($pdf, $receiptX, $receiptY, $receiptW, $receiptH, 8.0, 'DF');
 
-    // Logo
-    $logoCircleCx = $innerX + 6.0;
-    $logoCircleCy = $headerY + 8.0;
-    $logoCircleR = 8.0;
+// Logo
 
-    $pdf->SetDrawColor($colInk[0], $colInk[1], $colInk[2]);
-    if (method_exists($pdf, 'Circle')) {
-        $pdf->Circle($logoCircleCx, $logoCircleCy, $logoCircleR, 0, 360, 'D');
-    } else {
-        $pdf->Ellipse($logoCircleCx, $logoCircleCy, $logoCircleR, $logoCircleR, 0, 0, 360, 'D');
-    }
-
-    if ($logoAbs && is_file($logoAbs)) {
-        try {
-            $pdf->Image($logoAbs, $innerX - 1.6, $headerY - 0.2, $logoSize, $logoSize, '', '', '', false, 300);
-        } catch (Throwable $e) {
-            $pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
-            $pdf->SetFont('dejavusans', '', 7.5);
-            $pdf->SetXY($innerX - 0.5, $headerY + 5.0);
-            $pdf->Cell($logoSize, 4.0, 'LOGO', 0, 0, 'C');
-        }
-    } else {
+if ($logoAbs && is_file($logoAbs)) {
+    try {
+        $pdf->Image($logoAbs, $innerX - 1.6, $headerY - 0.2, $logoSize, $logoSize, '', '', '', false, 300);
+    } catch (Throwable $e) {
         $pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
         $pdf->SetFont('dejavusans', '', 7.5);
         $pdf->SetXY($innerX - 0.5, $headerY + 5.0);
         $pdf->Cell($logoSize, 4.0, 'LOGO', 0, 0, 'C');
     }
-
-    // Empresa / subtitulo
+} else {
     $pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
-    $pdf->SetFont('dejavusans', 'B', $companyFont);
-    $pdf->SetXY($titleX, $headerY + 1.0);
-    $pdf->Cell($titleW, 7.0, $empresa, 0, 0, 'C');
+    $pdf->SetFont('dejavusans', '', 7.5);
+    $pdf->SetXY($innerX - 0.5, $headerY + 5.0);
+    $pdf->Cell($logoSize, 4.0, 'LOGO', 0, 0, 'C');
+}
 
-    $pdf->SetFont('dejavusans', '', $subtitleFont);
-    $pdf->SetXY($titleX, $headerY + 10.5);
-    $pdf->Cell($titleW, 5.0, $subtitleText, 0, 0, 'C');
+// Empresa / subtitulo
+$pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
+$pdf->SetFont('dejavusans', 'B', $companyFont);
+$pdf->SetXY($titleX, $headerY + 1.0);
+$pdf->Cell($titleW, 7.0, $empresa, 0, 0, 'C');
 
-    // Monto
-    $pdf->SetFont('dejavusans', 'B', $currencyFont);
-    $pdf->SetXY($currencyX, $headerY + 2.3);
-    $pdf->Cell($amountCurrencyW, 8.0, 'S/.', 0, 0, 'R');
+$pdf->SetFont('dejavusans', '', $subtitleFont);
+$pdf->SetXY($titleX, $headerY + 10.5);
+$pdf->Cell($titleW, 5.0, $subtitleText, 0, 0, 'C');
 
-    eg_pdf_round_rect($pdf, $amountBoxX, $headerY + 0.8, $amountBoxW, $amountBoxH, 3.0, 'D');
-    $pdf->SetFont('dejavusans', 'B', $amountFont);
-    $pdf->SetXY($amountBoxX, $headerY + 2.5);
-    $pdf->Cell($amountBoxW, 8.0, $monto, 0, 0, 'C');
+// Monto
+$pdf->SetFont('dejavusans', 'B', $currencyFont);
+$pdf->SetXY($currencyX, $headerY + 2.3);
+$pdf->Cell($amountCurrencyW, 8.0, 'S/.', 0, 0, 'R');
 
-    // Banda gris dinámica
-    $pdf->SetFillColor($colSoft[0], $colSoft[1], $colSoft[2]);
-    $pdf->SetDrawColor($colBrand[0], $colBrand[1], $colBrand[2]);
-    eg_pdf_round_rect($pdf, $bandX, $bandY, $bandW, $bandH, 2.4, 'DF');
+eg_pdf_round_rect($pdf, $amountBoxX, $headerY + 0.8, $amountBoxW, $amountBoxH, 3.0, 'D');
+$pdf->SetFont('dejavusans', 'B', $amountFont);
+$pdf->SetXY($amountBoxX, $headerY + 2.5);
+$pdf->Cell($amountBoxW, 8.0, $monto, 0, 0, 'C');
 
-    $pdf->SetTextColor(255, 255, 255);
-    $pdf->SetFont('dejavusans', 'B', 8.6);
+// Banda gris dinámica
+$pdf->SetFillColor($colSoft[0], $colSoft[1], $colSoft[2]);
+$pdf->SetDrawColor($colBrand[0], $colBrand[1], $colBrand[2]);
+eg_pdf_round_rect($pdf, $bandX, $bandY, $bandW, $bandH, 2.4, 'DF');
 
-    $bandTextY = $bandY + 2.1;
-    $col1X = $bandX + $bandPadX;
-    $col2X = $col1X + $bandDateW + $bandGap;
-    $col3X = $col2X + $bandCompW + $bandGap;
+$pdf->SetTextColor(255, 255, 255);
+$pdf->SetFont('dejavusans', 'B', 8.6);
 
-    eg_pdf_draw_text_lines($pdf, $col1X, $bandTextY, $bandDateW, $dateLines, $bandLineH, 'L');
-    eg_pdf_draw_text_lines($pdf, $col2X, $bandTextY, $bandCompW, $compLines, $bandLineH, 'L');
-    eg_pdf_draw_text_lines($pdf, $col3X, $bandTextY, $bandStateW, $stateLines, $bandLineH, 'L');
+$bandTextY = $bandY + 2.1;
+$col1X = $bandX + $bandPadX;
+$col2X = $col1X + $bandDateW + $bandGap;
+$col3X = $col2X + $bandCompW + $bandGap;
 
-    // Beneficiario / documento en bloques separados
-    $pdf->SetTextColor($colBrand[0], $colBrand[1], $colBrand[2]);
-    $pdf->SetFont('dejavusans', 'B', 9.6);
+eg_pdf_draw_text_lines($pdf, $col1X, $bandTextY, $bandDateW, $dateLines, $bandLineH, 'L');
+eg_pdf_draw_text_lines($pdf, $col2X, $bandTextY, $bandCompW, $compLines, $bandLineH, 'L');
+eg_pdf_draw_text_lines($pdf, $col3X, $bandTextY, $bandStateW, $stateLines, $bandLineH, 'L');
 
-    $benefX = $innerX;
-    $docX = $innerX + $benefW + $infoGap;
+// Beneficiario / documento en bloques separados
+$pdf->SetTextColor($colBrand[0], $colBrand[1], $colBrand[2]);
+$pdf->SetFont('dejavusans', 'B', 9.6);
 
-    $pdf->SetXY($benefX, $infoY);
-    $pdf->Cell($benefW, 4.5, 'BENEFICIARIO', 0, 0, 'L');
+$benefX = $innerX;
+$docX = $innerX + $benefW + $infoGap;
 
-    $pdf->SetXY($docX, $infoY);
-    $pdf->Cell($docW, 4.5, 'DOCUMENTO', 0, 0, 'L');
+$pdf->SetXY($benefX, $infoY);
+$pdf->Cell($benefW, 4.5, 'BENEFICIARIO', 0, 0, 'L');
 
-    $pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
-    $pdf->SetFont('dejavusans', '', 9.4);
+$pdf->SetXY($docX, $infoY);
+$pdf->Cell($docW, 4.5, 'DOCUMENTO', 0, 0, 'L');
 
-    eg_pdf_draw_text_lines($pdf, $benefX, $infoY + 5.8, $benefW, $benefLines, $infoValueLineH, 'L');
-    eg_pdf_draw_text_lines($pdf, $docX, $infoY + 5.8, $docW, $docLines, $infoValueLineH, 'L');
+$pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
+$pdf->SetFont('dejavusans', '', 9.4);
 
-    // Concepto dinámico
-    $pdf->SetTextColor($colBrand[0], $colBrand[1], $colBrand[2]);
-    $pdf->SetFont('dejavusans', 'B', 9.8);
-    $pdf->SetXY($innerX, $conceptY);
-    $pdf->Cell($conceptLabelW, 5.0, 'CONCEPTO', 0, 0, 'L');
+eg_pdf_draw_text_lines($pdf, $benefX, $infoY + 5.8, $benefW, $benefLines, $infoValueLineH, 'L');
+eg_pdf_draw_text_lines($pdf, $docX, $infoY + 5.8, $docW, $docLines, $infoValueLineH, 'L');
 
-    $pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
-    $pdf->SetFont('dejavusans', '', 9.6);
+// Concepto dinámico
+$pdf->SetTextColor($colBrand[0], $colBrand[1], $colBrand[2]);
+$pdf->SetFont('dejavusans', 'B', 9.8);
+$pdf->SetXY($innerX, $conceptY);
+$pdf->Cell($conceptLabelW, 5.0, 'CONCEPTO', 0, 0, 'L');
 
-    $conceptDrawY = $conceptY;
-    for ($i = 0; $i < $conceptRows; $i++) {
-        $textLine = $conceptLines[$i] ?? '';
-        $lineY = $conceptDrawY + ($i * $conceptLineH);
+$pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
+$pdf->SetFont('dejavusans', '', 9.6);
 
-        $pdf->SetXY($conceptTextX, $lineY);
-        $pdf->Cell($conceptW, $conceptLineH, $textLine, 0, 0, 'L');
+$conceptDrawY = $conceptY;
+for ($i = 0; $i < $conceptRows; $i++) {
+    $textLine = $conceptLines[$i] ?? '';
+    $lineY = $conceptDrawY + ($i * $conceptLineH);
 
-        $pdf->SetDrawColor($colInk[0], $colInk[1], $colInk[2]);
-        $pdf->Line($conceptTextX, $lineY + $conceptLineH - 0.7, $conceptTextX + $conceptW, $lineY + $conceptLineH - 0.7);
-    }
+    $pdf->SetXY($conceptTextX, $lineY);
+    $pdf->Cell($conceptW, $conceptLineH, $textLine, 0, 0, 'L');
 
-    // Seccion inferior
-    $sourcesX = $innerX;
-    $signsX = $innerX + $sourcesW + $bottomGap;
+    $pdf->SetDrawColor($colInk[0], $colInk[1], $colInk[2]);
+    $pdf->Line($conceptTextX, $lineY + $conceptLineH - 0.7, $conceptTextX + $conceptW, $lineY + $conceptLineH - 0.7);
+}
 
-    $pdf->SetFillColor($colSoft[0], $colSoft[1], $colSoft[2]);
-    $pdf->SetDrawColor($colBrand[0], $colBrand[1], $colBrand[2]);
-    eg_pdf_round_rect($pdf, $sourcesX, $bottomY, $sourcesW, $sourceTitleH, 2.2, 'DF');
+// Seccion inferior
+$sourcesX = $innerX;
+$signsX = $innerX + $sourcesW + $bottomGap;
 
-    $pdf->SetTextColor(255, 255, 255);
-    $pdf->SetFont('dejavusans', 'B', 9.6);
-    $pdf->SetXY($sourcesX, $bottomY + 1.6);
-    $pdf->Cell($sourcesW, 5.0, 'FUENTES DE SALIDA', 0, 0, 'C');
+$pdf->SetFillColor($colSoft[0], $colSoft[1], $colSoft[2]);
+$pdf->SetDrawColor($colBrand[0], $colBrand[1], $colBrand[2]);
+eg_pdf_round_rect($pdf, $sourcesX, $bottomY, $sourcesW, $sourceTitleH, 2.2, 'DF');
 
-    $pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
-    $pdf->SetFont('dejavusans', '', 9.0);
+$pdf->SetTextColor(255, 255, 255);
+$pdf->SetFont('dejavusans', 'B', 9.6);
+$pdf->SetXY($sourcesX, $bottomY + 1.6);
+$pdf->Cell($sourcesW, 5.0, 'FUENTES DE SALIDA', 0, 0, 'C');
 
-    $sourceY = $bottomY + $sourceTitleH + 2.0;
-    foreach ($preparedSources as $src) {
-        $rowH = (float)$src['height'];
+$pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
+$pdf->SetFont('dejavusans', '', 9.0);
 
-        eg_pdf_draw_text_lines($pdf, $sourcesX + 2.0, $sourceY, $sourceLabelW, $src['label_lines'], 4.4, 'L');
+$sourceY = $bottomY + $sourceTitleH + 2.0;
+foreach ($preparedSources as $src) {
+    $rowH = (float)$src['height'];
 
-        $pdf->SetXY($sourcesX + $sourcesW - $sourceAmountW - 1.0, $sourceY);
-        $pdf->Cell($sourceAmountW, $rowH, $src['amount'], 0, 0, 'R');
+    eg_pdf_draw_text_lines($pdf, $sourcesX + 2.0, $sourceY, $sourceLabelW, $src['label_lines'], 4.4, 'L');
 
-        $pdf->SetDrawColor($colInk[0], $colInk[1], $colInk[2]);
-        $pdf->Line($sourcesX + 1.0, $sourceY + $rowH + 0.8, $sourcesX + $sourcesW - 1.0, $sourceY + $rowH + 0.8);
+    $pdf->SetXY($sourcesX + $sourcesW - $sourceAmountW - 1.0, $sourceY);
+    $pdf->Cell($sourceAmountW, $rowH, $src['amount'], 0, 0, 'R');
 
-        $sourceY += $rowH + $sourceLineGap;
-    }
+    $pdf->SetDrawColor($colInk[0], $colInk[1], $colInk[2]);
+    $pdf->Line($sourcesX + 1.0, $sourceY + $rowH + 0.8, $sourcesX + $sourcesW - 1.0, $sourceY + $rowH + 0.8);
 
-    // Firmas alineadas al fondo del bloque inferior
-    $signTopY = $bottomY + max(0, $bottomSectionH - $signBlockH);
+    $sourceY += $rowH + $sourceLineGap;
+}
+
+// Firmas
+$signTopY = $bottomY + max(0, $bottomSectionH - $signBlockH);
+$pdf->SetDrawColor($colInk[0], $colInk[1], $colInk[2]);
+$pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
+$pdf->SetFont('dejavusans', '', 9.0);
+
+if ($showBeneficiarioFirma) {
     $signLeftX = $signsX;
     $signRightX = $signsX + $signColW + $signGap;
     $signLineY = $signTopY + 7.0;
 
-    $pdf->SetDrawColor($colInk[0], $colInk[1], $colInk[2]);
     $pdf->Line($signLeftX, $signLineY, $signLeftX + $signColW, $signLineY);
     $pdf->Line($signRightX, $signLineY, $signRightX + $signColW, $signLineY);
 
-    $pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
-    $pdf->SetFont('dejavusans', '', 9.0);
     eg_pdf_draw_text_lines($pdf, $signLeftX, $signLineY + 2.2, $signColW, $benefSignLines, $signNameLineH, 'C');
     eg_pdf_draw_text_lines($pdf, $signRightX, $signLineY + 2.2, $signColW, $respSignLines, $signNameLineH, 'C');
 
-    $roleY = $signLineY + 2.2 + ($signNamesH) + 1.8;
+    $roleY = $signLineY + 2.2 + $signNamesH + 1.8;
+
     $pdf->SetTextColor($colBrand[0], $colBrand[1], $colBrand[2]);
     $pdf->SetFont('dejavusans', '', 8.8);
 
@@ -1539,9 +1541,28 @@ try {
 
     $pdf->SetXY($signRightX, $roleY);
     $pdf->Cell($signColW, 4.5, 'Responsable', 0, 0, 'C');
+} else {
+    $singleSignW = min(72.0, $signAreaW - 6.0);
+    if ($singleSignW < 40.0) {
+        $singleSignW = $signAreaW - 2.0;
+    }
 
-    $pdf->Output('recibo_egreso_' . $codigo . '.pdf', 'I');
-    exit;
+    $singleSignX = $signsX + (($signAreaW - $singleSignW) / 2.0);
+    $signLineY = $signTopY + 7.0;
+
+    $pdf->Line($singleSignX, $signLineY, $singleSignX + $singleSignW, $signLineY);
+    eg_pdf_draw_text_lines($pdf, $singleSignX, $signLineY + 2.2, $singleSignW, $respSignLines, $signNameLineH, 'C');
+
+    $roleY = $signLineY + 2.2 + $signNamesH + 1.8;
+
+    $pdf->SetTextColor($colBrand[0], $colBrand[1], $colBrand[2]);
+    $pdf->SetFont('dejavusans', '', 8.8);
+    $pdf->SetXY($singleSignX, $roleY);
+    $pdf->Cell($singleSignW, 4.5, 'Responsable', 0, 0, 'C');
+}
+
+$pdf->Output('recibo_egreso_' . $codigo . '.pdf', 'I');
+exit;
 }
 
     eg_json_err('Accion no reconocida.');
