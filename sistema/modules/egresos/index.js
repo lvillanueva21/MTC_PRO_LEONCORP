@@ -156,45 +156,113 @@ function voucherFuentesRows(v){
     .join('');
 }
 
+function voucherCompText(v){
+  const tipo=String(v.tipo_comprobante||v.tipo||'RECIBO').toUpperCase().trim();
+  const referencia=String(v.referencia||'').trim();
+  const serie=String(v.serie||'').trim();
+  const numero=String(v.numero||'').trim();
+
+  if(tipo==='RECIBO'){
+    return referencia || 'RECIBO INTERNO';
+  }
+
+  const doc=(serie&&numero)?(`${serie}-${numero}`):(serie||numero||'-');
+  return `${tipo} ${doc}`.trim();
+}
+
+function voucherEstadoText(v){
+  return ((String(v.estado||'ACTIVO').toUpperCase()==='ANULADO') ? 'ANULADO' : 'EMITIDO');
+}
+
+function voucherText(v){
+  return String(v||'').replace(/\s+/g,' ').trim();
+}
+
+function voucherCompanyFontSize(name){
+  const len=voucherText(name).length;
+  if(len>=42) return 24;
+  if(len>=34) return 26;
+  if(len>=28) return 28;
+  return 32;
+}
+
+function voucherAmountFontSize(amountText){
+  const len=String(amountText||'').length;
+  if(len>=12) return 20;
+  if(len>=10) return 22;
+  if(len>=8) return 25;
+  return 30;
+}
+
+function voucherFuentesHtml(v){
+  const fuentes=Array.isArray(v.fuentes)?v.fuentes:[];
+  if(!fuentes.length){
+    return `
+      <div class="egpv3-source-row">
+        <div class="egpv3-source-name">Sin fuentes</div>
+        <div class="egpv3-source-amount">S/. 0.00</div>
+      </div>
+    `;
+  }
+
+  return fuentes.map(f=>{
+    const key=canonKey((f&&f.key)||(f&&f.fuente_key)||'');
+    const lbl=(f&&f.label)||FUENTE_LABEL[key]||key||'Fuente';
+    return `
+      <div class="egpv3-source-row">
+        <div class="egpv3-source-name">${esc(lbl)}</div>
+        <div class="egpv3-source-amount">${esc(money((f&&f.monto)||0))}</div>
+      </div>
+    `;
+  }).join('');
+}
+
 function voucherHTML(v,logo){
-  const empresa=esc(cleanVoucherText(v.empresa_nombre||EMP||'EMPRESA')||'EMPRESA');
-  const codigo=esc(cleanVoucherText(v.codigo||'Sin guardar')||'Sin guardar');
-  const comp=esc(buildVoucherComp(v));
-  const estado=esc(buildVoucherEstado(v));
-  const monto=esc(round2(num(v.monto||0)).toFixed(2));
-  const fecha=esc(fmt(v.fecha_emision||v.fecha||''));
-  const beneficiario=esc(cleanVoucherText(v.beneficiario||'-')||'-');
-  const documento=esc(cleanVoucherText(v.documento||'-')||'-');
-  const concepto=esc(clipVoucherText(v.concepto||'',240));
-  const responsable=esc(voucherResponsable(v));
-  const fuentesHtml=voucherFuentesRows(v);
+  const empresa=voucherText(v.empresa_nombre||EMP||'EMPRESA')||'EMPRESA';
+  const codigo=voucherText(v.codigo||'Sin guardar')||'Sin guardar';
+  const fecha=fmt(v.fecha_emision||v.fecha||'');
+  const comprobante=voucherCompText(v);
+  const estado=voucherEstadoText(v);
+  const beneficiario=voucherText(v.beneficiario||'-')||'-';
+  const documento=voucherText(v.documento||'-')||'-';
+  const concepto=voucherText(v.concepto||'-')||'-';
+  const responsable=voucherText(v.creado_nombre||v.creado_usuario||USR||'Responsable')||'Responsable';
+  const montoValor=round2(num(v.monto||0)).toFixed(2);
+  const fuentesHtml=voucherFuentesHtml(v);
+  const companySize=voucherCompanyFontSize(empresa);
+  const amountSize=voucherAmountFontSize(montoValor);
 
   const logoHtml=logo
-    ? `<div class="egpv-logo"><img src="${esc(logo)}" alt="Logo"></div>`
-    : `<div class="egpv-logo"><span>LOGO</span></div>`;
+    ? `<div class="egpv3-logo"><img src="${esc(logo)}" alt="Logo"></div>`
+    : `<div class="egpv3-logo"><span>LOGO</span></div>`;
 
   return `
     <style>
-      #egVoucher .egpv-wrap{
+      #egVoucher{
+        background:transparent;
+        padding:0;
+      }
+      #egVoucher .egpv3-wrap{
         width:100%;
         max-width:1120px;
         margin:0 auto;
         background:#f5f5f3;
         border:2px solid #1f1f1f;
         border-radius:32px;
-        padding:22px 26px 24px;
+        padding:22px 28px 24px;
         color:#111;
         font-family:Arial,Helvetica,sans-serif;
+        box-sizing:border-box;
       }
-      #egVoucher .egpv-head{
-        display:flex;
-        align-items:flex-start;
-        justify-content:space-between;
-        gap:18px;
+      #egVoucher .egpv3-head{
+        display:grid;
+        grid-template-columns:84px minmax(0,1fr) 220px;
+        gap:16px;
+        align-items:start;
       }
-      #egVoucher .egpv-logo{
-        width:74px;
-        height:74px;
+      #egVoucher .egpv3-logo{
+        width:80px;
+        height:80px;
         border:2px solid #1f1f1f;
         border-radius:50%;
         background:#fff;
@@ -202,261 +270,293 @@ function voucherHTML(v,logo){
         align-items:center;
         justify-content:center;
         overflow:hidden;
-        flex:0 0 74px;
       }
-      #egVoucher .egpv-logo img{
+      #egVoucher .egpv3-logo img{
         width:100%;
         height:100%;
         object-fit:contain;
       }
-      #egVoucher .egpv-logo span{
-        font-size:14px;
+      #egVoucher .egpv3-logo span{
+        font-size:12px;
         font-weight:700;
       }
-      #egVoucher .egpv-title{
-        flex:1;
+      #egVoucher .egpv3-title{
+        min-width:0;
         text-align:center;
+        padding-top:4px;
+      }
+      #egVoucher .egpv3-company{
+        font-weight:800;
+        line-height:1.08;
+        word-break:break-word;
+      }
+      #egVoucher .egpv3-subtitle{
+        margin-top:8px;
+        font-size:13px;
+        line-height:1.2;
+        word-break:break-word;
+      }
+      #egVoucher .egpv3-amount{
+        display:grid;
+        grid-template-columns:52px 1fr;
+        gap:10px;
+        align-items:center;
         padding-top:8px;
       }
-      
-      #egVoucher .egpv-company{
-  font-size:22px;
-  font-weight:800;
-  letter-spacing:.2px;
-}
-#egVoucher .egpv-subtitle{
-  margin-top:8px;
-  font-size:14px;
-}
-#egVoucher .egpv-amount{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding-top:6px;
-  flex:0 0 210px;
-  justify-content:flex-end;
-}
-#egVoucher .egpv-currency{
-  font-size:24px;
-  font-weight:700;
-}
-#egVoucher .egpv-amount-box{
-  width:140px;
-  height:56px;
-  border:2px solid #1f1f1f;
-  border-radius:12px;
-  background:#fff;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:20px;
-  font-weight:800;
-}
-#egVoucher .egpv-band{
-  margin-top:18px;
-  background:#949ba1;
-  color:#fff;
-  border:2px solid #4d6178;
-  border-radius:10px;
-  padding:10px 14px;
-  display:grid;
-  grid-template-columns:1.15fr 1.35fr .75fr;
-  gap:12px;
-  font-size:13px;
-  font-weight:700;
-}
-#egVoucher .egpv-band > div{
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-#egVoucher .egpv-grid2{
-  margin-top:24px;
-  display:grid;
-  grid-template-columns:1.15fr .85fr;
-  gap:20px;
-  align-items:start;
-}
-#egVoucher .egpv-grid2 > div{
-  min-width:0;
-}
-#egVoucher .egpv-label{
-  display:inline-block;
-  font-size:14px;
-  font-weight:800;
-  color:#2f4868;
-  margin-right:6px;
-}
-#egVoucher .egpv-value{
-  display:inline-block;
-  font-size:14px;
-  max-width:calc(100% - 150px);
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  vertical-align:bottom;
-}
-#egVoucher .egpv-concept{
-  margin-top:22px;
-  display:grid;
-  grid-template-columns:120px 1fr;
-  gap:12px;
-  align-items:start;
-}
-#egVoucher .egpv-concept-box{
-  position:relative;
-  height:72px;
-  padding-top:2px;
-  background-image:
-    linear-gradient(
-      to bottom,
-      transparent 18px, #111 18px, #111 20px, transparent 20px,
-      transparent 40px, #111 40px, #111 42px, transparent 42px,
-      transparent 62px, #111 62px, #111 64px, transparent 64px
-    );
-}
-#egVoucher .egpv-concept-text{
-  position:relative;
-  z-index:2;
-  font-size:14px;
-  line-height:20px;
-  height:60px;
-  overflow:hidden;
-  display:-webkit-box;
-  -webkit-line-clamp:3;
-  -webkit-box-orient:vertical;
-  white-space:normal;
-  padding-right:8px;
-  background:transparent;
-}
-#egVoucher .egpv-bottom{
-  margin-top:24px;
-  display:grid;
-  grid-template-columns:300px 1fr;
-  gap:28px;
-  align-items:end;
-}
-#egVoucher .egpv-source-title{
-  width:100%;
-  max-width:280px;
-  background:#949ba1;
-  color:#fff;
-  border:2px solid #4d6178;
-  border-radius:10px;
-  padding:10px 12px;
-  text-align:center;
-  font-size:15px;
-  font-weight:800;
-}
-#egVoucher .egpv-source-rows{
-  margin-top:8px;
-  max-width:280px;
-}
-#egVoucher .egpv-source-row{
-  display:flex;
-  justify-content:space-between;
-  gap:14px;
-  padding:8px 10px 6px;
-  border-bottom:2px solid #1f1f1f;
-  font-size:14px;
-}
-#egVoucher .egpv-signatures{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:32px;
-  align-items:end;
-  padding-bottom:4px;
-}
-#egVoucher .egpv-sign-line{
-  border-bottom:2px solid #1f1f1f;
-  height:14px;
-  margin-bottom:8px;
-}
-#egVoucher .egpv-sign-name{
-  font-size:14px;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-#egVoucher .egpv-sign-role{
-  margin-top:14px;
-  font-size:12px;
-}
-      
+      #egVoucher .egpv3-currency{
+        font-size:24px;
+        font-weight:800;
+        text-align:right;
+      }
+      #egVoucher .egpv3-amount-box{
+        min-height:64px;
+        border:2px solid #1f1f1f;
+        border-radius:14px;
+        background:#fff;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        padding:6px 10px;
+        box-sizing:border-box;
+        font-weight:800;
+      }
+      #egVoucher .egpv3-band{
+        margin-top:20px;
+        background:#949ba1;
+        color:#fff;
+        border:2px solid #4d6178;
+        border-radius:12px;
+        padding:10px 14px;
+        display:grid;
+        grid-template-columns:1fr 1.35fr .72fr;
+        gap:14px;
+        align-items:start;
+      }
+      #egVoucher .egpv3-band-item{
+        min-width:0;
+      }
+      #egVoucher .egpv3-band-label{
+        font-size:12px;
+        font-weight:700;
+        line-height:1.15;
+        opacity:.95;
+      }
+      #egVoucher .egpv3-band-value{
+        font-size:14px;
+        font-weight:800;
+        line-height:1.25;
+        margin-top:2px;
+        white-space:normal;
+        word-break:break-word;
+      }
+      #egVoucher .egpv3-main{
+        margin-top:22px;
+        display:grid;
+        grid-template-columns:1.15fr .7fr;
+        gap:18px;
+        align-items:start;
+      }
+      #egVoucher .egpv3-field{
+        min-width:0;
+      }
+      #egVoucher .egpv3-field-label{
+        color:#2f4868;
+        font-size:14px;
+        font-weight:800;
+        line-height:1.15;
+      }
+      #egVoucher .egpv3-field-value{
+        margin-top:5px;
+        font-size:14px;
+        line-height:1.35;
+        white-space:normal;
+        word-break:break-word;
+      }
+      #egVoucher .egpv3-concept{
+        margin-top:18px;
+        display:grid;
+        grid-template-columns:120px 1fr;
+        gap:14px;
+        align-items:start;
+      }
+      #egVoucher .egpv3-concept-label{
+        color:#000;
+        font-size:16px;
+        font-weight:800;
+        line-height:1.15;
+        padding-top:3px;
+      }
+      #egVoucher .egpv3-concept-box{
+        min-height:76px;
+        padding:2px 0 0;
+        box-sizing:border-box;
+        background-image:repeating-linear-gradient(
+          to bottom,
+          transparent 0,
+          transparent 23px,
+          #1f1f1f 23px,
+          #1f1f1f 24px
+        );
+      }
+      #egVoucher .egpv3-concept-text{
+        font-size:14px;
+        line-height:24px;
+        white-space:normal;
+        word-break:break-word;
+        padding-right:8px;
+      }
+      #egVoucher .egpv3-bottom{
+        margin-top:24px;
+        display:grid;
+        grid-template-columns:320px 1fr;
+        gap:28px;
+        align-items:end;
+      }
+      #egVoucher .egpv3-sources{
+        min-width:0;
+      }
+      #egVoucher .egpv3-sources-title{
+        display:block;
+        width:100%;
+        background:#949ba1;
+        color:#fff;
+        border:2px solid #4d6178;
+        border-radius:12px;
+        padding:10px 14px;
+        text-align:center;
+        font-size:15px;
+        font-weight:800;
+        box-sizing:border-box;
+      }
+      #egVoucher .egpv3-sources-list{
+        margin-top:10px;
+      }
+      #egVoucher .egpv3-source-row{
+        display:grid;
+        grid-template-columns:minmax(0,1fr) auto;
+        gap:16px;
+        align-items:start;
+        padding:9px 10px 8px;
+        border-bottom:2px solid #1f1f1f;
+      }
+      #egVoucher .egpv3-source-name{
+        font-size:14px;
+        line-height:1.3;
+        word-break:break-word;
+      }
+      #egVoucher .egpv3-source-amount{
+        font-size:14px;
+        line-height:1.3;
+        font-weight:700;
+        white-space:nowrap;
+      }
+      #egVoucher .egpv3-signatures{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:36px;
+        align-items:end;
+      }
+      #egVoucher .egpv3-sign{
+        min-width:0;
+        text-align:center;
+      }
+      #egVoucher .egpv3-sign-line{
+        border-bottom:2px solid #1f1f1f;
+        height:18px;
+        margin-bottom:8px;
+      }
+      #egVoucher .egpv3-sign-name{
+        font-size:14px;
+        line-height:1.25;
+        word-break:break-word;
+      }
+      #egVoucher .egpv3-sign-role{
+        margin-top:10px;
+        font-size:13px;
+        line-height:1.2;
+        color:#2f4868;
+      }
       @media (max-width: 992px){
-        #egVoucher .egpv-band,
-        #egVoucher .egpv-grid2,
-        #egVoucher .egpv-bottom,
-        #egVoucher .egpv-signatures,
-        #egVoucher .egpv-head,
-        #egVoucher .egpv-concept{
+        #egVoucher .egpv3-head,
+        #egVoucher .egpv3-band,
+        #egVoucher .egpv3-main,
+        #egVoucher .egpv3-concept,
+        #egVoucher .egpv3-bottom,
+        #egVoucher .egpv3-signatures{
           grid-template-columns:1fr;
-          display:block;
         }
-        #egVoucher .egpv-head > *{ margin-bottom:14px; }
-        #egVoucher .egpv-amount{ justify-content:flex-start; }
-        #egVoucher .egpv-sign{ margin-top:18px; }
+        #egVoucher .egpv3-amount{
+          max-width:260px;
+        }
       }
     </style>
 
-    <div class="egpv-wrap">
-      <div class="egpv-head">
+    <div class="egpv3-wrap">
+      <div class="egpv3-head">
         ${logoHtml}
 
-        <div class="egpv-title">
-          <div class="egpv-company">${empresa}</div>
-          <div class="egpv-subtitle">RECIBO DE EGRESO - ${codigo}</div>
+        <div class="egpv3-title">
+          <div class="egpv3-company" style="font-size:${companySize}px;">${esc(empresa)}</div>
+          <div class="egpv3-subtitle">RECIBO DE EGRESO - ${esc(codigo)}</div>
         </div>
 
-        <div class="egpv-amount">
-          <div class="egpv-currency">S/.</div>
-          <div class="egpv-amount-box">${monto}</div>
-        </div>
-      </div>
-
-      <div class="egpv-band">
-        <div>Fecha y hora: ${fecha}</div>
-        <div>Comprobante: ${comp}</div>
-        <div>Estado: ${estado}</div>
-      </div>
-
-      <div class="egpv-grid2">
-  <div>
-    <div class="egpv-label">BENEFICIARIO:</div>
-    <div class="egpv-value" style="display:block;max-width:100%;margin-top:4px;">${beneficiario}</div>
-  </div>
-  <div>
-    <div class="egpv-label">DOCUMENTO:</div>
-    <div class="egpv-value" style="display:block;max-width:100%;margin-top:4px;">${documento}</div>
-  </div>
-</div>
-
-      <div class="egpv-concept">
-        <div class="egpv-label">CONCEPTO:</div>
-        <div class="egpv-concept-box">
-          <div class="egpv-concept-text">${concepto}</div>
+        <div class="egpv3-amount">
+          <div class="egpv3-currency">S/.</div>
+          <div class="egpv3-amount-box" style="font-size:${amountSize}px;">${esc(montoValor)}</div>
         </div>
       </div>
 
-      <div class="egpv-bottom">
-        <div class="egpv-source-box">
-          <div class="egpv-source-title">FUENTES DE SALIDA</div>
-          <div class="egpv-source-rows">
+      <div class="egpv3-band">
+        <div class="egpv3-band-item">
+          <div class="egpv3-band-label">Fecha y hora</div>
+          <div class="egpv3-band-value">${esc(fecha)}</div>
+        </div>
+        <div class="egpv3-band-item">
+          <div class="egpv3-band-label">Comprobante</div>
+          <div class="egpv3-band-value">${esc(comprobante)}</div>
+        </div>
+        <div class="egpv3-band-item">
+          <div class="egpv3-band-label">Estado</div>
+          <div class="egpv3-band-value">${esc(estado)}</div>
+        </div>
+      </div>
+
+      <div class="egpv3-main">
+        <div class="egpv3-field">
+          <div class="egpv3-field-label">BENEFICIARIO</div>
+          <div class="egpv3-field-value">${esc(beneficiario)}</div>
+        </div>
+        <div class="egpv3-field">
+          <div class="egpv3-field-label">DOCUMENTO</div>
+          <div class="egpv3-field-value">${esc(documento)}</div>
+        </div>
+      </div>
+
+      <div class="egpv3-concept">
+        <div class="egpv3-concept-label">CONCEPTO</div>
+        <div class="egpv3-concept-box">
+          <div class="egpv3-concept-text">${esc(concepto)}</div>
+        </div>
+      </div>
+
+      <div class="egpv3-bottom">
+        <div class="egpv3-sources">
+          <div class="egpv3-sources-title">FUENTES DE SALIDA</div>
+          <div class="egpv3-sources-list">
             ${fuentesHtml}
           </div>
         </div>
 
-        <div class="egpv-signatures">
-          <div class="egpv-sign">
-            <div class="egpv-sign-line"></div>
-            <div class="egpv-sign-name">${beneficiario}</div>
-            <div class="egpv-sign-role">Beneficiario</div>
+        <div class="egpv3-signatures">
+          <div class="egpv3-sign">
+            <div class="egpv3-sign-line"></div>
+            <div class="egpv3-sign-name">${esc(beneficiario)}</div>
+            <div class="egpv3-sign-role">Beneficiario</div>
           </div>
-
-          <div class="egpv-sign">
-            <div class="egpv-sign-line"></div>
-            <div class="egpv-sign-name">${responsable}</div>
-            <div class="egpv-sign-role">Responsable</div>
+          <div class="egpv3-sign">
+            <div class="egpv3-sign-line"></div>
+            <div class="egpv3-sign-name">${esc(responsable)}</div>
+            <div class="egpv3-sign-role">Responsable</div>
           </div>
         </div>
       </div>
@@ -470,8 +570,6 @@ function showVoucher(v,logo){
   if(!c||!v) return;
 
   c.innerHTML=voucherHTML(v,logo||'../../dist/img/AdminLTELogo.png');
-  c.style.background='transparent';
-  c.style.padding='0';
 
   const modal=qs('#egresoPrintModal');
   if(modal){
