@@ -413,8 +413,44 @@ function eg_caja_context(mysqli $db, int $empId): array
         ];
     }
 
-    $out['mensaje'] = 'No hay caja diaria abierta. Abre la caja desde el módulo Caja para registrar egresos.';
+        $out['mensaje'] = 'No hay caja diaria abierta. Abre la caja desde el módulo Caja para registrar egresos.';
     return $out;
+}
+
+function eg_get_latest_caja_diaria(mysqli $db, int $empId): ?array
+{
+    $sql = "SELECT id, codigo, fecha, estado
+            FROM mod_caja_diaria
+            WHERE id_empresa=?
+            ORDER BY fecha DESC, id DESC
+            LIMIT 1";
+    $st = $db->prepare($sql);
+    $st->bind_param('i', $empId);
+    $st->execute();
+    $row = $st->get_result()->fetch_assoc() ?: null;
+    $st->close();
+
+    return $row ?: null;
+}
+
+function eg_is_valid_ymd(string $value): bool
+{
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+        return false;
+    }
+
+    $dt = DateTime::createFromFormat('Y-m-d', $value);
+    return $dt instanceof DateTime && $dt->format('Y-m-d') === $value;
+}
+
+function eg_human_ymd(string $value): string
+{
+    if (!eg_is_valid_ymd($value)) {
+        return $value;
+    }
+
+    $dt = DateTime::createFromFormat('Y-m-d', $value);
+    return $dt instanceof DateTime ? $dt->format('d/m/Y') : $value;
 }
 
 function eg_saldo_diaria(mysqli $db, int $empId, int $cajaDiariaId): array
@@ -806,31 +842,111 @@ try {
         eg_json_err_code(500, 'La base de datos aun no tiene las tablas de egresos (egr_* y egr_egreso_fuentes). Ejecuta primero la migracion.');
     }
 
-    if ($accion === 'listar') {
+        if ($accion === 'listar') {
         $page = max(1, (int)($_GET['page'] ?? 1));
         $per = (int)($_GET['per'] ?? 10);
         $per = max(5, min(50, $per));
+
         $q = trim((string)($_GET['q'] ?? ''));
         $tipo = strtoupper(trim((string)($_GET['tipo'] ?? 'TODOS')));
         $estado = strtoupper(trim((string)($_GET['estado'] ?? 'TODOS')));
+        $scope = strtolower(trim((string)($_GET['scope'] ?? 'latest')));
+        $fecha = trim((string)($_GET['fecha'] ?? ''));
+        $desde = trim((string)($_GET['desde'] ?? ''));
+        $hasta = trim((string)($_GET['hasta'] ?? ''));
+
+        if (!in_array($tipo, ['TODOS', 'RECIBO', 'BOLETA', 'FACTURA'], true)) {
+            eg_json_err('Tipo de comprobante invalido.');
+        }
+
+        if (!in_array($estado, ['TODOS', 'ACTIVO', 'ANULADO'], true)) {
+            eg_json_err('Estado invalido.');
+        }
+
+        if (!in_array($scope, ['latest', 'date', 'range', 'all'], true)) {
+            $scope = 'latest';
+        }
 
         $where = ["e.id_empresa=?"];
         $types = 'i';
         $params = [$empId];
+        $context = [
+            'scope' => 'latest',
+            'title' => 'Última caja',
+            'detail' => 'Sin contexto disponible.',
+        ];
 
-        if ($tipo !== '' && $tipo !== 'TODOS') {
-            if (!in_array($tipo, ['RECIBO', 'BOLETA', 'FACTURA'], true)) {
-                eg_json_err('Tipo de comprobante invalido.');
+        if ($scope === 'date') {
+            if (!eg_is_valid_ymd($fecha)) {
+                eg_json_err('Selecciona una fecha válida.');
             }
+
+            $where[] = "cd.fecha=?";
+            $types .= 's';
+            $params[] = $fecha;
+            $context = [
+                'scope' => 'date',
+                'title' => 'Fecha seleccionada',
+                'detail' => eg_human_ymd($fecha),
+                'fecha' => $fecha,
+            ];
+        } elseif ($scope === 'range') {
+            if (!eg_is_valid_ymd($desde) || !eg_is_valid_ymd($hasta)) {
+                eg_json_err('Selecciona un rango de fechas válido.');
+            }
+            if ($desde > $hasta) {
+                eg_json_err('La fecha inicial no puede ser mayor que la final.');
+            }
+
+            $where[] = "cd.fecha BETWEEN ? AND ?";
+            $types .= 'ss';
+            $params[] = $desde;
+            $params[] = $hasta;
+            $context = [
+                'scope' => 'range',
+                'title' => 'Rango seleccionado',
+                'detail' => eg_human_ymd($desde) . ' al ' . eg_human_ymd($hasta),
+                'desde' => $desde,
+                'hasta' => $hasta,
+            ];
+        } elseif ($scope === 'all') {
+            $context = [
+                'scope' => 'all',
+                'title' => 'Histórico completo',
+                'detail' => 'Mostrando egresos de todas las cajas diarias registradas.',
+            ];
+        } else {
+            $latest = eg_get_latest_caja_diaria($db, $empId);
+            if ($latest) {
+                $where[] = "e.id_caja_diaria=?";
+                $types .= 'i';
+                $params[] = (int)$latest['id'];
+                $context = [
+                    'scope' => 'latest',
+                    'title' => 'Última caja',
+                    'detail' => (string)$latest['codigo'] . ' | ' . eg_human_ymd((string)$latest['fecha']) . ' | ' . ucfirst((string)$latest['estado']),
+                    'caja_id' => (int)$latest['id'],
+                    'caja_codigo' => (string)$latest['codigo'],
+                    'caja_fecha' => (string)$latest['fecha'],
+                    'caja_estado' => (string)$latest['estado'],
+                ];
+            } else {
+                $where[] = "1=0";
+                $context = [
+                    'scope' => 'latest',
+                    'title' => 'Última caja',
+                    'detail' => 'No hay cajas diarias registradas.',
+                ];
+            }
+        }
+
+        if ($tipo !== 'TODOS') {
             $where[] = "e.tipo_comprobante=?";
             $types .= 's';
             $params[] = $tipo;
         }
 
-        if ($estado !== '' && $estado !== 'TODOS') {
-            if (!in_array($estado, ['ACTIVO', 'ANULADO'], true)) {
-                eg_json_err('Estado invalido.');
-            }
+        if ($estado !== 'TODOS') {
             $where[] = "e.estado=?";
             $types .= 's';
             $params[] = $estado;
@@ -851,18 +967,33 @@ try {
 
         $W = 'WHERE ' . implode(' AND ', $where);
 
-        $sqlCount = "SELECT COUNT(*) c FROM egr_egresos e {$W}";
-        $st = $db->prepare($sqlCount);
+        $sqlAgg = "SELECT
+                     COUNT(*) AS c,
+                     COALESCE(SUM(CASE WHEN e.estado='ACTIVO' THEN e.monto ELSE 0 END),0) AS total_activos
+                   FROM egr_egresos e
+                   INNER JOIN mod_caja_diaria cd ON cd.id = e.id_caja_diaria
+                   {$W}";
+        $st = $db->prepare($sqlAgg);
         $st->bind_param($types, ...$params);
         $st->execute();
-        $total = (int)($st->get_result()->fetch_assoc()['c'] ?? 0);
+        $agg = $st->get_result()->fetch_assoc() ?: [];
         $st->close();
 
+        $total = (int)($agg['c'] ?? 0);
+        $totalActivos = round((float)($agg['total_activos'] ?? 0), 2);
+        $totalPages = (int)max(1, ceil($total / $per));
+        if ($page > $totalPages) {
+            $page = $totalPages;
+        }
         $offset = ($page - 1) * $per;
+
         $sql = "SELECT
                   e.id, e.codigo, e.tipo_comprobante, e.serie, e.numero, e.referencia,
                   e.fecha_emision, e.monto, e.beneficiario, e.documento, e.concepto, e.estado,
-                  e.id_caja_diaria, cd.codigo AS caja_diaria_codigo
+                  e.id_caja_diaria,
+                  cd.codigo AS caja_diaria_codigo,
+                  cd.fecha AS caja_diaria_fecha,
+                  cd.estado AS caja_diaria_estado
                 FROM egr_egresos e
                 INNER JOIN mod_caja_diaria cd ON cd.id = e.id_caja_diaria
                 {$W}
@@ -879,14 +1010,14 @@ try {
         $rows = $st->get_result()->fetch_all(MYSQLI_ASSOC) ?: [];
         $st->close();
 
-        $totalPages = (int)max(1, ceil($total / $per));
-
         eg_json_ok([
             'rows' => $rows,
             'total' => $total,
             'page' => $page,
             'per' => $per,
             'total_pages' => $totalPages,
+            'total_activos' => $totalActivos,
+            'context' => $context,
         ]);
     }
 
