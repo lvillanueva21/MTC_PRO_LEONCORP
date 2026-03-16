@@ -5,7 +5,7 @@ const API=String(root.dataset.api||''),EMP=String(root.dataset.emp||''),USR=Stri
 const qs=(s,c=document)=>c.querySelector(s),qsa=(s,c=document)=>Array.from(c.querySelectorAll(s));
 const FUENTE_ORDER=['EFECTIVO','YAPE','PLIN','TRANSFERENCIA'];
 const FUENTE_LABEL={EFECTIVO:'Efectivo',YAPE:'Yape',PLIN:'Plin',TRANSFERENCIA:'Transferencia'};
-const st={p:1,pp:8,q:'',t:'TODOS',e:'TODOS',schema:true,schemaMsg:'',caja:null,saldo:null,prev:null,fuentesAsignadas:{}};
+const st={p:1,pp:8,q:'',t:'TODOS',e:'TODOS',scope:'latest',fecha:'',desde:'',hasta:'',schema:true,schemaMsg:'',caja:null,saldo:null,prev:null,context:null,totalActivos:0,fuentesAsignadas:{}};
 const esc=s=>(s||'').toString().replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const round2=v=>Math.round((Number(v||0)+Number.EPSILON)*100)/100;
 const num=v=>{const n=parseFloat(v);return Number.isFinite(n)?n:0;};
@@ -72,6 +72,80 @@ function renderFuentesResumen(){const box=qs('#egFuentesResumen');if(!box)return
 function datos(){return{tipo:(qs('#egTipo').value||'RECIBO').toUpperCase(),serie:qs('#egSerie').value.trim(),numero:qs('#egNumero').value.trim(),referencia:qs('#egReferencia').value.trim(),monto:round2(num(qs('#egMonto').value||'0')),fecha:qs('#egFecha').value.trim(),benef:qs('#egBeneficiario').value.trim(),doc:qs('#egDocumento').value.trim(),concepto:qs('#egConcepto').value.trim(),obs:qs('#egObs').value.trim()};}
 function validar(d){if(!d.concepto){alertF('danger','Escribe el concepto del egreso.');return false;}if(!(d.monto>0)){alertF('danger','El monto debe ser mayor a cero.');return false;}if(!d.fecha){alertF('danger','Selecciona fecha y hora.');return false;}if((d.tipo==='FACTURA'||d.tipo==='BOLETA')&&(!d.serie||!d.numero)){alertF('danger','Serie y numero son obligatorios para factura/boleta.');return false;}return true;}
 async function loadCaja(){try{renderCaja(await get('estado'));}catch(e){renderCaja({schema_ok:false,schema_message:e.message,caja:{puede_registrar:false,diaria:{},mensual:{}},saldo:null});}}
+
+function renderListScopeInfo(context){
+  const el=qs('#egScopeInfo');
+  if(!el) return;
+  if(!context){el.innerHTML='';return;}
+  const title=esc(context.title||'Contexto');
+  const detail=esc(context.detail||'');
+  el.innerHTML='<span class="eg-scope-chip"><span class="badge badge-light border">Periodo</span><strong>'+title+'</strong><span>'+detail+'</span></span>';
+}
+
+function renderListCounter(total,page,per,currentCount){
+  const el=qs('#egResumenListado');
+  if(!el) return;
+  if(total<=0){el.textContent='Sin resultados para este filtro.';return;}
+  const pages=Math.max(1,Math.ceil(total/per));
+  const from=((page-1)*per)+(currentCount>0?1:0);
+  const to=Math.min(total,((page-1)*per)+currentCount);
+  el.textContent='Mostrando '+from+'-'+to+' de '+total+' egresos | pagina '+page+' de '+pages;
+}
+
+function syncListScopeUI(){
+  const scope=(qs('#egScope')||{}).value||'latest';
+  const fechaWrap=qs('#egFechaWrap'),desdeWrap=qs('#egDesdeWrap'),hastaWrap=qs('#egHastaWrap');
+  if(fechaWrap)fechaWrap.classList.toggle('d-none',scope!=='date');
+  if(desdeWrap)desdeWrap.classList.toggle('d-none',scope!=='range');
+  if(hastaWrap)hastaWrap.classList.toggle('d-none',scope!=='range');
+  const reset=qs('#egResetScope');
+  if(reset){
+    const isDefault=scope==='latest' && !(qs('#egFechaFiltro')||{}).value && !(qs('#egDesde')||{}).value && !(qs('#egHasta')||{}).value;
+    reset.disabled=isDefault;
+  }
+}
+
+function applyListScopeFilters(){
+  const scope=((qs('#egScope')||{}).value||'latest').trim();
+  const fecha=((qs('#egFechaFiltro')||{}).value||'').trim();
+  const desde=((qs('#egDesde')||{}).value||'').trim();
+  const hasta=((qs('#egHasta')||{}).value||'').trim();
+
+  if(scope==='date'){
+    if(!fecha){alertF('warning','Selecciona una fecha para filtrar los egresos.');return;}
+    st.scope='date';st.fecha=fecha;st.desde='';st.hasta='';
+  }else if(scope==='range'){
+    if(!desde||!hasta){alertF('warning','Completa las fechas Desde y Hasta para aplicar el rango.');return;}
+    if(desde>hasta){alertF('warning','La fecha inicial no puede ser mayor que la final.');return;}
+    st.scope='range';st.desde=desde;st.hasta=hasta;st.fecha='';
+  }else if(scope==='all'){
+    st.scope='all';st.fecha='';st.desde='';st.hasta='';
+  }else{
+    st.scope='latest';st.fecha='';st.desde='';st.hasta='';
+    if(qs('#egFechaFiltro'))qs('#egFechaFiltro').value='';
+    if(qs('#egDesde'))qs('#egDesde').value='';
+    if(qs('#egHasta'))qs('#egHasta').value='';
+  }
+
+  st.p=1;
+  syncListScopeUI();
+  loadList();
+}
+
+function resetListScopeToLatest(){
+  if(qs('#egScope'))qs('#egScope').value='latest';
+  if(qs('#egFechaFiltro'))qs('#egFechaFiltro').value='';
+  if(qs('#egDesde'))qs('#egDesde').value='';
+  if(qs('#egHasta'))qs('#egHasta').value='';
+  st.scope='latest';
+  st.fecha='';
+  st.desde='';
+  st.hasta='';
+  st.p=1;
+  syncListScopeUI();
+  loadList();
+}
+
 function rowsHTML(rows){
   if(!rows.length)return '<tr><td colspan="9" class="text-muted small">No hay egresos que coincidan con el filtro.</td></tr>';
   return rows.map(r=>{
@@ -79,8 +153,9 @@ function rowsHTML(rows){
     const tBadge=tipo==='FACTURA'?'badge-info':(tipo==='BOLETA'?'badge-primary':'badge-secondary');
     const tLbl=tipo==='FACTURA'?'Factura':(tipo==='BOLETA'?'Boleta':'Recibo');
     const comp=tipo==='RECIBO'?(r.referencia||'INTERNO'):(((r.serie||'')+'-'+(r.numero||'')).replace(/^-|-$|^$/,'-'));
-    const c=(r.concepto||'').length>80?(r.concepto||'').slice(0,77)+'...':(r.concepto||'');
-    return '<tr class="'+(an?'eg-row-anulado':'')+'"><td><strong>'+esc(r.codigo||'')+'</strong></td><td class="text-nowrap">'+esc(fmt(r.fecha_emision))+'</td><td><span class="badge '+tBadge+'">'+tLbl+'</span></td><td class="text-nowrap">'+esc(comp)+'</td><td>'+esc(r.beneficiario||'-')+'</td><td class="small">'+esc(c||'-')+'</td><td class="text-right font-weight-bold">'+esc(money(r.monto))+'</td><td><span class="badge '+(an?'badge-danger':'badge-success')+'">'+(an?'Anulado':'Activo')+'</span></td><td class="text-center text-nowrap"><button class="btn btn-xs btn-outline-primary mr-1" data-action="preview" data-id="'+r.id+'" title="Vista previa"><i class="fas fa-eye"></i></button><a class="btn btn-xs btn-outline-secondary mr-1" target="_blank" rel="noopener" href="'+API+'?accion=egreso_pdf&id='+r.id+'" title="Imprimir PDF"><i class="fas fa-print"></i></a><button class="btn btn-xs btn-outline-danger" data-action="anular" data-id="'+r.id+'" '+(an?'disabled':'')+' title="Anular"><i class="fas fa-ban"></i></button></td></tr>';
+    const c=(r.concepto||'').length>96?(r.concepto||'').slice(0,93)+'...':(r.concepto||'');
+    const cajaTxt=r.caja_diaria_codigo?('<div class="small text-muted">Caja: '+esc(r.caja_diaria_codigo)+'</div>'):'';
+    return '<tr class="'+(an?'eg-row-anulado':'')+'"><td><strong>'+esc(r.codigo||'')+'</strong></td><td><div class="text-nowrap">'+esc(fmt(r.fecha_emision))+'</div>'+cajaTxt+'</td><td><span class="badge '+tBadge+'">'+tLbl+'</span></td><td><div class="small text-nowrap">'+esc(comp)+'</div></td><td>'+esc(r.beneficiario||'-')+'</td><td class="small">'+esc(c||'-')+'</td><td class="text-right font-weight-bold">'+esc(money(r.monto))+'</td><td><span class="badge '+(an?'badge-danger':'badge-success')+'">'+(an?'Anulado':'Activo')+'</span></td><td class="text-center text-nowrap"><button class="btn btn-xs btn-outline-primary mr-1" data-action="preview" data-id="'+r.id+'" title="Vista previa"><i class="fas fa-eye"></i></button><a class="btn btn-xs btn-outline-secondary mr-1" target="_blank" rel="noopener" href="'+API+'?accion=egreso_pdf&id='+r.id+'" title="Imprimir PDF"><i class="fas fa-print"></i></a><button class="btn btn-xs btn-outline-danger" data-action="anular" data-id="'+r.id+'" '+(an?'disabled':'')+' title="Anular"><i class="fas fa-ban"></i></button></td></tr>';
   }).join('');
 }
 function pager(tp,p){
@@ -90,14 +165,38 @@ function pager(tp,p){
 }
 async function loadList(){
   const tb=qs('#egTableBody'),resTxt=qs('#egResumenListado'),tot=qs('#egTotalesDia');
-  if(!st.schema){tb.innerHTML='<tr><td colspan="9" class="text-danger small">'+esc(st.schemaMsg||'No se puede listar por un error de conexion/API.')+'</td></tr>';resTxt.textContent='';tot.textContent='';pager(1,1);return;}
+  if(!st.schema){
+    tb.innerHTML='<tr><td colspan="9" class="text-danger small">'+esc(st.schemaMsg||'No se puede listar por un error de conexion/API.')+'</td></tr>';
+    if(resTxt)resTxt.textContent='';
+    if(tot)tot.textContent='';
+    renderListScopeInfo(null);
+    pager(1,1);
+    return;
+  }
   tb.innerHTML='<tr><td colspan="9" class="text-muted small">Cargando...</td></tr>';
   try{
-    const r=await get('listar',{page:st.p,per:st.pp,q:st.q,tipo:st.t,estado:st.e}),rows=Array.isArray(r.rows)?r.rows:[];
-    tb.innerHTML=rowsHTML(rows);pager(r.total_pages||1,r.page||1);
-    if((r.total||0)>0){const from=((r.page-1)*r.per)+1,to=Math.min(r.total,from+rows.length-1);resTxt.textContent='Mostrando '+from+'-'+to+' de '+r.total+' egresos.';}else{resTxt.textContent='Sin egresos para los filtros actuales.';}
-    const s=rows.reduce((a,x)=>((x.estado||'').toUpperCase()==='ANULADO')?a:a+Number(x.monto||0),0);tot.textContent=rows.length?('Total visible activos: '+money(s)):'';
-  }catch(e){tb.innerHTML='<tr><td colspan="9" class="text-danger small">'+esc(e.message||'Error al listar egresos.')+'</td></tr>';resTxt.textContent='';tot.textContent='';}
+    const r=await get('listar',{page:st.p,per:st.pp,q:st.q,tipo:st.t,estado:st.e,scope:st.scope,fecha:st.fecha,desde:st.desde,hasta:st.hasta});
+    const rows=Array.isArray(r.rows)?r.rows:[];
+    st.context=r.context||null;
+    st.totalActivos=Number(r.total_activos||0);
+    tb.innerHTML=rowsHTML(rows);
+    pager(r.total_pages||1,r.page||1);
+    renderListScopeInfo(st.context);
+    renderListCounter(Number(r.total||0),Number(r.page||1),Number(r.per||st.pp),rows.length);
+    const visibleActivos=rows.reduce((a,x)=>((x.estado||'').toUpperCase()==='ANULADO')?a:a+Number(x.monto||0),0);
+    if(tot){
+      if((r.total||0)>0){
+        tot.textContent='Total activos filtrados: '+money(st.totalActivos)+(rows.length?(' | Activos visibles: '+money(visibleActivos)):'');
+      }else{
+        tot.textContent='';
+      }
+    }
+  }catch(e){
+    tb.innerHTML='<tr><td colspan="9" class="text-danger small">'+esc(e.message||'Error al listar egresos.')+'</td></tr>';
+    if(resTxt)resTxt.textContent='';
+    if(tot)tot.textContent='';
+    renderListScopeInfo(null);
+  }
 }
 
 function buildVoucherComp(v){
@@ -630,11 +729,56 @@ function bind(){
     showVoucher({id:0,codigo:'SIN GUARDAR',tipo_comprobante:d.tipo,serie:d.serie,numero:d.numero,referencia:d.referencia,fecha_emision:d.fecha||new Date().toISOString(),monto:d.monto||0,beneficiario:d.benef||'',documento:d.doc||'',concepto:d.concepto||'',estado:'ACTIVO',empresa_nombre:EMP,creado_nombre:USR,fuentes:fuentesPayload(vf.map)},'../../dist/img/AdminLTELogo.png');
   });
   qs('#egBtnPrintReal').addEventListener('click',()=>{const v=st.prev;if(!v||!(v.id>0)){alertF('warning','Primero guarda el egreso para poder imprimir el PDF oficial.');return;}window.open(API+'?accion=egreso_pdf&id='+v.id,'_blank','noopener');});
-  let t=null;qs('#egQ').addEventListener('input',()=>{clearTimeout(t);t=setTimeout(()=>{st.q=qs('#egQ').value||'';st.p=1;loadList();},250);});
-  qs('#egFiltroTipo').addEventListener('change',()=>{st.t=(qs('#egFiltroTipo').value||'TODOS').toUpperCase();st.p=1;loadList();});
-  qs('#egFiltroEstado').addEventListener('change',()=>{st.e=(qs('#egFiltroEstado').value||'TODOS').toUpperCase();st.p=1;loadList();});
-  qs('#egConcepto').setAttribute('maxlength','1000');qs('#egConcepto').addEventListener('input',countC);
+
+  let timer=null;
+  qs('#egQ').addEventListener('input',()=>{
+    clearTimeout(timer);
+    timer=setTimeout(()=>{
+      st.q=qs('#egQ').value||'';
+      st.p=1;
+      loadList();
+    },250);
+  });
+
+  if(qs('#egClearQ'))qs('#egClearQ').addEventListener('click',()=>{
+    qs('#egQ').value='';
+    st.q='';
+    st.p=1;
+    loadList();
+  });
+
+  qs('#egFiltroTipo').addEventListener('change',()=>{
+    st.t=(qs('#egFiltroTipo').value||'TODOS').toUpperCase();
+    st.p=1;
+    loadList();
+  });
+
+  qs('#egFiltroEstado').addEventListener('change',()=>{
+    st.e=(qs('#egFiltroEstado').value||'TODOS').toUpperCase();
+    st.p=1;
+    loadList();
+  });
+
+  if(qs('#egScope'))qs('#egScope').addEventListener('change',syncListScopeUI);
+  if(qs('#egApplyScope'))qs('#egApplyScope').addEventListener('click',applyListScopeFilters);
+  if(qs('#egResetScope'))qs('#egResetScope').addEventListener('click',resetListScopeToLatest);
+
+  qs('#egConcepto').setAttribute('maxlength','1000');
+  qs('#egConcepto').addEventListener('input',countC);
 }
-async function init(){setTipo('RECIBO');setNow();countC();renderFuentesResumen();bind();await loadCaja();await loadList();}
+
+async function init(){
+  setTipo('RECIBO');
+  setNow();
+  countC();
+  renderFuentesResumen();
+  if(qs('#egScope'))qs('#egScope').value='latest';
+  if(qs('#egFiltroTipo'))qs('#egFiltroTipo').value='TODOS';
+  if(qs('#egFiltroEstado'))qs('#egFiltroEstado').value='TODOS';
+  syncListScopeUI();
+  bind();
+  await loadCaja();
+  await loadList();
+}
 init();
 })();
