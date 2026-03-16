@@ -5,7 +5,7 @@ const API=String(root.dataset.api||''),EMP=String(root.dataset.emp||''),USR=Stri
 const qs=(s,c=document)=>c.querySelector(s),qsa=(s,c=document)=>Array.from(c.querySelectorAll(s));
 const FUENTE_ORDER=['EFECTIVO','YAPE','PLIN','TRANSFERENCIA'];
 const FUENTE_LABEL={EFECTIVO:'Efectivo',YAPE:'Yape',PLIN:'Plin',TRANSFERENCIA:'Transferencia'};
-const st={p:1,pp:8,q:'',t:'TODOS',e:'TODOS',scope:'latest',fecha:'',desde:'',hasta:'',schema:true,schemaMsg:'',caja:null,saldo:null,prev:null,context:null,totalActivos:0,fuentesAsignadas:{}};
+const st={p:1,pp:8,q:'',t:'TODOS',e:'TODOS',schema:true,schemaMsg:'',caja:null,saldo:null,prev:null,fuentesAsignadas:{},detailCache:{}};
 const esc=s=>(s||'').toString().replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const round2=v=>Math.round((Number(v||0)+Number.EPSILON)*100)/100;
 const num=v=>{const n=parseFloat(v);return Number.isFinite(n)?n:0;};
@@ -146,16 +146,120 @@ function resetListScopeToLatest(){
   loadList();
 }
 
+function egListCols(){return 7;}
+
+function egCompText(r){
+  const tipo=(r.tipo_comprobante||'').toUpperCase();
+  if(tipo==='RECIBO') return r.referencia||'INTERNO';
+  const serie=String(r.serie||'').trim();
+  const numero=String(r.numero||'').trim();
+  return (serie||numero)?[serie,numero].filter(Boolean).join('-'):'-';
+}
+
+function egNl2BrEsc(v){
+  return esc(String(v||'')).replace(/\r\n|\r|\n/g,'<br>');
+}
+
+function egDetailBodyId(id){return 'egDetailBody_'+String(id);}
+function egDetailRowId(id){return 'egDetailRow_'+String(id);}
+function egToggleId(id){return 'egToggleIcon_'+String(id);}
+
+function egDetailHTML(row){
+  const concepto=((row&&row.concepto)||'').toString().trim()||'-';
+  const obs=((row&&row.observaciones)||'').toString().trim()||'Sin observaciones internas.';
+  return `
+    <div class="eg-detail-box">
+      <div class="eg-detail-grid">
+        <div class="eg-detail-item">
+          <span class="eg-detail-label">Concepto</span>
+          <div class="eg-detail-text">${egNl2BrEsc(concepto)}</div>
+        </div>
+        <div class="eg-detail-item">
+          <span class="eg-detail-label">Observaciones internas</span>
+          <div class="eg-detail-text">${egNl2BrEsc(obs)}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function toggleEgresoDetail(id){
+  const row=qs('#'+egDetailRowId(id));
+  const body=qs('#'+egDetailBodyId(id));
+  const icon=qs('#'+egToggleId(id));
+  if(!row||!body) return;
+
+  const isOpen=row.classList.contains('show');
+  if(isOpen){
+    row.classList.remove('show');
+    if(icon) icon.classList.remove('is-open');
+    return;
+  }
+
+  row.classList.add('show');
+  if(icon) icon.classList.add('is-open');
+
+  const cacheKey=String(id);
+  if(st.detailCache[cacheKey]){
+    body.innerHTML=egDetailHTML(st.detailCache[cacheKey]);
+    return;
+  }
+
+  body.innerHTML='<div class="eg-detail-box"><div class="eg-detail-placeholder">Cargando detalle del egreso...</div></div>';
+
+  try{
+    const r=await get('detalle',{id:id});
+    st.detailCache[cacheKey]=r.row||{};
+    body.innerHTML=egDetailHTML(st.detailCache[cacheKey]);
+  }catch(err){
+    body.innerHTML='<div class="eg-detail-box"><div class="text-danger small">'+esc(err.message||'No se pudo cargar el detalle del egreso.')+'</div></div>';
+  }
+}
+
 function rowsHTML(rows){
-  if(!rows.length)return '<tr><td colspan="9" class="text-muted small">No hay egresos que coincidan con el filtro.</td></tr>';
+  if(!rows.length){
+    return '<tr><td colspan="'+egListCols()+'" class="text-muted small">No hay egresos que coincidan con el filtro.</td></tr>';
+  }
+
   return rows.map(r=>{
-    const tipo=(r.tipo_comprobante||'').toUpperCase(),an=((r.estado||'').toUpperCase()==='ANULADO');
+    const tipo=(r.tipo_comprobante||'').toUpperCase();
+    const an=((r.estado||'').toUpperCase()==='ANULADO');
     const tBadge=tipo==='FACTURA'?'badge-info':(tipo==='BOLETA'?'badge-primary':'badge-secondary');
     const tLbl=tipo==='FACTURA'?'Factura':(tipo==='BOLETA'?'Boleta':'Recibo');
-    const comp=tipo==='RECIBO'?(r.referencia||'INTERNO'):(((r.serie||'')+'-'+(r.numero||'')).replace(/^-|-$|^$/,'-'));
-    const c=(r.concepto||'').length>96?(r.concepto||'').slice(0,93)+'...':(r.concepto||'');
+    const comp=egCompText(r);
     const cajaTxt=r.caja_diaria_codigo?('<div class="small text-muted">Caja: '+esc(r.caja_diaria_codigo)+'</div>'):'';
-    return '<tr class="'+(an?'eg-row-anulado':'')+'"><td><strong>'+esc(r.codigo||'')+'</strong></td><td><div class="text-nowrap">'+esc(fmt(r.fecha_emision))+'</div>'+cajaTxt+'</td><td><span class="badge '+tBadge+'">'+tLbl+'</span></td><td><div class="small text-nowrap">'+esc(comp)+'</div></td><td>'+esc(r.beneficiario||'-')+'</td><td class="small">'+esc(c||'-')+'</td><td class="text-right font-weight-bold">'+esc(money(r.monto))+'</td><td><span class="badge '+(an?'badge-danger':'badge-success')+'">'+(an?'Anulado':'Activo')+'</span></td><td class="text-center text-nowrap"><button class="btn btn-xs btn-outline-primary mr-1" data-action="preview" data-id="'+r.id+'" title="Vista previa"><i class="fas fa-eye"></i></button><a class="btn btn-xs btn-outline-secondary mr-1" target="_blank" rel="noopener" href="'+API+'?accion=egreso_pdf&id='+r.id+'" title="Imprimir PDF"><i class="fas fa-print"></i></a><button class="btn btn-xs btn-outline-danger" data-action="anular" data-id="'+r.id+'" '+(an?'disabled':'')+' title="Anular"><i class="fas fa-ban"></i></button></td></tr>';
+
+    return `
+      <tr class="eg-row-main ${an?'eg-row-anulado':''}" data-role="eg-row-main" data-id="${r.id}">
+        <td>
+          <div class="d-flex align-items-start justify-content-between">
+            <strong>${esc(r.codigo||'')}</strong>
+            <span id="${egToggleId(r.id)}" class="eg-row-toggle text-muted ml-2"><i class="fas fa-chevron-down"></i></span>
+          </div>
+        </td>
+        <td>
+          <div class="text-nowrap">${esc(fmt(r.fecha_emision))}</div>
+          ${cajaTxt}
+        </td>
+        <td class="eg-type-cell">
+          <span class="badge ${tBadge}">${tLbl}</span>
+          <div class="eg-type-ref">${esc(comp)}</div>
+        </td>
+        <td>${esc(r.beneficiario||'-')}</td>
+        <td class="text-right font-weight-bold">${esc(money(r.monto))}</td>
+        <td><span class="badge ${an?'badge-danger':'badge-success'}">${an?'Anulado':'Activo'}</span></td>
+        <td class="text-center text-nowrap" data-stop-row-toggle="1">
+          <button class="btn btn-xs btn-outline-primary mr-1" data-stop-row-toggle="1" data-action="preview" data-id="${r.id}" title="Vista previa"><i class="fas fa-eye"></i></button>
+          <a class="btn btn-xs btn-outline-secondary mr-1" data-stop-row-toggle="1" target="_blank" rel="noopener" href="${API}?accion=egreso_pdf&id=${r.id}" title="Imprimir PDF"><i class="fas fa-print"></i></a>
+          <button class="btn btn-xs btn-outline-danger" data-stop-row-toggle="1" data-action="anular" data-id="${r.id}" ${an?'disabled':''} title="Anular"><i class="fas fa-ban"></i></button>
+        </td>
+      </tr>
+      <tr class="eg-detail-row" id="${egDetailRowId(r.id)}">
+        <td colspan="${egListCols()}" class="eg-detail-cell">
+          <div id="${egDetailBodyId(r.id)}" class="eg-detail-placeholder p-3">Haz clic para ver concepto y observaciones internas.</div>
+        </td>
+      </tr>
+    `;
   }).join('');
 }
 function pager(tp,p){
@@ -711,40 +815,116 @@ async function anular(id){
 }
 function bind(){
   document.addEventListener('click',ev=>{
-    const chip=ev.target.closest('#egTipoChipGroup .eg-chip');if(chip){ev.preventDefault();setTipo(chip.dataset.tipo||'RECIBO');return;}
-    const pg=ev.target.closest('#egPager a[data-page]');if(pg){ev.preventDefault();const p=parseInt(pg.dataset.page,10);if(!isNaN(p)&&p>=1){st.p=p;loadList();}return;}
-    const act=ev.target.closest('[data-action][data-id]');if(act){const id=parseInt(act.dataset.id,10),a=act.dataset.action;if(!(id>0))return;if(a==='preview')previewId(id).catch(e=>alertF('danger',esc(e.message||'No se pudo abrir vista previa.')));if(a==='anular')anular(id);}
+    const chip=ev.target.closest('#egTipoChipGroup .eg-chip');
+    if(chip){
+      ev.preventDefault();
+      setTipo(chip.dataset.tipo||'RECIBO');
+      return;
+    }
+
+    const pg=ev.target.closest('#egPager a[data-page]');
+    if(pg){
+      ev.preventDefault();
+      const p=parseInt(pg.dataset.page,10);
+      if(!isNaN(p)&&p>=1){
+        st.p=p;
+        loadList();
+      }
+      return;
+    }
+
+    const act=ev.target.closest('[data-action][data-id]');
+    if(act){
+      const id=parseInt(act.dataset.id,10);
+      const a=act.dataset.action;
+      if(!(id>0)) return;
+      if(a==='preview') previewId(id).catch(e=>alertF('danger',esc(e.message||'No se pudo abrir vista previa.')));
+      if(a==='anular') anular(id);
+      return;
+    }
+
+    const row=ev.target.closest('tr[data-role="eg-row-main"][data-id]');
+    if(row && !ev.target.closest('[data-stop-row-toggle],a,button,input,textarea,select,label')){
+      const id=parseInt(row.dataset.id,10);
+      if(id>0) toggleEgresoDetail(id);
+      return;
+    }
   });
-  document.addEventListener('input',ev=>{if(ev.target&&ev.target.classList&&ev.target.classList.contains('js-eg-fuente-monto'))updateFuentesModalTotals();});
+
+  document.addEventListener('input',ev=>{
+    if(ev.target&&ev.target.classList&&ev.target.classList.contains('js-eg-fuente-monto')) updateFuentesModalTotals();
+  });
+
   qs('#egForm').addEventListener('submit',save);
   qs('#egBtnLimpiar').addEventListener('click',clearForm);
-  if(qs('#egBtnDistribuir'))qs('#egBtnDistribuir').addEventListener('click',()=>{if(!(montoObjetivo()>0)){alertF('warning','Ingresa primero el monto del egreso para distribuir por fuente.');if(qs('#egMonto'))qs('#egMonto').focus();return;}renderFuentesModalRows();if(window.jQuery)window.jQuery('#egFuentesModal').modal('show');});
-  if(qs('#egBtnFuentesAuto'))qs('#egBtnFuentesAuto').addEventListener('click',autoDistribuirFuentes);
-  if(qs('#egBtnFuentesClear'))qs('#egBtnFuentesClear').addEventListener('click',clearFuentesModalInputs);
-  if(qs('#egBtnFuentesAplicar'))qs('#egBtnFuentesAplicar').addEventListener('click',applyFuentesModal);
-  if(qs('#egMonto'))qs('#egMonto').addEventListener('input',()=>{renderFuentesResumen();if(hasFuentesModal())updateFuentesModalTotals();});
-  qs('#egBtnVistaPrevia').addEventListener('click',()=>{
-    const d=datos();if(!d.concepto||!(d.monto>0)){alertF('warning','Para la vista previa, completa al menos concepto y monto.');return;}
-    const vf=validateFuentes(st.fuentesAsignadas,d.monto);if(!vf.ok){alertF('warning',esc(vf.msg));if(qs('#egBtnDistribuir'))qs('#egBtnDistribuir').click();return;}
-    showVoucher({id:0,codigo:'SIN GUARDAR',tipo_comprobante:d.tipo,serie:d.serie,numero:d.numero,referencia:d.referencia,fecha_emision:d.fecha||new Date().toISOString(),monto:d.monto||0,beneficiario:d.benef||'',documento:d.doc||'',concepto:d.concepto||'',estado:'ACTIVO',empresa_nombre:EMP,creado_nombre:USR,fuentes:fuentesPayload(vf.map)},'../../dist/img/AdminLTELogo.png');
-  });
-  qs('#egBtnPrintReal').addEventListener('click',()=>{const v=st.prev;if(!v||!(v.id>0)){alertF('warning','Primero guarda el egreso para poder imprimir el PDF oficial.');return;}window.open(API+'?accion=egreso_pdf&id='+v.id,'_blank','noopener');});
 
-  let timer=null;
+  if(qs('#egBtnDistribuir')) qs('#egBtnDistribuir').addEventListener('click',()=>{
+    if(!(montoObjetivo()>0)){
+      alertF('warning','Ingresa primero el monto del egreso para distribuir por fuente.');
+      if(qs('#egMonto')) qs('#egMonto').focus();
+      return;
+    }
+    renderFuentesModalRows();
+    if(window.jQuery) window.jQuery('#egFuentesModal').modal('show');
+  });
+
+  if(qs('#egBtnFuentesAuto')) qs('#egBtnFuentesAuto').addEventListener('click',autoDistribuirFuentes);
+  if(qs('#egBtnFuentesClear')) qs('#egBtnFuentesClear').addEventListener('click',clearFuentesModalInputs);
+  if(qs('#egBtnFuentesAplicar')) qs('#egBtnFuentesAplicar').addEventListener('click',applyFuentesModal);
+
+  if(qs('#egMonto')) qs('#egMonto').addEventListener('input',()=>{
+    renderFuentesResumen();
+    if(hasFuentesModal()) updateFuentesModalTotals();
+  });
+
+  qs('#egBtnVistaPrevia').addEventListener('click',()=>{
+    const d=datos();
+    if(!d.concepto||!(d.monto>0)){
+      alertF('warning','Para la vista previa, completa al menos concepto y monto.');
+      return;
+    }
+    const vf=validateFuentes(st.fuentesAsignadas,d.monto);
+    if(!vf.ok){
+      alertF('warning',esc(vf.msg));
+      if(qs('#egBtnDistribuir')) qs('#egBtnDistribuir').click();
+      return;
+    }
+    showVoucher({
+      id:0,
+      codigo:'SIN GUARDAR',
+      tipo_comprobante:d.tipo,
+      serie:d.serie,
+      numero:d.numero,
+      referencia:d.referencia,
+      fecha_emision:d.fecha||new Date().toISOString(),
+      monto:d.monto||0,
+      beneficiario:d.benef||'',
+      documento:d.doc||'',
+      concepto:d.concepto||'',
+      estado:'ACTIVO',
+      empresa_nombre:EMP,
+      creado_nombre:USR,
+      fuentes:fuentesPayload(vf.map)
+    },'../../dist/img/AdminLTELogo.png');
+  });
+
+  qs('#egBtnPrintReal').addEventListener('click',()=>{
+    const v=st.prev;
+    if(!v||!(v.id>0)){
+      alertF('warning','Primero guarda el egreso para poder imprimir el PDF oficial.');
+      return;
+    }
+    window.open(API+'?accion=egreso_pdf&id='+v.id,'_blank','noopener');
+  });
+
+  let t=null;
   qs('#egQ').addEventListener('input',()=>{
-    clearTimeout(timer);
-    timer=setTimeout(()=>{
+    clearTimeout(t);
+    t=setTimeout(()=>{
       st.q=qs('#egQ').value||'';
       st.p=1;
       loadList();
     },250);
-  });
-
-  if(qs('#egClearQ'))qs('#egClearQ').addEventListener('click',()=>{
-    qs('#egQ').value='';
-    st.q='';
-    st.p=1;
-    loadList();
   });
 
   qs('#egFiltroTipo').addEventListener('change',()=>{
@@ -759,9 +939,9 @@ function bind(){
     loadList();
   });
 
-  if(qs('#egScope'))qs('#egScope').addEventListener('change',syncListScopeUI);
-  if(qs('#egApplyScope'))qs('#egApplyScope').addEventListener('click',applyListScopeFilters);
-  if(qs('#egResetScope'))qs('#egResetScope').addEventListener('click',resetListScopeToLatest);
+  if(qs('#egScope')) qs('#egScope').addEventListener('change',syncListScopeUI);
+  if(qs('#egApplyScope')) qs('#egApplyScope').addEventListener('click',applyListScopeFilters);
+  if(qs('#egResetScope')) qs('#egResetScope').addEventListener('click',resetListScopeToLatest);
 
   qs('#egConcepto').setAttribute('maxlength','1000');
   qs('#egConcepto').addEventListener('input',countC);
