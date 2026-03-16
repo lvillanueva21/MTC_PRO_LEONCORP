@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../../includes/acl.php';
 require_once __DIR__ . '/../../includes/permisos.php';
 require_once __DIR__ . '/../../includes/conexion.php';
@@ -33,6 +33,29 @@ include __DIR__ . '/../../includes/header.php';
 ?>
 
 <link rel="stylesheet" href="<?= h(rel('modules/egresos/estilo.css?v=4')) ?>">
+<style>
+  .eg-list-toolbar{display:grid;gap:10px;}
+  .eg-list-filter-row{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:10px 12px;align-items:end;}
+  .eg-list-filter-col{min-width:0;}
+  .eg-list-filter-col.search{grid-column:span 12;}
+  .eg-list-filter-col.estado,.eg-list-filter-col.tipo,.eg-list-filter-col.scope{grid-column:span 12;}
+  .eg-list-filter-col.fecha,.eg-list-filter-col.desde,.eg-list-filter-col.hasta{grid-column:span 12;}
+  .eg-list-filter-col.actions{grid-column:span 12;}
+  .eg-list-actions{display:flex;flex-wrap:wrap;gap:8px;}
+  .eg-list-filter-meta{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 14px;align-items:center;}
+  .eg-scope-chip{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;border-radius:999px;background:#f8f7ff;border:1px solid #dad5ff;color:#49437c;}
+  .eg-scope-chip .badge{font-weight:600;}
+  .eg-list-summary{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+  @media (min-width: 576px){
+    .eg-list-filter-col.estado,.eg-list-filter-col.tipo,.eg-list-filter-col.scope,.eg-list-filter-col.fecha,.eg-list-filter-col.desde,.eg-list-filter-col.hasta{grid-column:span 6;}
+  }
+  @media (min-width: 1200px){
+    .eg-list-filter-col.search{grid-column:span 5;}
+    .eg-list-filter-col.estado,.eg-list-filter-col.tipo,.eg-list-filter-col.scope{grid-column:span 2;}
+    .eg-list-filter-col.fecha,.eg-list-filter-col.desde,.eg-list-filter-col.hasta{grid-column:span 3;}
+    .eg-list-filter-col.actions{grid-column:span 3;}
+  }
+</style>
 
 <div class="content-wrapper" id="egApp"
      data-api="<?= h(rel('modules/egresos/api.php')) ?>"
@@ -162,30 +185,109 @@ include __DIR__ . '/../../includes/header.php';
         </div>
 
         <div class="col-12 col-lg-7">
-          <div class="card eg-card shadow-sm h-100">
+                    <div class="card eg-card shadow-sm h-100">
             <div class="card-body d-flex flex-column">
               <div class="eg-list-head mb-2">
                 <div class="eg-list-head-main">
                   <h5 class="card-title mb-0">Egresos registrados</h5>
-                  <div class="text-muted small">Control de salidas por caja diaria.</div>
-                </div>
-                <div class="eg-filters">
-                  <div class="input-group input-group-sm">
-                    <div class="input-group-prepend"><span class="input-group-text bg-white border-right-0"><i class="fas fa-search"></i></span></div>
-                    <input id="egQ" class="form-control border-left-0" placeholder="Buscar por codigo, concepto o beneficiario...">
-                  </div>
-                  <select id="egFiltroTipo" class="form-control form-control-sm"><option value="TODOS">Todos</option><option value="FACTURA">Facturas</option><option value="BOLETA">Boletas</option><option value="RECIBO">Recibos</option></select>
-                  <select id="egFiltroEstado" class="form-control form-control-sm"><option value="TODOS">Activos y anulados</option><option value="ACTIVO">Solo activos</option><option value="ANULADO">Solo anulados</option></select>
+                  <div class="text-muted small">Vista operativa por caja diaria, con histórico disponible bajo demanda.</div>
                 </div>
               </div>
-              <div class="small text-muted mb-2" id="egResumenListado"></div>
+
+              <div class="eg-list-toolbar mb-2">
+                <div class="eg-list-filter-row">
+                  <div class="eg-list-filter-col search">
+                    <label class="mb-1 small font-weight-bold">Buscar</label>
+                    <div class="input-group input-group-sm">
+                      <div class="input-group-prepend"><span class="input-group-text bg-white border-right-0"><i class="fas fa-search"></i></span></div>
+                      <input id="egQ" class="form-control border-left-0" placeholder="Codigo, concepto, beneficiario, documento, serie, numero o referencia">
+                      <div class="input-group-append">
+                        <button class="btn btn-outline-secondary" type="button" id="egClearQ" title="Limpiar busqueda"><i class="fas fa-times"></i></button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="eg-list-filter-col estado">
+                    <label class="mb-1 small font-weight-bold">Estado</label>
+                    <select id="egFiltroEstado" class="form-control form-control-sm">
+                      <option value="TODOS" selected>Todos</option>
+                      <option value="ACTIVO">Solo activos</option>
+                      <option value="ANULADO">Solo anulados</option>
+                    </select>
+                  </div>
+
+                  <div class="eg-list-filter-col tipo">
+                    <label class="mb-1 small font-weight-bold">Tipo</label>
+                    <select id="egFiltroTipo" class="form-control form-control-sm">
+                      <option value="TODOS" selected>Todos</option>
+                      <option value="FACTURA">Facturas</option>
+                      <option value="BOLETA">Boletas</option>
+                      <option value="RECIBO">Recibos</option>
+                    </select>
+                  </div>
+
+                  <div class="eg-list-filter-col scope">
+                    <label class="mb-1 small font-weight-bold">Periodo</label>
+                    <select id="egScope" class="form-control form-control-sm">
+                      <option value="latest" selected>Ultima caja</option>
+                      <option value="date">Fecha</option>
+                      <option value="range">Rango</option>
+                      <option value="all">Historico</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="eg-list-filter-row">
+                  <div class="eg-list-filter-col fecha d-none" id="egFechaWrap">
+                    <label class="mb-1 small font-weight-bold">Fecha</label>
+                    <input id="egFechaFiltro" type="date" class="form-control form-control-sm">
+                  </div>
+
+                  <div class="eg-list-filter-col desde d-none" id="egDesdeWrap">
+                    <label class="mb-1 small font-weight-bold">Desde</label>
+                    <input id="egDesde" type="date" class="form-control form-control-sm">
+                  </div>
+
+                  <div class="eg-list-filter-col hasta d-none" id="egHastaWrap">
+                    <label class="mb-1 small font-weight-bold">Hasta</label>
+                    <input id="egHasta" type="date" class="form-control form-control-sm">
+                  </div>
+
+                  <div class="eg-list-filter-col actions">
+                    <label class="mb-1 small font-weight-bold d-block">&nbsp;</label>
+                    <div class="eg-list-actions">
+                      <button class="btn btn-sm btn-primary" type="button" id="egApplyScope"><i class="fas fa-filter mr-1"></i>Aplicar</button>
+                      <button class="btn btn-sm btn-outline-secondary" type="button" id="egResetScope"><i class="fas fa-history mr-1"></i>Volver a ultima caja</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="eg-list-filter-meta">
+                  <div id="egScopeInfo" class="small text-muted"></div>
+                  <div id="egResumenListado" class="small text-muted"></div>
+                </div>
+              </div>
+
               <div class="table-responsive flex-grow-1">
                 <table class="table table-sm table-hover mb-2" id="egTable">
-                  <thead class="thead-light"><tr><th>Codigo</th><th>Fecha</th><th>Tipo</th><th>Comp.</th><th>Beneficiario</th><th>Concepto</th><th class="text-right">Monto</th><th>Estado</th><th class="text-center">Acciones</th></tr></thead>
+                  <thead class="thead-light">
+                    <tr>
+                      <th>Codigo</th>
+                      <th>Fecha</th>
+                      <th>Tipo</th>
+                      <th>Comp.</th>
+                      <th>Beneficiario</th>
+                      <th>Concepto</th>
+                      <th class="text-right">Monto</th>
+                      <th>Estado</th>
+                      <th class="text-center">Acciones</th>
+                    </tr>
+                  </thead>
                   <tbody id="egTableBody"><tr><td colspan="9" class="text-muted small">Cargando egresos...</td></tr></tbody>
                 </table>
               </div>
-              <div class="d-flex justify-content-between align-items-center mt-2">
+
+              <div class="eg-list-summary mt-2">
                 <div class="small text-muted" id="egTotalesDia"></div>
                 <nav><ul class="pagination pagination-sm mb-0" id="egPager"></ul></nav>
               </div>
