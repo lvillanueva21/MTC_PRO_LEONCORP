@@ -46,6 +46,79 @@ include __DIR__ . '/../../includes/header.php';
   .eg-scope-chip{display:inline-flex;align-items:center;gap:8px;padding:4px 10px;border-radius:999px;background:#f8f7ff;border:1px solid #dad5ff;color:#49437c;}
   .eg-scope-chip .badge{font-weight:600;}
   .eg-list-summary{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;}
+
+  .eg-row-main{cursor:pointer;}
+  .eg-row-main:hover{background:#f8fafc;}
+  .eg-row-toggle{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:20px;
+    height:20px;
+    border-radius:50%;
+    transition:transform .18s ease, background-color .18s ease, color .18s ease;
+  }
+  .eg-row-toggle i{transition:transform .18s ease;}
+  .eg-row-toggle.is-open{
+    background:#eef2ff;
+    color:#4f46e5 !important;
+  }
+  .eg-row-toggle.is-open i{transform:rotate(180deg);}
+
+  .eg-type-cell .badge{display:inline-block;}
+  .eg-type-ref{
+    margin-top:5px;
+    font-size:12px;
+    line-height:1.25;
+    color:#6c757d;
+    word-break:break-word;
+  }
+
+  .eg-detail-row{display:none;}
+  .eg-detail-row.show{display:table-row;}
+  .eg-detail-cell{
+    padding:0 !important;
+    border-top:0 !important;
+    background:#fbfcfe;
+  }
+  .eg-detail-box{
+    margin:0 12px 10px;
+    padding:14px 16px;
+    border:1px solid #e6e9ef;
+    border-radius:12px;
+    background:#fff;
+  }
+  .eg-detail-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:14px 18px;
+  }
+  .eg-detail-item{min-width:0;}
+  .eg-detail-label{
+    display:block;
+    margin-bottom:6px;
+    font-size:12px;
+    font-weight:700;
+    color:#4b5563;
+    text-transform:uppercase;
+    letter-spacing:.02em;
+  }
+  .eg-detail-text{
+    font-size:13px;
+    line-height:1.45;
+    color:#111827;
+    white-space:pre-wrap;
+    word-break:break-word;
+  }
+  .eg-detail-placeholder{
+    font-size:12px;
+    color:#6b7280;
+  }
+
+  @media (max-width: 767.98px){
+    .eg-detail-grid{grid-template-columns:1fr;}
+  }
+
   @media (min-width: 576px){
     .eg-list-filter-col.estado,.eg-list-filter-col.tipo,.eg-list-filter-col.scope,.eg-list-filter-col.fecha,.eg-list-filter-col.desde,.eg-list-filter-col.hasta{grid-column:span 6;}
   }
@@ -267,30 +340,29 @@ include __DIR__ . '/../../includes/header.php';
                   <div id="egResumenListado" class="small text-muted"></div>
                 </div>
               </div>
+<div class="small text-muted mb-2">Haz clic en una fila para ver concepto y observaciones internas.</div>
 
-              <div class="table-responsive flex-grow-1">
-                <table class="table table-sm table-hover mb-2" id="egTable">
-                  <thead class="thead-light">
-                    <tr>
-                      <th>Codigo</th>
-                      <th>Fecha</th>
-                      <th>Tipo</th>
-                      <th>Comp.</th>
-                      <th>Beneficiario</th>
-                      <th>Concepto</th>
-                      <th class="text-right">Monto</th>
-                      <th>Estado</th>
-                      <th class="text-center">Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody id="egTableBody"><tr><td colspan="9" class="text-muted small">Cargando egresos...</td></tr></tbody>
-                </table>
-              </div>
+<div class="table-responsive flex-grow-1">
+  <table class="table table-sm table-hover mb-2" id="egTable">
+    <thead class="thead-light">
+      <tr>
+        <th>Codigo</th>
+        <th>Fecha</th>
+        <th>Tipo</th>
+        <th>Beneficiario</th>
+        <th class="text-right">Monto</th>
+        <th>Estado</th>
+        <th class="text-center">Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="egTableBody"><tr><td colspan="7" class="text-muted small">Cargando egresos...</td></tr></tbody>
+  </table>
+</div>
 
-              <div class="eg-list-summary mt-2">
-                <div class="small text-muted" id="egTotalesDia"></div>
-                <nav><ul class="pagination pagination-sm mb-0" id="egPager"></ul></nav>
-              </div>
+<div class="eg-list-summary mt-2">
+  <div class="small text-muted" id="egTotalesDia"></div>
+  <nav><ul class="pagination pagination-sm mb-0" id="egPager"></ul></nav>
+</div>
             </div>
           </div>
         </div>
