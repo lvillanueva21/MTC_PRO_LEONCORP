@@ -1,4 +1,4 @@
-﻿// modules/egresos/index.js
+// modules/egresos/index.js
 (function(){
 const root=document.querySelector('#egApp'); if(!root) return;
 const API=String(root.dataset.api||''),EMP=String(root.dataset.emp||''),USR=String(root.dataset.usr||'');
@@ -99,23 +99,395 @@ async function loadList(){
     const s=rows.reduce((a,x)=>((x.estado||'').toUpperCase()==='ANULADO')?a:a+Number(x.monto||0),0);tot.textContent=rows.length?('Total visible activos: '+money(s)):'';
   }catch(e){tb.innerHTML='<tr><td colspan="9" class="text-danger small">'+esc(e.message||'Error al listar egresos.')+'</td></tr>';resTxt.textContent='';tot.textContent='';}
 }
-function voucherHTML(v,logo){
+
+function buildVoucherComp(v){
   const tipo=(v.tipo_comprobante||v.tipo||'RECIBO').toUpperCase();
-  const comp=tipo==='RECIBO'?(v.referencia||'RECIBO INTERNO'):((v.serie||'')+'-'+(v.numero||'')).replace(/^-|-$|^$/,'-');
-  const est=((v.estado||'ACTIVO').toUpperCase()==='ANULADO')?'ANULADO':'EMITIDO';
-  const resp=esc((v.creado_nombre||'').trim()||USR||'Responsable');
-  const logoHtml=logo?'<div class="eg-voucher-logo"><img src="'+esc(logo)+'" alt="Logo"></div>':'<div class="eg-voucher-logo eg-voucher-logo-placeholder"></div>';
+  const ref=String(v.referencia||'').trim();
+  const serie=String(v.serie||'').trim();
+  const numero=String(v.numero||'').trim();
+
+  if(tipo==='RECIBO'){
+    return ref || 'RECIBO INTERNO';
+  }
+
+  const doc=(serie&&numero)?(`${serie}-${numero}`):(serie||numero||'-');
+  return `${tipo} ${doc}`.trim();
+}
+
+function buildVoucherEstado(v){
+  return ((v.estado||'ACTIVO').toUpperCase()==='ANULADO') ? 'ANULADO' : 'EMITIDO';
+}
+
+function cleanVoucherText(v){
+  return String(v||'').replace(/\s+/g,' ').trim();
+}
+
+function clipVoucherText(v,max){
+  const txt=cleanVoucherText(v);
+  if(!txt) return '-';
+  if(txt.length<=max) return txt;
+  return txt.slice(0,Math.max(0,max-3)).replace(/[ ,.;:-]+$/,'')+'...';
+}
+
+function voucherResponsable(v){
+  return cleanVoucherText(v.creado_nombre||v.creado_usuario||USR||'Responsable') || 'Responsable';
+}
+
+function voucherFuentesRows(v){
   const fuentes=Array.isArray(v.fuentes)?v.fuentes:[];
-  const fuentesHtml=fuentes.length
-    ? '<ul class="eg-voucher-fuentes-list">'+fuentes.map(f=>{const key=canonKey((f&&f.key)||(f&&f.fuente_key)||'');const lbl=(f&&f.label)||FUENTE_LABEL[key]||key||'Fuente';return '<li><span>'+esc(lbl)+'</span><strong>'+esc(money((f&&f.monto)||0))+'</strong></li>';}).join('')+'</ul>'
-    : '<div class="text-muted small">Sin fuentes registradas.</div>';
-  return '<div class="eg-voucher"><div class="eg-voucher-head">'+logoHtml+'<div class="eg-voucher-head-main"><div class="eg-voucher-empresa">'+esc(v.empresa_nombre||EMP)+'</div><div class="eg-voucher-sub text-muted small">Recibo de egreso</div></div><div class="eg-voucher-amount-box"><div class="label">S/.</div><div class="value">'+esc(Number(v.monto||0).toFixed(2))+'</div></div></div><div class="eg-voucher-row mt-2"><div class="eg-voucher-block"><div class="label">Fecha y hora</div><div class="value">'+esc(fmt(v.fecha_emision||v.fecha||''))+'</div></div><div class="eg-voucher-block"><div class="label">Comprobante</div><div class="value">'+esc(tipo+' '+comp)+'</div></div><div class="eg-voucher-block"><div class="label">Estado</div><div class="value">'+esc(est)+'</div></div></div><div class="eg-voucher-row mt-2"><div class="eg-voucher-block eg-voucher-block-wide"><div class="label">Beneficiario</div><div class="value">'+esc(v.beneficiario||'-')+'</div></div><div class="eg-voucher-block"><div class="label">Documento</div><div class="value">'+esc(v.documento||'-')+'</div></div></div><div class="eg-voucher-section mt-3"><div class="label">Concepto</div><div class="eg-voucher-concepto">'+esc(v.concepto||'')+'</div></div><div class="eg-voucher-section mt-2"><div class="label">Fuentes de salida</div>'+fuentesHtml+'</div><div class="eg-voucher-footer"><div class="eg-voucher-firma"><div class="line"></div><div class="caption">Responsable<br><strong>'+resp+'</strong><br><span class="small">Codigo: '+esc(v.codigo||'Sin guardar')+'</span></div></div></div></div>';
+  const order={EFECTIVO:1,YAPE:2,PLIN:3,TRANSFERENCIA:4};
+
+  if(!fuentes.length){
+    return `<div class="egpv-source-row"><span>Sin fuentes registradas</span><strong>S/. 0.00</strong></div>`;
+  }
+
+  return fuentes
+    .slice()
+    .sort((a,b)=>{
+      const ka=canonKey((a&&a.key)||(a&&a.fuente_key)||'');
+      const kb=canonKey((b&&b.key)||(b&&b.fuente_key)||'');
+      return (order[ka]||99)-(order[kb]||99);
+    })
+    .map(f=>{
+      const key=canonKey((f&&f.key)||(f&&f.fuente_key)||'');
+      const lbl=(f&&f.label)||FUENTE_LABEL[key]||key||'Fuente';
+      return `<div class="egpv-source-row"><span>${esc(lbl)}</span><strong>${esc(money((f&&f.monto)||0))}</strong></div>`;
+    })
+    .join('');
 }
+
+function voucherHTML(v,logo){
+  const empresa=esc(cleanVoucherText(v.empresa_nombre||EMP||'EMPRESA')||'EMPRESA');
+  const codigo=esc(cleanVoucherText(v.codigo||'Sin guardar')||'Sin guardar');
+  const comp=esc(buildVoucherComp(v));
+  const estado=esc(buildVoucherEstado(v));
+  const monto=esc(round2(num(v.monto||0)).toFixed(2));
+  const fecha=esc(fmt(v.fecha_emision||v.fecha||''));
+  const beneficiario=esc(cleanVoucherText(v.beneficiario||'-')||'-');
+  const documento=esc(cleanVoucherText(v.documento||'-')||'-');
+  const concepto=esc(clipVoucherText(v.concepto||'',240));
+  const responsable=esc(voucherResponsable(v));
+  const fuentesHtml=voucherFuentesRows(v);
+
+  const logoHtml=logo
+    ? `<div class="egpv-logo"><img src="${esc(logo)}" alt="Logo"></div>`
+    : `<div class="egpv-logo"><span>LOGO</span></div>`;
+
+  return `
+    <style>
+      #egVoucher .egpv-wrap{
+        width:100%;
+        max-width:1120px;
+        margin:0 auto;
+        background:#f5f5f3;
+        border:2px solid #1f1f1f;
+        border-radius:32px;
+        padding:22px 26px 24px;
+        color:#111;
+        font-family:Arial,Helvetica,sans-serif;
+      }
+      #egVoucher .egpv-head{
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:18px;
+      }
+      #egVoucher .egpv-logo{
+        width:74px;
+        height:74px;
+        border:2px solid #1f1f1f;
+        border-radius:50%;
+        background:#fff;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        overflow:hidden;
+        flex:0 0 74px;
+      }
+      #egVoucher .egpv-logo img{
+        width:100%;
+        height:100%;
+        object-fit:contain;
+      }
+      #egVoucher .egpv-logo span{
+        font-size:14px;
+        font-weight:700;
+      }
+      #egVoucher .egpv-title{
+        flex:1;
+        text-align:center;
+        padding-top:8px;
+      }
+      
+      #egVoucher .egpv-company{
+  font-size:22px;
+  font-weight:800;
+  letter-spacing:.2px;
+}
+#egVoucher .egpv-subtitle{
+  margin-top:8px;
+  font-size:14px;
+}
+#egVoucher .egpv-amount{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding-top:6px;
+  flex:0 0 210px;
+  justify-content:flex-end;
+}
+#egVoucher .egpv-currency{
+  font-size:24px;
+  font-weight:700;
+}
+#egVoucher .egpv-amount-box{
+  width:140px;
+  height:56px;
+  border:2px solid #1f1f1f;
+  border-radius:12px;
+  background:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:20px;
+  font-weight:800;
+}
+#egVoucher .egpv-band{
+  margin-top:18px;
+  background:#949ba1;
+  color:#fff;
+  border:2px solid #4d6178;
+  border-radius:10px;
+  padding:10px 14px;
+  display:grid;
+  grid-template-columns:1.15fr 1.35fr .75fr;
+  gap:12px;
+  font-size:13px;
+  font-weight:700;
+}
+#egVoucher .egpv-band > div{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+#egVoucher .egpv-grid2{
+  margin-top:24px;
+  display:grid;
+  grid-template-columns:1.15fr .85fr;
+  gap:20px;
+  align-items:start;
+}
+#egVoucher .egpv-grid2 > div{
+  min-width:0;
+}
+#egVoucher .egpv-label{
+  display:inline-block;
+  font-size:14px;
+  font-weight:800;
+  color:#2f4868;
+  margin-right:6px;
+}
+#egVoucher .egpv-value{
+  display:inline-block;
+  font-size:14px;
+  max-width:calc(100% - 150px);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  vertical-align:bottom;
+}
+#egVoucher .egpv-concept{
+  margin-top:22px;
+  display:grid;
+  grid-template-columns:120px 1fr;
+  gap:12px;
+  align-items:start;
+}
+#egVoucher .egpv-concept-box{
+  position:relative;
+  height:72px;
+  padding-top:2px;
+  background-image:
+    linear-gradient(
+      to bottom,
+      transparent 18px, #111 18px, #111 20px, transparent 20px,
+      transparent 40px, #111 40px, #111 42px, transparent 42px,
+      transparent 62px, #111 62px, #111 64px, transparent 64px
+    );
+}
+#egVoucher .egpv-concept-text{
+  position:relative;
+  z-index:2;
+  font-size:14px;
+  line-height:20px;
+  height:60px;
+  overflow:hidden;
+  display:-webkit-box;
+  -webkit-line-clamp:3;
+  -webkit-box-orient:vertical;
+  white-space:normal;
+  padding-right:8px;
+  background:transparent;
+}
+#egVoucher .egpv-bottom{
+  margin-top:24px;
+  display:grid;
+  grid-template-columns:300px 1fr;
+  gap:28px;
+  align-items:end;
+}
+#egVoucher .egpv-source-title{
+  width:100%;
+  max-width:280px;
+  background:#949ba1;
+  color:#fff;
+  border:2px solid #4d6178;
+  border-radius:10px;
+  padding:10px 12px;
+  text-align:center;
+  font-size:15px;
+  font-weight:800;
+}
+#egVoucher .egpv-source-rows{
+  margin-top:8px;
+  max-width:280px;
+}
+#egVoucher .egpv-source-row{
+  display:flex;
+  justify-content:space-between;
+  gap:14px;
+  padding:8px 10px 6px;
+  border-bottom:2px solid #1f1f1f;
+  font-size:14px;
+}
+#egVoucher .egpv-signatures{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:32px;
+  align-items:end;
+  padding-bottom:4px;
+}
+#egVoucher .egpv-sign-line{
+  border-bottom:2px solid #1f1f1f;
+  height:14px;
+  margin-bottom:8px;
+}
+#egVoucher .egpv-sign-name{
+  font-size:14px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+#egVoucher .egpv-sign-role{
+  margin-top:14px;
+  font-size:12px;
+}
+      
+      @media (max-width: 992px){
+        #egVoucher .egpv-band,
+        #egVoucher .egpv-grid2,
+        #egVoucher .egpv-bottom,
+        #egVoucher .egpv-signatures,
+        #egVoucher .egpv-head,
+        #egVoucher .egpv-concept{
+          grid-template-columns:1fr;
+          display:block;
+        }
+        #egVoucher .egpv-head > *{ margin-bottom:14px; }
+        #egVoucher .egpv-amount{ justify-content:flex-start; }
+        #egVoucher .egpv-sign{ margin-top:18px; }
+      }
+    </style>
+
+    <div class="egpv-wrap">
+      <div class="egpv-head">
+        ${logoHtml}
+
+        <div class="egpv-title">
+          <div class="egpv-company">${empresa}</div>
+          <div class="egpv-subtitle">RECIBO DE EGRESO - ${codigo}</div>
+        </div>
+
+        <div class="egpv-amount">
+          <div class="egpv-currency">S/.</div>
+          <div class="egpv-amount-box">${monto}</div>
+        </div>
+      </div>
+
+      <div class="egpv-band">
+        <div>Fecha y hora: ${fecha}</div>
+        <div>Comprobante: ${comp}</div>
+        <div>Estado: ${estado}</div>
+      </div>
+
+      <div class="egpv-grid2">
+  <div>
+    <div class="egpv-label">BENEFICIARIO:</div>
+    <div class="egpv-value" style="display:block;max-width:100%;margin-top:4px;">${beneficiario}</div>
+  </div>
+  <div>
+    <div class="egpv-label">DOCUMENTO:</div>
+    <div class="egpv-value" style="display:block;max-width:100%;margin-top:4px;">${documento}</div>
+  </div>
+</div>
+
+      <div class="egpv-concept">
+        <div class="egpv-label">CONCEPTO:</div>
+        <div class="egpv-concept-box">
+          <div class="egpv-concept-text">${concepto}</div>
+        </div>
+      </div>
+
+      <div class="egpv-bottom">
+        <div class="egpv-source-box">
+          <div class="egpv-source-title">FUENTES DE SALIDA</div>
+          <div class="egpv-source-rows">
+            ${fuentesHtml}
+          </div>
+        </div>
+
+        <div class="egpv-signatures">
+          <div class="egpv-sign">
+            <div class="egpv-sign-line"></div>
+            <div class="egpv-sign-name">${beneficiario}</div>
+            <div class="egpv-sign-role">Beneficiario</div>
+          </div>
+
+          <div class="egpv-sign">
+            <div class="egpv-sign-line"></div>
+            <div class="egpv-sign-name">${responsable}</div>
+            <div class="egpv-sign-role">Responsable</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function showVoucher(v,logo){
-  st.prev=v||null;const c=qs('#egVoucher');if(!c||!v)return;c.innerHTML=voucherHTML(v,logo||'../../dist/img/AdminLTELogo.png');
+  st.prev=v||null;
+  const c=qs('#egVoucher');
+  if(!c||!v) return;
+
+  c.innerHTML=voucherHTML(v,logo||'../../dist/img/AdminLTELogo.png');
+  c.style.background='transparent';
+  c.style.padding='0';
+
+  const modal=qs('#egresoPrintModal');
+  if(modal){
+    const dialog=qs('.modal-dialog',modal);
+    if(dialog){
+      dialog.classList.add('modal-xl');
+      dialog.style.maxWidth='1180px';
+      dialog.style.width='calc(100vw - 40px)';
+    }
+  }
+
   qs('#egBtnPrintReal').disabled=!(v.id>0);
-  if(window.jQuery)window.jQuery('#egresoPrintModal').modal('show');
+
+  if(window.jQuery) window.jQuery('#egresoPrintModal').modal('show');
 }
+
 async function previewId(id){const r=await get('detalle',{id:id});showVoucher(r.row,r.row.empresa_logo_web||'../../dist/img/AdminLTELogo.png');}
 function clearForm(){const f=qs('#egForm');if(!f)return;f.reset();setTipo('RECIBO');setNow();countC();st.fuentesAsignadas={};renderFuentesResumen();alertF('info','Formulario limpio. Completa los datos y registra el egreso.');}
 async function save(e){
@@ -170,9 +542,3 @@ function bind(){
 async function init(){setTipo('RECIBO');setNow();countC();renderFuentesResumen();bind();await loadCaja();await loadList();}
 init();
 })();
-
-
-
-
-
-
