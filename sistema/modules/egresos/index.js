@@ -261,16 +261,14 @@ function voucherHTML(v,logo){
         align-items:start;
       }
       #egVoucher .egpv3-logo{
-        width:80px;
-        height:80px;
-        border:2px solid #1f1f1f;
-        border-radius:50%;
-        background:#fff;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        overflow:hidden;
-      }
+  width:80px;
+  height:80px;
+  background:transparent;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
       #egVoucher .egpv3-logo img{
         width:100%;
         height:100%;
