@@ -258,41 +258,95 @@ function eg_catalogo_fuentes_medios(mysqli $db): array
     return $out;
 }
 
+function eg_column_exists(mysqli $db, string $table, string $column): bool
+{
+    static $cache = [];
+
+    $cacheKey = $table . '.' . $column;
+    if (array_key_exists($cacheKey, $cache)) {
+        return (bool)$cache[$cacheKey];
+    }
+
+    $tableEsc = $db->real_escape_string($table);
+    $columnEsc = $db->real_escape_string($column);
+    $rs = $db->query("SHOW COLUMNS FROM `{$tableEsc}` LIKE '{$columnEsc}'");
+    $exists = ($rs instanceof mysqli_result) && ($rs->num_rows > 0);
+    if ($rs instanceof mysqli_result) {
+        $rs->close();
+    }
+
+    $cache[$cacheKey] = $exists;
+    return $exists;
+}
+
+function eg_has_tipo_egreso_column(mysqli $db): bool
+{
+    return eg_column_exists($db, 'egr_egresos', 'tipo_egreso');
+}
+
+function eg_parse_tipo_egreso(?string $raw): string
+{
+    $tipo = eg_trim_upper($raw ?? 'NORMAL');
+    return $tipo === 'MULTICAJA' ? 'MULTICAJA' : 'NORMAL';
+}
+
 function eg_parse_fuentes_payload($raw): array
 {
     $payload = $raw;
     if (!is_array($payload)) {
         $rawStr = trim((string)$raw);
         if ($rawStr === '') {
-            return ['error' => '', 'items' => []];
+            return ['error' => '', 'items' => [], 'detail' => []];
         }
         $decoded = json_decode($rawStr, true);
         if (!is_array($decoded)) {
-            return ['error' => 'La distribucion por fuente tiene formato invalido.', 'items' => []];
+            return ['error' => 'La distribucion por fuente tiene formato invalido.', 'items' => [], 'detail' => []];
         }
         $payload = $decoded;
     }
 
-    $out = [];
+    $items = [];
+    $detail = [];
+
     foreach ($payload as $item) {
         if (!is_array($item)) {
             continue;
         }
+
         $rawKey = (string)($item['key'] ?? $item['fuente_key'] ?? $item['fuente'] ?? '');
         $key = fin_source_key_from_input($rawKey);
         if ($key === '') {
             continue;
         }
+
         $monto = round((float)($item['monto'] ?? 0), 2);
         if ($monto <= 0) {
             continue;
         }
-        if (!isset($out[$key])) {
-            $out[$key] = 0.0;
+
+        $sourceCajaId = (int)($item['id_caja_diaria'] ?? $item['caja_diaria_id'] ?? $item['caja_id'] ?? 0);
+        $detailKey = $sourceCajaId . '|' . $key;
+
+        if (!isset($items[$key])) {
+            $items[$key] = 0.0;
         }
-        $out[$key] = round((float)$out[$key] + $monto, 2);
+        $items[$key] = round((float)$items[$key] + $monto, 2);
+
+        if (!isset($detail[$detailKey])) {
+            $detail[$detailKey] = [
+                'id_caja_diaria' => $sourceCajaId,
+                'key' => $key,
+                'monto' => 0.0,
+            ];
+        }
+        $detail[$detailKey]['monto'] = round((float)$detail[$detailKey]['monto'] + $monto, 2);
     }
-    return ['error' => '', 'items' => $out];
+
+    return [
+        'error' => '',
+        'items' => $items,
+        'detail' => array_values($detail),
+    ];
 }
 
 function eg_caja_context(mysqli $db, int $empId): array
@@ -741,8 +795,13 @@ function eg_pdf_fit_font_size($pdf, string $text, float $maxWidth, float $start,
 
 function eg_select_one(mysqli $db, int $empId, int $id): ?array
 {
+    $tipoEgresoExpr = eg_has_tipo_egreso_column($db)
+        ? "e.tipo_egreso AS tipo_egreso"
+        : "'NORMAL' AS tipo_egreso";
+
     $sql = "SELECT
               e.id, e.id_empresa, e.id_caja_mensual, e.id_caja_diaria, e.codigo, e.correlativo,
+              {$tipoEgresoExpr},
               e.tipo_comprobante, e.serie, e.numero, e.referencia, e.fecha_emision, e.monto,
               e.beneficiario, e.documento, e.concepto, e.observaciones, e.estado,
               e.anulado_por, e.anulado_en, e.anulado_motivo, e.creado_por, e.creado, e.actualizado,
@@ -782,14 +841,20 @@ function eg_select_fuentes(mysqli $db, int $empId, int $egresoId): array
     }
 
     $sql = "SELECT
+              f.id_caja_diaria,
+              cd.codigo AS caja_diaria_codigo,
+              cd.fecha AS caja_diaria_fecha,
               f.fuente_key AS `key`,
               f.medio_id,
               mp.nombre AS medio,
               f.monto
             FROM egr_egreso_fuentes f
+            LEFT JOIN mod_caja_diaria cd ON cd.id = f.id_caja_diaria
             LEFT JOIN pos_medios_pago mp ON mp.id = f.medio_id
             WHERE f.id_empresa=? AND f.id_egreso=?
-            ORDER BY FIELD(f.fuente_key, 'EFECTIVO', 'YAPE', 'PLIN', 'TRANSFERENCIA'), f.id ASC";
+            ORDER BY f.id_caja_diaria ASC,
+                     FIELD(f.fuente_key, 'EFECTIVO', 'YAPE', 'PLIN', 'TRANSFERENCIA'),
+                     f.id ASC";
     $st = $db->prepare($sql);
     $st->bind_param('ii', $empId, $egresoId);
     $st->execute();
@@ -800,6 +865,7 @@ function eg_select_fuentes(mysqli $db, int $empId, int $egresoId): array
         $key = fin_source_key_from_input((string)($row['key'] ?? ''));
         $rows[$i]['key'] = $key;
         $rows[$i]['label'] = (string)(fin_canonical_rows()[$key]['label'] ?? $key);
+        $rows[$i]['id_caja_diaria'] = (int)($row['id_caja_diaria'] ?? 0);
         $rows[$i]['monto'] = round((float)($row['monto'] ?? 0), 2);
     }
     return $rows;
@@ -1035,12 +1101,13 @@ try {
         eg_json_ok(['row' => $row]);
     }
 
-    if ($accion === 'crear') {
+        if ($accion === 'crear') {
         if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
             eg_json_err('Metodo no permitido.');
         }
 
         $tipo = eg_trim_upper($_POST['tipo_comprobante'] ?? '');
+        $tipoEgreso = eg_parse_tipo_egreso($_POST['tipo_egreso'] ?? 'NORMAL');
         if (!in_array($tipo, ['RECIBO', 'BOLETA', 'FACTURA'], true)) {
             eg_json_err('Tipo de comprobante invalido.');
         }
@@ -1079,8 +1146,10 @@ try {
         if ($parsedFuentes['error'] !== '') {
             eg_json_err((string)$parsedFuentes['error']);
         }
+
         $fuentesMap = $parsedFuentes['items'] ?? [];
-        if (!is_array($fuentesMap) || count($fuentesMap) === 0) {
+        $fuentesDetalle = $parsedFuentes['detail'] ?? [];
+        if (!is_array($fuentesDetalle) || count($fuentesDetalle) === 0) {
             eg_json_err('La distribucion por fuente es obligatoria. Selecciona al menos una fuente.');
         }
 
@@ -1137,6 +1206,48 @@ try {
             $cajaDiariaId = (int)$caja['diaria_id'];
             $cajaMensualId = (int)$caja['mensual_id'];
 
+            $fuentesDetalleNormalizadas = [];
+            $fuentesExternas = [];
+            foreach ($fuentesDetalle as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+
+                $key = fin_source_key_from_input((string)($item['key'] ?? ''));
+                $montoDetalle = round((float)($item['monto'] ?? 0), 2);
+                if ($key === '' || $montoDetalle <= 0) {
+                    continue;
+                }
+
+                $fuenteCajaId = (int)($item['id_caja_diaria'] ?? 0);
+                if ($fuenteCajaId <= 0) {
+                    $fuenteCajaId = $cajaDiariaId;
+                }
+                if ($fuenteCajaId !== $cajaDiariaId) {
+                    $fuentesExternas[$fuenteCajaId] = $fuenteCajaId;
+                }
+
+                $fuentesDetalleNormalizadas[] = [
+                    'id_caja_diaria' => $fuenteCajaId,
+                    'key' => $key,
+                    'monto' => $montoDetalle,
+                ];
+            }
+
+            if (count($fuentesDetalleNormalizadas) === 0) {
+                $db->rollback();
+                eg_json_err('La distribucion por fuente es obligatoria. Selecciona al menos una fuente.');
+            }
+
+            if ($fuentesExternas !== []) {
+                $db->rollback();
+                eg_json_err_code(409, 'La extraccion desde otras cajas todavia no esta habilitada en esta fase. Completa primero las siguientes fases de Multicaja.', [
+                    'tipo_egreso' => $tipoEgreso,
+                    'cajas_fuente_detectadas' => array_values($fuentesExternas),
+                    'caja_registro_actual' => $cajaDiariaId,
+                ]);
+            }
+
             $saldo = eg_saldo_diaria($db, $empId, $cajaDiariaId);
             if ($saldo['saldo_disponible'] + 0.0001 < $monto) {
                 $db->rollback();
@@ -1172,35 +1283,68 @@ try {
             $correlativo = eg_next_correlativo($db, $empId);
             $codigo = eg_codigo($empId, $correlativo);
 
-            $sqlIns = "INSERT INTO egr_egresos(
-                         id_empresa, id_caja_mensual, id_caja_diaria, codigo, correlativo,
-                         tipo_comprobante, serie, numero, referencia, fecha_emision, monto,
-                         beneficiario, documento, concepto, observaciones, estado, creado_por
-                       ) VALUES (
-                         ?, ?, ?, ?, ?,
-                         ?, ?, ?, ?, ?, ?,
-                         ?, ?, ?, ?, 'ACTIVO', ?
-                       )";
-            $ins = $db->prepare($sqlIns);
-            $ins->bind_param(
-                'iiisisssssdssssi',
-                $empId,
-                $cajaMensualId,
-                $cajaDiariaId,
-                $codigo,
-                $correlativo,
-                $tipo,
-                $serie,
-                $numero,
-                $referencia,
-                $fecha,
-                $monto,
-                $beneficiario,
-                $documento,
-                $concepto,
-                $observaciones,
-                $uid
-            );
+            if (eg_has_tipo_egreso_column($db)) {
+                $sqlIns = "INSERT INTO egr_egresos(
+                             id_empresa, id_caja_mensual, id_caja_diaria, codigo, correlativo,
+                             tipo_comprobante, serie, numero, referencia, fecha_emision, monto,
+                             beneficiario, documento, concepto, observaciones, estado, tipo_egreso, creado_por
+                           ) VALUES (
+                             ?, ?, ?, ?, ?,
+                             ?, ?, ?, ?, ?, ?,
+                             ?, ?, ?, ?, 'ACTIVO', ?, ?
+                           )";
+                $ins = $db->prepare($sqlIns);
+                $ins->bind_param(
+                    'iiisisssssdsssssi',
+                    $empId,
+                    $cajaMensualId,
+                    $cajaDiariaId,
+                    $codigo,
+                    $correlativo,
+                    $tipo,
+                    $serie,
+                    $numero,
+                    $referencia,
+                    $fecha,
+                    $monto,
+                    $beneficiario,
+                    $documento,
+                    $concepto,
+                    $observaciones,
+                    $tipoEgreso,
+                    $uid
+                );
+            } else {
+                $sqlIns = "INSERT INTO egr_egresos(
+                             id_empresa, id_caja_mensual, id_caja_diaria, codigo, correlativo,
+                             tipo_comprobante, serie, numero, referencia, fecha_emision, monto,
+                             beneficiario, documento, concepto, observaciones, estado, creado_por
+                           ) VALUES (
+                             ?, ?, ?, ?, ?,
+                             ?, ?, ?, ?, ?, ?,
+                             ?, ?, ?, ?, 'ACTIVO', ?
+                           )";
+                $ins = $db->prepare($sqlIns);
+                $ins->bind_param(
+                    'iiisisssssdssssi',
+                    $empId,
+                    $cajaMensualId,
+                    $cajaDiariaId,
+                    $codigo,
+                    $correlativo,
+                    $tipo,
+                    $serie,
+                    $numero,
+                    $referencia,
+                    $fecha,
+                    $monto,
+                    $beneficiario,
+                    $documento,
+                    $concepto,
+                    $observaciones,
+                    $uid
+                );
+            }
             $ins->execute();
             $egresoId = (int)$db->insert_id;
             $ins->close();
@@ -1208,14 +1352,16 @@ try {
             $insF = $db->prepare("INSERT INTO egr_egreso_fuentes(
                                     id_egreso, id_empresa, id_caja_diaria, fuente_key, medio_id, monto
                                   ) VALUES (?, ?, ?, ?, ?, ?)");
-            foreach ($fuentesMap as $key => $montoFuente) {
+            foreach ($fuentesDetalleNormalizadas as $fuenteRow) {
+                $key = (string)$fuenteRow['key'];
                 $medioId = (int)$catalogoFuentes[$key]['medio_id'];
-                $montoRow = round((float)$montoFuente, 2);
+                $montoRow = round((float)$fuenteRow['monto'], 2);
+                $fuenteCajaId = (int)$fuenteRow['id_caja_diaria'];
                 $insF->bind_param(
                     'iiisid',
                     $egresoId,
                     $empId,
-                    $cajaDiariaId,
+                    $fuenteCajaId,
                     $key,
                     $medioId,
                     $montoRow
@@ -1245,7 +1391,8 @@ try {
                 'empresa_id' => $empId,
                 'usuario_id' => $uid,
                 'request_method' => $_SERVER['REQUEST_METHOD'] ?? null,
-                'post_keys' => array_keys($_POST ?? [])
+                'post_keys' => array_keys($_POST ?? []),
+                'tipo_egreso' => $tipoEgreso,
             ]);
             eg_json_err_code(500, 'No se pudo registrar el egreso.', ['error_ref' => $ref]);
         }
