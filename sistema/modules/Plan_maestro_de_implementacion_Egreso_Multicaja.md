@@ -1,871 +1,889 @@
-Plan maestro de implementación: Egreso Multicaja
-Objetivo funcional
+# Plan maestro de implementación: Egreso Multicaja
 
-Agregar un nuevo modo de egreso llamado Multicaja dentro del módulo actual de egresos, permitiendo registrar un egreso desde la caja operadora abierta del día, pero consumiendo saldo real desde una o varias cajas diarias de la misma empresa, incluso si esas cajas ya están cerradas. El saldo histórico de cada caja debe actualizarse en función de sus egresos y devoluciones, y el comprobante debe dejar evidencia clara de la caja de registro y de todas las cajas fuente utilizadas. El sistema actual ya calcula saldos con la fórmula ingresos - devoluciones - egresos en el widget principal de caja y ya registra devoluciones contra la caja abierta del momento del movimiento, por lo que el modelo Multicaja es consistente con la lógica existente.
+## Estado del documento
+- Archivo objetivo del repo: `sistema/modules/Plan_maestro_de_implementacion_Egreso_Multicaja.md`
+- Alcance: diseño funcional, técnico y de despliegue por fases
+- Criterio principal: **agregar Multicaja sin romper ventas, devoluciones, egresos históricos ni dashboards**
 
-Decisión de diseño
-Qué sí se hará
+---
 
-Se implementará dentro del mismo módulo egresos, no en otro módulo separado. El usuario seguirá entrando por sistema/modules/egresos/index.php, verá el mismo listado y el mismo historial, pero al crear un egreso podrá elegir modo Normal o modo Multicaja. El frontend actual ya tiene formulario, modal de distribución y preview/PDF; la mejora encaja mejor extendiendo esa base que creando un módulo paralelo.
+## 1. Objetivo funcional
 
-Qué no se hará
+Implementar un nuevo modo de egreso llamado **Multicaja** dentro del módulo actual `sistema/modules/egresos`, permitiendo registrar un egreso desde la **caja operadora abierta del día**, pero consumiendo saldo real desde **una o varias cajas diarias** de la **misma empresa**, incluso si esas cajas ya están cerradas.
 
-No se tocará primero sistema/includes/.
-No se hará un refactor grande del módulo caja.
-No se creará una interfaz aparte llamada “Traspasos”, porque hoy la operación sigue siendo un egreso, no una transferencia entre cajas. El listado, anulación, impresión y detalle ya viven en egresos; duplicarlo te complicaría más de lo que te ayuda.
+El resultado esperado es este:
 
-Fase 0 — Congelar el contrato funcional
-Propósito
+- el egreso se sigue registrando en el módulo actual de egresos;
+- el comprobante deja claro **dónde se registró** el egreso y **de qué cajas salió realmente el dinero**;
+- los saldos históricos se actualizan de forma real;
+- las devoluciones siguen restando dinero a la caja del movimiento, como ya hace hoy el sistema;
+- los egresos normales siguen funcionando exactamente como hoy.
 
-Dejar fijadas las reglas para no improvisar en mitad de la implementación.
+---
 
-Reglas funcionales definitivas
+## 2. Hallazgos reales del sistema actual
 
-egr_egresos.id_caja_diaria seguirá siendo la caja de registro.
+### 2.1. Ingresos de caja
+Hoy los ingresos de caja no se toman desde `pos_ventas.total`, sino desde **abonos aplicados**:
 
-egr_egreso_fuentes.id_caja_diaria será la caja fuente real de cada porción del dinero.
+- `sistema/modules/egresos/api.php` en `eg_saldo_diaria()` suma `pos_abono_aplicaciones.monto_aplicado` por `pos_abonos.caja_diaria_id`.
+- `sistema/modules/egresos/finanzas_medios.php` calcula ingresos por medio desde `pos_abonos` + `pos_abono_aplicaciones`.
+- `sistema/dashboard/administracion/funcion_caja_diaria_mensual.php` también usa abonos aplicados para el widget principal de caja.
 
-Un egreso NORMAL podrá seguir sacando dinero solo de la caja diaria abierta actual.
+### 2.2. Devoluciones
+Hoy las devoluciones **sí restan caja** y se registran contra la **caja abierta del momento de la devolución**:
 
-Un egreso MULTICAJA podrá sacar dinero de una o varias cajas diarias de la misma empresa.
+- `sistema/modules/caja/api_ventas.php`
+- tabla `pos_devoluciones`
+- impacto monetario por `caja_diaria_id`
 
-El comprobante mostrará:
+Eso ya coincide con la idea de “saldo vivo” por caja.
 
-caja de registro;
+### 2.3. Egreso normal actual
+Hoy el módulo `egresos` trabaja así:
 
-tipo de egreso;
+- exige **caja diaria abierta** y **caja mensual abierta** para registrar;
+- usa `fuentes_json` y `eg_parse_fuentes_payload()`;
+- el frontend obliga a distribuir el egreso por fuente antes de guardar;
+- el detalle se guarda en `egr_egreso_fuentes`;
+- el encabezado se guarda en `egr_egresos`.
 
-fuentes agrupadas por caja fuente;
+### 2.4. Limitación actual clave
+Hoy `eg_parse_fuentes_payload()` agrupa por `key` de fuente (`EFECTIVO`, `YAPE`, `PLIN`, `TRANSFERENCIA`). Eso sirve para un egreso normal, pero no para Multicaja porque perdería la caja origen.
 
-firmas al final.
+### 2.5. Estructura actual útil para Multicaja
+La tabla `egr_egreso_fuentes` **ya tiene** `id_caja_diaria`, así que ya existe la base correcta para registrar procedencia real del dinero. El problema actual no es de concepto, sino de restricción y de consultas.
 
-Los dashboards y saldos deberán descontar egresos por caja fuente real, no solo por el encabezado del egreso. El frontend actual ya muestra en el comprobante “Fuentes de salida” y el estado de caja ya expone ingresos, devoluciones, egresos y saldo disponible, así que esta fase solo fija reglas sobre estructuras que ya existen.
+### 2.6. Restricción actual que bloquea Multicaja
+La tabla `egr_egreso_fuentes` tiene hoy la llave única:
 
-Verificación
+```sql
+UNIQUE KEY `ux_egr_fuente_egreso_key` (`id_egreso`,`fuente_key`)
+```
 
-No hay despliegue aún. Solo sirve para que todas las siguientes fases mantengan una sola interpretación.
+Eso impide tener, dentro del mismo egreso, dos filas `EFECTIVO` de cajas distintas.
 
-Archivos
+### 2.7. Inconsistencia actual a corregir
+Hoy el sistema mezcla dos enfoques:
 
-Ninguno todavía.
+- el saldo global diario en `eg_saldo_diaria()` descuenta desde `egr_egresos.id_caja_diaria`;
+- la disponibilidad por medio en `fin_disponible_por_fuente_diaria()` descuenta desde `egr_egreso_fuentes.id_caja_diaria` unido a egresos activos.
 
-Tablas
+Con egreso normal no se nota, porque ambas cajas coinciden. Con Multicaja sí se rompería si no se corrige.
 
-Ninguna todavía.
+---
 
-Fase 1 — Ajuste de base de datos
-Propósito
+## 3. Decisiones de diseño
 
-Preparar la base para soportar varias fuentes del mismo medio provenientes de cajas distintas dentro de un mismo egreso, y para identificar formalmente si el egreso es NORMAL o MULTICAJA.
+## 3.1. Qué sí se hará
 
-Hallazgo actual
+### Se implementará dentro del mismo módulo `egresos`
+No se creará otro módulo aparte. El usuario seguirá entrando por:
 
-El diseño actual ya usa egr_egresos como encabezado y egr_egreso_fuentes como detalle; además egr_egreso_fuentes ya tiene id_caja_diaria, lo que la vuelve la tabla correcta para guardar la procedencia real del dinero.
+- `sistema/modules/egresos/index.php`
+- `sistema/modules/egresos/index.js`
+- `sistema/modules/egresos/api.php`
 
-Cambio recomendado
-Tabla a modificar: egr_egresos
+### Habrá dos modos de egreso
 
-Agregar campo:
+- `NORMAL`
+- `MULTICAJA`
 
+### El encabezado y el detalle tendrán roles distintos
+
+- `egr_egresos.id_caja_diaria` = **caja de registro**
+- `egr_egreso_fuentes.id_caja_diaria` = **caja fuente real**
+
+### El comprobante mostrará ambos conceptos
+
+- caja de registro
+- tipo de egreso
+- cajas fuente agrupadas
+- fuentes por caja
+- firmas
+
+## 3.2. Qué no se hará
+
+- no se tocará primero `sistema/includes/`;
+- no se hará refactor grande del módulo `caja`;
+- no se creará un módulo aparte llamado “Traspasos”;
+- no se migrarán egresos viejos a otra estructura;
+- no se reinterpretarán datos históricos con `UPDATE` masivos.
+
+---
+
+## 4. Compatibilidad y principio de seguridad
+
+Este punto es obligatorio.
+
+### 4.1. Qué no debe romperse
+
+- ventas históricas
+- devoluciones parciales
+- devoluciones totales
+- egresos normales existentes
+- anulación de egresos existentes
+- widget principal de caja
+- gráficos y cards del dashboard
+
+### 4.2. Regla de compatibilidad
+Multicaja debe aplicarse **solo a registros nuevos**.
+
+Los egresos existentes deben seguir siendo válidos como `NORMAL`.
+
+### 4.3. Principio operativo
+**No se modifican datos históricos.**
+Solo se agregan:
+
+- un nuevo tipo de egreso;
+- una nueva forma de registrar el detalle por caja fuente;
+- nuevas consultas y vistas para leer correctamente el saldo.
+
+---
+
+## 5. Riesgos reales y cómo controlarlos
+
+## 5.1. Riesgo: saldos mal calculados
+Puede ocurrir si se guarda el Multicaja por detalle, pero el saldo global sigue leyendo solo el encabezado `egr_egresos.id_caja_diaria`.
+
+### Control
+Actualizar en la misma salida:
+
+- `sistema/modules/egresos/api.php`
+- `sistema/modules/egresos/finanzas_medios.php`
+- `sistema/dashboard/administracion/funcion_caja_diaria_mensual.php`
+- `sistema/dashboard/administracion/funcion_ingreso_egreso_mensual.php`
+- `sistema/dashboard/administracion/funcion_card_ganancia_neta_ultima_caja.php`
+
+## 5.2. Riesgo: romper egresos históricos
+Puede ocurrir si se reescriben filas viejas o si se cambia la lógica sin mantener `NORMAL` como predeterminado.
+
+### Control
+- agregar `tipo_egreso` con default `NORMAL`;
+- no tocar filas viejas;
+- mantener el flujo actual de egreso normal intacto.
+
+## 5.3. Riesgo: permitir fuentes duplicadas inconsistentes
+Puede ocurrir si se deja la llave actual por `id_egreso + fuente_key`.
+
+### Control
+Cambiarla a:
+
+```sql
+(id_egreso, id_caja_diaria, fuente_key)
+```
+
+## 5.4. Riesgo: PDF y detalle engañosos
+Puede ocurrir si el comprobante solo muestra medios y montos, pero no la caja fuente.
+
+### Control
+Agrupar visualmente por caja fuente en preview y PDF.
+
+## 5.5. Riesgo: desplegar a medias
+Puede ocurrir si primero se habilita guardar Multicaja y después se actualizan dashboards.
+
+### Control
+No activar Multicaja en producción hasta haber completado:
+
+- base de datos;
+- backend de lectura;
+- persistencia;
+- consultas de saldo;
+- dashboard principal.
+
+---
+
+## 6. Auditoría previa obligatoria antes de tocar PHP
+
+Ejecutar esto primero en la base real.
+
+### 6.1. Verificar si existe algún egreso sin detalle de fuentes
+
+```sql
+SELECT e.id
+FROM egr_egresos e
+LEFT JOIN egr_egreso_fuentes f ON f.id_egreso = e.id
+WHERE f.id IS NULL
+LIMIT 20;
+```
+
+### 6.2. Verificar si hay duplicados inesperados por egreso y fuente
+
+```sql
+SELECT id_egreso, fuente_key, COUNT(*) AS repeticiones
+FROM egr_egreso_fuentes
+GROUP BY id_egreso, fuente_key
+HAVING COUNT(*) > 1;
+```
+
+### 6.3. Confirmar nombre exacto del índice actual
+
+```sql
+SHOW CREATE TABLE egr_egreso_fuentes;
+```
+
+### 6.4. Confirmar estructura actual de egresos
+
+```sql
+SHOW CREATE TABLE egr_egresos;
+SHOW CREATE TABLE egr_egreso_fuentes;
+```
+
+## Criterio de avance
+Solo avanzar si:
+
+- no hay egresos huérfanos sin detalle;
+- no hay duplicados raros incompatibles con la estructura actual;
+- el nombre del índice a reemplazar está confirmado.
+
+---
+
+## 7. Fases de implementación
+
+# Fase 0 — Congelar contrato funcional
+
+## Propósito
+Definir la interpretación única del modelo antes de tocar base o código.
+
+## Resultado esperado
+- todo egreso tiene una caja de registro;
+- todo egreso puede tener una o varias cajas fuente;
+- Multicaja es un egreso, no una transferencia.
+
+## Archivos a modificar
+Ninguno.
+
+## Tablas a modificar
+Ninguna.
+
+## Verificación
+Aprobación funcional del diseño.
+
+---
+
+# Fase 1 — Ajuste de base de datos
+
+## Propósito
+Preparar la BD para soportar egreso Multicaja sin romper egresos históricos.
+
+## Tablas a modificar
+- `egr_egresos`
+- `egr_egreso_fuentes`
+
+## SQL exacto recomendado
+
+### 1. Agregar `tipo_egreso`
+
+```sql
 ALTER TABLE `egr_egresos`
 ADD COLUMN `tipo_egreso` ENUM('NORMAL','MULTICAJA') NOT NULL DEFAULT 'NORMAL'
 AFTER `estado`;
-Tabla a modificar: egr_egreso_fuentes
+```
 
-La idea es permitir que un mismo id_egreso tenga varias filas EFECTIVO, YAPE, etc., siempre que vengan de cajas distintas. Para eso hay que reemplazar la restricción única actual por una compuesta con caja fuente.
+### 2. Reemplazar la llave única de fuentes
 
+> Antes de correr esto, validar el nombre exacto con `SHOW CREATE TABLE egr_egreso_fuentes;`
+
+```sql
 ALTER TABLE `egr_egreso_fuentes`
 DROP INDEX `ux_egr_fuente_egreso_key`,
 ADD UNIQUE KEY `ux_egr_fuente_egreso_caja_key` (`id_egreso`, `id_caja_diaria`, `fuente_key`);
-Índice recomendado adicional
+```
+
+### 3. Índice auxiliar recomendado
+
+```sql
 ALTER TABLE `egr_egreso_fuentes`
 ADD KEY `idx_egr_fuente_caja_key` (`id_caja_diaria`, `fuente_key`);
-Comentario importante
+```
 
-Ese DROP INDEX asume que el índice actual se llama ux_egr_fuente_egreso_key, que es el nombre que vi al revisar el dump. Antes de ejecutar en producción, valida el nombre exacto con SHOW CREATE TABLE egr_egreso_fuentes;. El objetivo no cambia: la llave única debe pasar a ser por egreso + caja + fuente. El dump del proyecto ya contiene las tablas egr_egresos y egr_egreso_fuentes, así que no es necesario crear tablas nuevas para esta mejora.
+## Riesgo
+Bajo, siempre que primero se valide el nombre del índice actual.
 
-Verificación manual
+## Verificación manual
+```sql
+SHOW COLUMNS FROM egr_egresos LIKE 'tipo_egreso';
+SHOW INDEX FROM egr_egreso_fuentes;
+```
 
-Ejecutar SHOW COLUMNS FROM egr_egresos LIKE 'tipo_egreso';
-
-Ejecutar SHOW INDEX FROM egr_egreso_fuentes;
-
-Confirmar que existe:
-
-tipo_egreso
-
-índice único por id_egreso, id_caja_diaria, fuente_key
-
-Archivos modificados
-
+## Archivos modificados
 Ninguno.
 
-Archivos creados
-
+## Archivos creados
 Ninguno.
 
-Tablas modificadas
+---
 
-egr_egresos
+# Fase 2 — Backend compatible: distinguir Normal vs Multicaja
 
-egr_egreso_fuentes
+## Propósito
+Permitir que `api.php` entienda ambos modos sin romper el flujo actual.
 
-Fase 2 — Backend base para distinguir Normal vs Multicaja
-Propósito
+## Archivo a modificar
+- `sistema/modules/egresos/api.php`
 
-Preparar api.php para entender ambos modos sin romper el flujo actual.
+## Cambios
 
-Archivo a modificar
+### 2.1. Ampliar payload de fuentes
+Hoy el frontend manda algo como:
 
-sistema/modules/egresos/api.php
-
-Cambios
-1) Extender el payload de creación
-
-Hoy eg_parse_fuentes_payload() consolida por key de fuente y suma montos por medio. Eso sirve para egreso normal, pero en Multicaja perdería la procedencia por caja. Hay que cambiar esa función para que soporte dos formatos:
-
-Formato actual Normal
+```json
 [
   {"key":"EFECTIVO","monto":100},
   {"key":"YAPE","monto":50}
 ]
-Formato nuevo Multicaja
+```
+
+Para Multicaja deberá soportarse también:
+
+```json
 [
   {"id_caja_diaria":12,"key":"EFECTIVO","monto":100},
   {"id_caja_diaria":18,"key":"EFECTIVO","monto":50},
   {"id_caja_diaria":18,"key":"YAPE","monto":30}
 ]
-2) Nueva lógica de parseo
+```
 
-Separar el parseo en dos niveles:
+### 2.2. Cambiar `eg_parse_fuentes_payload()`
+Debe dejar de colapsar por solo `key` cuando el modo sea `MULTICAJA`.
 
-validación del payload;
+### 2.3. Insertar `tipo_egreso`
+Al crear el encabezado en `egr_egresos`, guardar:
 
-agrupación por (id_caja_diaria, key) cuando el modo sea MULTICAJA.
+- `NORMAL`
+- `MULTICAJA`
 
-3) Persistencia
+## Riesgo
+Medio. Si se modifica mal esta fase, el egreso normal puede fallar al guardar.
 
-Cuando se cree el egreso:
+## Control
+Mantener compatibilidad total con el payload actual.
 
-insertar encabezado en egr_egresos con tipo_egreso;
+## Verificación manual
+1. Registrar egreso normal.
+2. Confirmar que guarda igual que antes.
+3. Confirmar que `tipo_egreso='NORMAL'`.
+4. Confirmar que la distribución normal sigue usando una sola caja fuente: la caja abierta actual.
 
-insertar detalle en egr_egreso_fuentes usando:
+## Archivos modificados
+- `sistema/modules/egresos/api.php`
 
-id_egreso
-
-id_caja_diaria fuente
-
-fuente_key
-
-monto
-
-datos de medio de pago si hoy ya se guardan desde catálogo.
-
-El endpoint actual ya crea egresos dentro del módulo y ya trabaja con fuentes_json, así que no hace falta inventar un endpoint totalmente distinto; conviene extender el contrato actual.
-
-Verificación manual
-
-Crear egreso normal y verificar que se siga guardando igual que antes.
-
-Revisar que en egr_egresos quede tipo_egreso='NORMAL'.
-
-Verificar que el detalle siga insertándose en egr_egreso_fuentes con una sola caja fuente: la abierta actual.
-
-Probar payload Multicaja por Postman o formulario:
-
-dos filas EFECTIVO de cajas distintas;
-
-confirmar que ambas se insertan sin conflicto.
-
-Archivos modificados
-
-sistema/modules/egresos/api.php
-
-Archivos creados
-
+## Archivos creados
 Ninguno todavía.
 
-Tablas modificadas
+---
 
-No nuevas en esta fase; usa las de la fase 1.
+# Fase 3 — Backend de lectura de cajas fuente
 
-Fase 3 — Lectura de cajas fuente disponibles
-Propósito
+## Propósito
+Poder consultar cajas históricas de la misma empresa y conocer su saldo disponible real.
 
-Permitir que el frontend consulte cajas diarias históricas de la misma empresa y vea su saldo real disponible por fuente.
+## Archivos a modificar
+- `sistema/modules/egresos/api.php`
+- `sistema/modules/egresos/finanzas_medios.php`
 
-Archivos a modificar
+## Archivo nuevo recomendado
+- `sistema/modules/egresos/multicaja_service.php`
 
-sistema/modules/egresos/api.php
+## Cambios
 
-sistema/modules/egresos/finanzas_medios.php
+### 3.1. Nuevo endpoint: listar cajas fuente
+Debe devolver por empresa actual:
 
-Cambios
-1) Nuevo endpoint de listado de cajas fuente
+- `id`
+- `codigo`
+- `fecha`
+- `estado`
+- `id_caja_mensual`
+- `saldo_disponible`
 
-Agregar algo como accion=listar_cajas_fuente, filtrado por empresa del usuario. Debe devolver:
+### 3.2. Nuevo endpoint: detalle de caja fuente
+Debe devolver:
 
-id
+- datos de la caja
+- ingresos
+- devoluciones
+- egresos
+- saldo disponible
+- saldo por medio
 
-codigo
+### 3.3. Reutilizar `fin_disponible_por_fuente_diaria()`
+Esa función ya descuenta egresos activos por `egr_egreso_fuentes.id_caja_diaria`, así que es la base correcta para leer caja fuente real.
 
-fecha
+## Riesgo
+Bajo a medio.
 
-estado
+## Verificación manual
+1. Listar cajas de la empresa actual.
+2. Consultar una caja cerrada.
+3. Confirmar que devuelve saldo real.
+4. Confirmar que una caja sin saldo no aparece como útil.
 
-id_caja_mensual
+## Archivos modificados
+- `sistema/modules/egresos/api.php`
+- `sistema/modules/egresos/finanzas_medios.php`
 
-saldo disponible global
+## Archivos creados
+- `sistema/modules/egresos/multicaja_service.php`
 
-2) Nuevo endpoint de detalle de caja fuente
+---
 
-Agregar algo como accion=detalle_caja_fuente&id_caja_diaria=... y devolver:
+# Fase 4 — UI: modo de egreso y selector Multicaja
 
-datos de la caja
+## Propósito
+Agregar la experiencia de uso sin confundir al usuario ni romper el flujo actual.
 
-ingresos
+## Archivos a modificar
+- `sistema/modules/egresos/index.php`
+- `sistema/modules/egresos/index.js`
 
-devoluciones
+## Archivo nuevo recomendado
+- `sistema/modules/egresos/egresos_multicaja.js`
 
-egresos
+## Decisión UI
+Se mantiene el mismo módulo de egresos y el mismo listado.
 
-saldo disponible
+### Nuevo selector visible en el formulario
+- `Normal`
+- `Multicaja`
 
-saldo disponible por fuente (EFECTIVO, YAPE, PLIN, TRANSFERENCIA)
+### Si el modo es `Normal`
+Todo sigue igual.
 
-3) Reutilizar helper existente
+- mismo botón `egBtnDistribuir`
+- mismo modal `egFuentesModal`
+- mismas validaciones actuales
 
-finanzas_medios.php ya resuelve catálogo de medios y disponibilidad por fuente, y hoy el frontend de egresos muestra ingresos, devoluciones, egresos activos y saldo disponible en el estado de caja. La idea es reutilizar esa base para consultar cualquier caja diaria, no solo la caja abierta.
+### Si el modo es `Multicaja`
+El botón de distribución abrirá un flujo especial.
 
-Recomendación técnica
+## Diseño recomendado del nuevo flujo
 
-Aquí sí conviene crear un archivo nuevo, pero solo si ves que api.php está creciendo demasiado. Mi sugerencia moderada:
+### Bloque 1: búsqueda de cajas fuente
+- filtro por fecha exacta
+- filtro por rango
+- búsqueda por código
+- tabla de resultados
 
-Archivo nuevo opcional
+### Bloque 2: cajas seleccionadas
+- código
+- fecha
+- estado
+- saldo disponible
+- botón quitar
 
-sistema/modules/egresos/multicaja_service.php
-
-Uso:
-
-helpers de consulta de cajas candidatas
-
-validación de pertenencia a empresa
-
-armado del detalle por fuente
-
-Esto baja riesgo y mantiene api.php manejable.
-
-Verificación manual
-
-Pedir listado de cajas fuente y comprobar que solo salen cajas de la empresa actual.
-
-Elegir una caja cerrada y confirmar que devuelve saldo disponible.
-
-Confirmar que una caja con devoluciones ya trae saldo descontado.
-
-Confirmar que una caja sin saldo disponible no puede ser útil como fuente.
-
-Archivos modificados
-
-sistema/modules/egresos/api.php
-
-sistema/modules/egresos/finanzas_medios.php
-
-Archivos creados
-
-sistema/modules/egresos/multicaja_service.php (opcional pero recomendado)
-
-Tablas modificadas
-
-Ninguna.
-
-Fase 4 — UI: selector de modo y modal Multicaja
-Propósito
-
-Agregar la experiencia de uso sin romper el egreso normal.
-
-Archivos a modificar
-
-sistema/modules/egresos/index.php
-
-sistema/modules/egresos/index.js
-
-Archivo nuevo recomendado
-
-sistema/modules/egresos/egresos_multicaja.js
-
-Diseño recomendado
-En el formulario principal
-
-Agregar un selector:
-
-Normal
-
-Multicaja
-
-Si está en Normal
-
-Todo sigue como hoy:
-
-botón “Distribuir”
-
-usa solo caja abierta actual
-
-sin cambios mentales para el usuario actual
-
-Si está en Multicaja
-
-El botón “Distribuir” debe cambiar visualmente a algo como:
-
-Seleccionar cajas y distribuir
-
-Y abrir un modal nuevo con esta estructura:
-
-Bloque 1: búsqueda de cajas
-
-filtro por fecha exacta
-
-filtro por rango
-
-búsqueda por código de caja
-
-tabla de resultados
-
-Bloque 2: resumen de cajas elegidas
-
-caja
-
-fecha
-
-saldo disponible
-
-botón quitar
-
-Bloque 3: distribución por caja y fuente
-
+### Bloque 3: distribución por caja y fuente
 Por cada caja elegida:
 
-cabecera con código y fecha
+- cabecera con código y fecha
+- filas para `EFECTIVO`, `YAPE`, `PLIN`, `TRANSFERENCIA`
+- monto editable por fila
+- subtotal por caja
 
-filas: EFECTIVO, YAPE, PLIN, TRANSFERENCIA
+### Bloque 4: resumen total
+- monto del egreso
+- total asignado
+- diferencia
+- validación exacta
 
-monto editable por cada fila
+## Riesgo
+Medio. Si se mezcla demasiado con la lógica actual, `index.js` puede volverse más frágil.
 
-subtotal por caja
+## Control
+Sacar la lógica Multicaja a un archivo separado:
 
-Bloque 4: resumen final
+- `sistema/modules/egresos/egresos_multicaja.js`
 
-monto del egreso
+## Verificación manual
+1. Probar modo `Normal` y confirmar que no cambió.
+2. Probar modo `Multicaja`.
+3. Buscar dos cajas.
+4. Distribuir por medios.
+5. Confirmar cuadratura exacta.
+6. Confirmar que no se excede saldo por caja ni por medio.
 
-total distribuido
+## Archivos modificados
+- `sistema/modules/egresos/index.php`
+- `sistema/modules/egresos/index.js`
 
-diferencia
+## Archivos creados
+- `sistema/modules/egresos/egresos_multicaja.js`
 
-validación de cuadratura exacta
+---
 
-Por qué así
+# Fase 5 — Guardado real de egreso Multicaja
 
-El frontend actual ya fuerza que la suma distribuida cuadre exactamente con el monto del egreso. No conviene romper ese comportamiento; conviene extenderlo al eje caja + fuente. La vista actual también ya renderiza “Fuentes de salida” y usa la información de caja/estado para mostrar saldos.
+## Propósito
+Persistir correctamente el egreso multicaja sin afectar el histórico.
 
-Verificación manual
+## Archivos a modificar
+- `sistema/modules/egresos/api.php`
+- `sistema/modules/egresos/multicaja_service.php`
 
-En modo Normal, confirmar que no cambió el comportamiento actual.
+## Cambios
 
-En modo Multicaja:
+### 5.1. Validar empresa
+Cada `id_caja_diaria` fuente debe pertenecer a la empresa actual.
 
-buscar caja por fecha;
+### 5.2. Validar saldo por caja y por fuente
+Recalcular dentro de transacción.
 
-agregar dos cajas;
+### 5.3. Mantener caja abierta como operadora
+El egreso solo se puede registrar si hay caja diaria abierta actual.
 
-distribuir montos por medios;
+### 5.4. Guardado final
+- `egr_egresos.id_caja_diaria` = caja operadora
+- `egr_egreso_fuentes.id_caja_diaria` = caja fuente real
 
-comprobar que la suma exacta sea obligatoria;
+### 5.5. Anulación
+La anulación debe seguir funcionando por estado del encabezado. No se requiere tabla nueva.
 
-comprobar que no se exceda el disponible por caja y por fuente.
+## Riesgo
+Alto si esta fase se despliega antes de actualizar saldos y dashboard.
 
-Archivos modificados
+## Control
+Esta fase solo se libera junto con Fase 8 y Fase 9.
 
-sistema/modules/egresos/index.php
+## Verificación manual
+1. Registrar Multicaja con 2 cajas.
+2. Confirmar filas en `egr_egreso_fuentes`.
+3. Anular egreso.
+4. Confirmar liberación del saldo.
 
-sistema/modules/egresos/index.js
+## Archivos modificados
+- `sistema/modules/egresos/api.php`
+- `sistema/modules/egresos/multicaja_service.php`
 
-Archivos creados
-
-sistema/modules/egresos/egresos_multicaja.js
-
-Tablas modificadas
-
-Ninguna.
-
-Fase 5 — Persistencia segura del egreso Multicaja
-Propósito
-
-Guardar correctamente el egreso multicaja y proteger saldos.
-
-Archivos a modificar
-
-sistema/modules/egresos/api.php
-
-sistema/modules/egresos/multicaja_service.php si se crea en fase 3
-
-Cambios
-1) Validación por empresa
-
-Cada id_caja_diaria fuente debe pertenecer a la empresa del usuario actual.
-
-2) Validación por caja
-
-Permitir cajas cerradas y abiertas, pero siempre de la misma empresa.
-
-3) Validación por saldo
-
-Antes de insertar:
-
-recalcular disponibilidad real de cada caja y cada fuente;
-
-asegurar que el monto pedido no exceda el saldo disponible.
-
-4) Transacción
-
-Todo debe ir en una sola transacción:
-
-validar;
-
-insertar encabezado;
-
-insertar detalles;
-
-confirmar.
-
-5) Anulación
-
-La anulación de un egreso multicaja no necesita una tabla nueva; debe seguir marcando el encabezado como anulado y el saldo se libera porque los cálculos de disponibilidad ya filtran por egresos activos. El código actual ya trata anulación de egresos dentro del mismo módulo, así que aquí la clave es que toda consulta futura use el detalle por caja fuente real.
-
-Verificación manual
-
-Crear egreso Multicaja con dos cajas y dos fuentes.
-
-Confirmar:
-
-egr_egresos.tipo_egreso = 'MULTICAJA'
-
-egr_egresos.id_caja_diaria = caja operadora abierta
-
-egr_egreso_fuentes contiene varias filas con distintas cajas fuente
-
-Anular el egreso.
-
-Confirmar que la disponibilidad de las cajas fuente vuelve a quedar libre.
-
-Archivos modificados
-
-sistema/modules/egresos/api.php
-
-sistema/modules/egresos/multicaja_service.php si existe
-
-Archivos creados
-
+## Archivos creados
 Ninguno adicional.
 
-Tablas modificadas
+---
 
-Ninguna adicional.
+# Fase 6 — Listado, detalle y vista previa
 
-Fase 6 — Detalle, listado y preview
-Propósito
+## Propósito
+Hacer visible la realidad del egreso multicaja en UI.
 
-Hacer visible el origen real del dinero en el listado y en el detalle.
+## Archivos a modificar
+- `sistema/modules/egresos/api.php`
+- `sistema/modules/egresos/index.js`
 
-Archivos a modificar
+## Cambios
 
-sistema/modules/egresos/api.php
+### 6.1. Listado
+Agregar badge o columna para tipo de egreso.
 
-sistema/modules/egresos/index.js
+### 6.2. Detalle
+`eg_select_fuentes()` debe devolver además:
 
-Cambios
-1) Listado
+- `id_caja_diaria`
+- `codigo_caja`
+- `fecha_caja`
 
-Agregar badge o texto visible:
+### 6.3. Preview
+Agrupar fuentes por caja en la vista previa.
 
-Normal
+## Riesgo
+Bajo.
 
-Multicaja
+## Verificación manual
+1. Abrir detalle de egreso normal.
+2. Abrir detalle de egreso multicaja.
+3. Confirmar que se agrupa por caja fuente.
 
-El listado actual ya pinta código, fecha, caja, comprobante, beneficiario, monto y estado. Solo hay que sumar una marca visual clara del tipo de egreso.
+## Archivos modificados
+- `sistema/modules/egresos/api.php`
+- `sistema/modules/egresos/index.js`
 
-2) Detalle
-
-eg_select_fuentes() o la función equivalente debe devolver no solo fuente y monto, sino también:
-
-id_caja_diaria
-
-codigo_caja
-
-fecha_caja
-
-3) Render del detalle en JS
-
-Agrupar fuentes por caja:
-
-Caja CD-...
-
-Fecha
-
-tabla interna por medios y montos
-
-Verificación manual
-
-Abrir detalle de egreso normal:
-
-debe verse igual o casi igual
-
-Abrir detalle de egreso multicaja:
-
-debe verse agrupado por cajas fuente
-
-El listado debe identificar el tipo de egreso sin abrir detalle.
-
-Archivos modificados
-
-sistema/modules/egresos/api.php
-
-sistema/modules/egresos/index.js
-
-Archivos creados
-
+## Archivos creados
 Ninguno.
 
-Tablas modificadas
+---
 
-Ninguna.
+# Fase 7 — Comprobante y PDF
 
-Fase 7 — Comprobante y PDF
-Propósito
+## Propósito
+Dejar trazabilidad sólida en el comprobante.
 
-Hacer que el comprobante sea auditable y claro.
+## Archivos a modificar
+- `sistema/modules/egresos/api.php`
+- `sistema/modules/egresos/index.js`
 
-Archivos a modificar
+## Cambios
 
-sistema/modules/egresos/api.php
+### 7.1. Cabecera
+Mostrar:
+- código
+- fecha y hora
+- estado
+- tipo de egreso
+- caja de registro
 
-sistema/modules/egresos/index.js
+### 7.2. Fuentes agrupadas por caja
+Ejemplo esperado:
 
-Cambios
-Encabezado del comprobante
+- Caja `CD-20260301` | `01/03/2026`
+  - Efectivo — S/ 400.00
+  - Yape — S/ 300.00
+- Caja `CD-20260316` | `16/03/2026`
+  - Efectivo — S/ 200.00
 
-Debe mostrar:
+### 7.3. Firmas
+Mantener bloque de firmas al final.
 
-código de egreso
+## Riesgo
+Bajo.
 
-tipo de egreso
+## Verificación manual
+1. Preview de egreso normal.
+2. Preview de egreso multicaja.
+3. PDF oficial.
+4. Revisar claridad visual y consistencia de datos.
 
-fecha y hora
+## Archivos modificados
+- `sistema/modules/egresos/api.php`
+- `sistema/modules/egresos/index.js`
 
-comprobante
-
-estado
-
-beneficiario
-
-documento
-
-concepto
-
-caja de registro
-
-Bloque nuevo: cajas fuente
-
-Agrupar en minitablas o tarjetas internas:
-
-Caja CD-20260301 | 01/03/2026
-
-Efectivo — S/ 400.00
-
-Yape — S/ 300.00
-
-Caja CD-20260316 | 16/03/2026
-
-Efectivo — S/ 200.00
-
-Firmas
-
-Al final:
-
-beneficiario
-
-responsable
-
-La vista previa actual ya muestra “RECIBO DE EGRESO”, datos de cabecera y un bloque “FUENTES DE SALIDA”, así que este cambio consiste en pasar de una sola tabla plana a una agrupación por caja fuente.
-
-Verificación manual
-
-Generar preview de egreso normal.
-
-Generar preview de egreso multicaja.
-
-Imprimir PDF y revisar:
-
-claridad de la caja de registro
-
-claridad de cada caja fuente
-
-firmas
-
-Archivos modificados
-
-sistema/modules/egresos/api.php
-
-sistema/modules/egresos/index.js
-
-Archivos creados
-
+## Archivos creados
 Ninguno.
 
-Tablas modificadas
+---
 
-Ninguna.
+# Fase 8 — Corrección de saldos del módulo egresos
 
-Fase 8 — Corrección de saldos del módulo egresos
-Propósito
+## Propósito
+Alinear saldo global con saldo real por caja fuente.
 
-Evitar que el egreso multicaja distorsione los saldos.
+## Archivos a modificar
+- `sistema/modules/egresos/api.php`
+- `sistema/modules/egresos/finanzas_medios.php`
 
-Archivos a modificar
+## Cambio principal
+`eg_saldo_diaria()` ya no debe calcular egresos solo desde:
 
-sistema/modules/egresos/api.php
+```sql
+egr_egresos.id_caja_diaria
+```
 
-sistema/modules/egresos/finanzas_medios.php
+Debe usar el detalle por caja fuente real, unido a egresos activos.
 
-Problema actual
+## Efecto esperado
+Si el 29/03 se registra un Multicaja usando dinero de la caja del 01/03, entonces:
 
-El sistema ya calcula disponibilidad por fuente usando detalle de egreso, pero el saldo global diario y otros resúmenes pueden seguir descontando por egr_egresos.id_caja_diaria del encabezado. Eso sirve hoy porque encabezado y detalle apuntan a la misma caja; con Multicaja deja de servir.
+- la caja del 01/03 baja su saldo;
+- la caja del 29/03 no baja si no aportó dinero.
 
-Cambio
+## Riesgo
+Alto si no se corrige antes del despliegue.
 
-Toda consulta de saldo diario o disponibilidad global que represente “cuánto dinero le queda a esta caja” debe descontar egresos por:
+## Verificación manual
+1. Medir saldo de una caja antigua.
+2. Usarla en un egreso Multicaja desde otra fecha.
+3. Confirmar que baja el saldo de la caja fuente.
 
-egr_egreso_fuentes.id_caja_diaria = caja consultada
+## Archivos modificados
+- `sistema/modules/egresos/api.php`
+- `sistema/modules/egresos/finanzas_medios.php`
 
-unido a egr_egresos.estado = 'ACTIVO' o equivalente real del proyecto
-
-Verificación manual
-
-Tomar una caja antigua con saldo conocido.
-
-Hacer egreso multicaja desde otra fecha consumiendo esa caja.
-
-Volver a consultar su saldo.
-
-Debe disminuir exactamente el monto usado.
-
-Archivos modificados
-
-sistema/modules/egresos/api.php
-
-sistema/modules/egresos/finanzas_medios.php
-
-Archivos creados
-
+## Archivos creados
 Ninguno.
 
-Tablas modificadas
+---
 
-Ninguna.
+# Fase 9 — Dashboards de administración
 
-Fase 9 — Dashboard de administración
-Propósito
+## Propósito
+Evitar que el dashboard muestre saldos o netos falsos.
 
-Alinear el dashboard con la nueva realidad contable.
+## Archivos a modificar
+- `sistema/dashboard/administracion/funcion_caja_diaria_mensual.php`
+- `sistema/dashboard/administracion/funcion_ingreso_egreso_mensual.php`
+- `sistema/dashboard/administracion/funcion_card_ganancia_neta_ultima_caja.php`
 
-Archivos a modificar
+## Cambios
 
-sistema/dashboard/administracion/funcion_caja_diaria_mensual.php
-
-sistema/dashboard/administracion/funcion_ingreso_egreso_mensual.php
-
-sistema/dashboard/administracion/funcion_card_ganancia_neta_ultima_caja.php
-
-Cambios
-1) Widget principal de caja
-
+### 9.1. Widget principal de caja
 Debe seguir mostrando:
+- disponible
+- ingresado
+- egresado
+- devuelto
 
-Disponible
+Pero el egreso deberá descontarse por caja fuente real.
 
-Ingresado
+### 9.2. Gráfico mensual
+Corregir su lectura para que no dependa solo de `egr_egresos.id_caja_diaria`.
 
-Egresado
+### 9.3. Card de ganancia neta
+Debe considerar:
 
-Devuelto
+```text
+ingresos - devoluciones - egresos
+```
 
-Pero Egresado y Disponible deben calcular egresos por caja fuente real, no por caja operadora del encabezado. El widget actual ya muestra esos cuatro montos, así que aquí cambias consulta, no concepto.
+y no solo:
 
-2) Ingresos vs egresos mensual
+```text
+ingresos - egresos
+```
 
-Debe quedar claro si el “neto” mensual resta también devoluciones. Hoy ya existe un widget mensual separado; conviene dejar consistente el criterio con el widget principal de caja.
+## Riesgo
+Medio.
 
-3) Ganancia neta última caja
+## Verificación manual
+1. Registrar Multicaja.
+2. Abrir dashboard.
+3. Confirmar que baja la caja correcta.
+4. Confirmar que devoluciones siguen restando.
 
-Hoy conviene corregirlo para que tome:
+## Archivos modificados
+- `sistema/dashboard/administracion/funcion_caja_diaria_mensual.php`
+- `sistema/dashboard/administracion/funcion_ingreso_egreso_mensual.php`
+- `sistema/dashboard/administracion/funcion_card_ganancia_neta_ultima_caja.php`
 
-ingresos
-
-menos devoluciones
-
-menos egresos
-
-No solo ingresos menos egresos.
-
-Verificación manual
-
-Abrir dashboard antes y después de un egreso multicaja.
-
-Confirmar que:
-
-baja el saldo de la caja fuente;
-
-no baja erróneamente una caja que no aportó fondos;
-
-devoluciones siguen restando.
-
-Archivos modificados
-
-sistema/dashboard/administracion/funcion_caja_diaria_mensual.php
-
-sistema/dashboard/administracion/funcion_ingreso_egreso_mensual.php
-
-sistema/dashboard/administracion/funcion_card_ganancia_neta_ultima_caja.php
-
-Archivos creados
-
+## Archivos creados
 Ninguno.
 
-Tablas modificadas
+---
 
+# Fase 10 — Regresión y salida controlada
+
+## Propósito
+Confirmar que lo nuevo no dañó lo actual.
+
+## Casos mínimos obligatorios
+1. Venta con abono.
+2. Venta pendiente con pago posterior.
+3. Devolución parcial.
+4. Devolución total.
+5. Egreso normal con una sola fuente.
+6. Egreso normal redistribuido entre varias fuentes.
+7. Egreso Multicaja con una caja histórica.
+8. Egreso Multicaja con varias cajas.
+9. Anulación de egreso normal.
+10. Anulación de egreso Multicaja.
+11. Dashboard antes y después del egreso Multicaja.
+
+## Riesgo
+Medio.
+
+## Verificación
+Aprobación funcional completa antes de producción.
+
+---
+
+## 8. Orden real de implementación
+
+Orden recomendado y obligatorio:
+
+1. Auditoría previa SQL
+2. Fase 1 — Base de datos
+3. Fase 2 — Backend compatible
+4. Fase 3 — Lectura de cajas fuente
+5. Fase 4 — UI Multicaja
+6. Fase 5 — Guardado real
+7. Fase 6 — Detalle y preview
+8. Fase 7 — PDF
+9. Fase 8 — Saldos del módulo
+10. Fase 9 — Dashboards
+11. Fase 10 — Regresión
+
+**No habilitar producción de Multicaja antes de completar Fase 8 y Fase 9.**
+
+---
+
+## 9. Límite de archivos nuevos
+
+Para mantener el módulo ordenado y sin crecer demasiado, el límite recomendado es este:
+
+### Archivos nuevos
+1. `sistema/modules/egresos/multicaja_service.php`
+2. `sistema/modules/egresos/egresos_multicaja.js`
+
+No es necesario crear más archivos salvo que, durante la implementación, `api.php` quede demasiado cargado y se justifique un helper adicional pequeño.
+
+---
+
+## 10. Resumen global de cambios
+
+## Archivos que se modificarán
+- `sistema/modules/egresos/api.php`
+- `sistema/modules/egresos/index.php`
+- `sistema/modules/egresos/index.js`
+- `sistema/modules/egresos/finanzas_medios.php`
+- `sistema/dashboard/administracion/funcion_caja_diaria_mensual.php`
+- `sistema/dashboard/administracion/funcion_ingreso_egreso_mensual.php`
+- `sistema/dashboard/administracion/funcion_card_ganancia_neta_ultima_caja.php`
+
+## Archivos que se crearán
+- `sistema/modules/egresos/multicaja_service.php`
+- `sistema/modules/egresos/egresos_multicaja.js`
+
+## Tablas que se modificarán
+- `egr_egresos`
+- `egr_egreso_fuentes`
+
+## Tablas nuevas
 Ninguna.
 
-Fase 10 — Pruebas de regresión y cierre
-Propósito
+---
 
-Asegurar que el módulo no rompa el flujo actual.
+## 11. SQL consolidado
 
-Casos mínimos obligatorios
+### Alter de `egr_egresos`
 
-Venta normal con abono normal.
-
-Devolución parcial.
-
-Devolución total.
-
-Egreso normal con una sola fuente.
-
-Egreso normal redistribuido entre varias fuentes de la caja actual.
-
-Egreso multicaja usando una caja histórica.
-
-Egreso multicaja usando dos cajas históricas.
-
-Anulación de egreso normal.
-
-Anulación de egreso multicaja.
-
-Revisión del dashboard tras egreso multicaja.
-
-El sistema actual ya distingue devoluciones parciales y totales en caja/api_ventas.php, y el frontend actual de egresos ya exige cuadratura exacta por fuentes antes de guardar; esas son las dos áreas que más debes vigilar para no romper compatibilidad.
-
-Archivos
-
-No necesariamente nuevos cambios aquí; es fase de validación.
-
-Orden real recomendado de implementación
-
-No lo haría todo de una sola vez. El orden más seguro es este:
-
-Fase 1 — Base de datos
-
-Fase 2 — Backend distingue NORMAL / MULTICAJA
-
-Fase 3 — Lectura de cajas fuente
-
-Fase 4 — UI Multicaja
-
-Fase 5 — Guardado real
-
-Fase 6 — Detalle y listado
-
-Fase 7 — PDF/comprobante
-
-Fase 8 — Saldos del módulo
-
-Fase 9 — Dashboards
-
-Fase 10 — Regresión
-
-Ese orden minimiza riesgo porque primero dejas lista la base y el backend, luego agregas UI, y recién al final tocas dashboard.
-
-Límite de archivos nuevos
-
-Para mantenerlo ordenado y dentro de tu preferencia, mi propuesta queda así:
-
-Archivos nuevos recomendados
-
-sistema/modules/egresos/multicaja_service.php
-
-sistema/modules/egresos/egresos_multicaja.js
-
-Con eso basta. No hace falta más si quieres mantener el módulo controlado.
-
-Resumen global de cambios esperados
-Archivos que se modificarán
-
-sistema/modules/egresos/api.php
-
-sistema/modules/egresos/index.php
-
-sistema/modules/egresos/index.js
-
-sistema/modules/egresos/finanzas_medios.php
-
-sistema/dashboard/administracion/funcion_caja_diaria_mensual.php
-
-sistema/dashboard/administracion/funcion_ingreso_egreso_mensual.php
-
-sistema/dashboard/administracion/funcion_card_ganancia_neta_ultima_caja.php
-
-Archivos que se crearán
-
-sistema/modules/egresos/multicaja_service.php
-
-sistema/modules/egresos/egresos_multicaja.js
-
-Tablas que se modificarán
-
-egr_egresos
-
-egr_egreso_fuentes
-
-SQL de alter table
+```sql
 ALTER TABLE `egr_egresos`
 ADD COLUMN `tipo_egreso` ENUM('NORMAL','MULTICAJA') NOT NULL DEFAULT 'NORMAL'
 AFTER `estado`;
+```
+
+### Alter de `egr_egreso_fuentes`
+
+```sql
 ALTER TABLE `egr_egreso_fuentes`
 DROP INDEX `ux_egr_fuente_egreso_key`,
 ADD UNIQUE KEY `ux_egr_fuente_egreso_caja_key` (`id_egreso`, `id_caja_diaria`, `fuente_key`);
+```
+
+```sql
 ALTER TABLE `egr_egreso_fuentes`
 ADD KEY `idx_egr_fuente_caja_key` (`id_caja_diaria`, `fuente_key`);
-Tablas nuevas
+```
 
-Ninguna.
+---
 
-Recomendación final de ejecución
+## 12. Criterio de “Go / No Go” para producción
 
-La siguiente tarea ideal ya no es seguir diseñando, sino entrar a la Fase 1 + Fase 2 con material ejecutable:
-te preparo el siguiente mensaje con:
+## Se puede avanzar a producción si:
+- el egreso normal sigue intacto;
+- el Multicaja guarda bien;
+- la anulación libera saldo;
+- el widget de caja muestra saldo correcto;
+- el PDF muestra caja de registro y cajas fuente;
+- no hay diferencias entre saldo esperado y saldo mostrado.
 
-archivos a modificar;
+## No se debe desplegar si:
+- el dashboard sigue descontando por encabezado y no por fuente;
+- el egreso normal cambió de comportamiento;
+- el PDF no distingue caja de registro y caja fuente;
+- los saldos de cajas históricas quedan cruzados.
 
-SQL exacto listo para correr;
+---
 
-parche backend inicial en api.php;
+## 13. Recomendación final
 
-y pasos de prueba manual para dejar listo el esqueleto NORMAL/MULTICAJA.
+La implementación es **viable** y **coherente con la lógica actual del sistema**, siempre que se respete esta regla:
+
+> **Multicaja se agrega como una extensión de egresos, no como una reescritura del sistema de caja.**
+
+La tabla correcta para representar la procedencia real del dinero ya existe: `egr_egreso_fuentes`.
+
+Lo que se debe hacer bien es:
+
+- permitir varias cajas fuente por egreso;
+- guardar el tipo de egreso;
+- leer saldos por caja fuente real;
+- reflejarlo correctamente en UI, PDF y dashboard.
+
+Con ese enfoque, el cambio queda robusto, entendible, compatible y mantenible.
