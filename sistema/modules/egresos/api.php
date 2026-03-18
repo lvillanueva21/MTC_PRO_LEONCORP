@@ -8,6 +8,7 @@ require_once __DIR__ . '/../../includes/acl.php';
 require_once __DIR__ . '/../../includes/permisos.php';
 require_once __DIR__ . '/../../includes/conexion.php';
 require_once __DIR__ . '/finanzas_medios.php';
+require_once __DIR__ . '/multicaja_service.php';
 
 /**
  * Log de guardia temprana para 403 (antes de entrar a la logica JSON del modulo).
@@ -905,10 +906,56 @@ try {
     }
 
     if (!eg_schema_ready($db)) {
-        eg_json_err_code(500, 'La base de datos aun no tiene las tablas de egresos (egr_* y egr_egreso_fuentes). Ejecuta primero la migracion.');
-    }
+eg_json_err_code(500, 'La base de datos aun no tiene las tablas de egresos (egr_* y egr_egreso_fuentes). Ejecuta primero la migracion.');
 
-        if ($accion === 'listar') {
+}
+
+if ($accion === 'listar_cajas_fuente') {
+$q = trim((string)($_GET['q'] ?? ''));
+$fecha = trim((string)($_GET['fecha'] ?? ''));
+$desde = trim((string)($_GET['desde'] ?? ''));
+$hasta = trim((string)($_GET['hasta'] ?? ''));
+$limit = (int)($_GET['limit'] ?? 40);
+$limit = max(1, min(80, $limit));
+
+$items = egm_listar_cajas_fuente($db, $empId, [
+'q' => $q,
+'fecha' => $fecha,
+'desde' => $desde,
+'hasta' => $hasta,
+'limit' => $limit,
+]);
+
+eg_json_ok([
+'items' => $items,
+'count' => count($items),
+'filtros' => [
+'q' => $q,
+'fecha' => $fecha,
+'desde' => $desde,
+'hasta' => $hasta,
+'limit' => $limit,
+],
+]);
+}
+
+if ($accion === 'detalle_caja_fuente') {
+$idCaja = (int)($_GET['id_caja_diaria'] ?? ($_GET['id'] ?? 0));
+if ($idCaja <= 0) {
+eg_json_err('Caja diaria invalida.');
+}
+
+$row = egm_detalle_caja_fuente($db, $empId, $idCaja);
+if (!$row) {
+eg_json_err_code(404, 'No se encontro la caja fuente solicitada.');
+}
+
+eg_json_ok([
+'row' => $row,
+]);
+}
+
+if ($accion === 'listar') {
         $page = max(1, (int)($_GET['page'] ?? 1));
         $per = (int)($_GET['per'] ?? 10);
         $per = max(5, min(50, $per));
