@@ -130,23 +130,24 @@
     if (resumenMc) resumenMc.classList.toggle('d-none', newMode !== 'MULTICAJA');
 
     if (newMode === 'MULTICAJA') {
-      showBox('info', 'Modo <strong>Multicaja</strong> activo. En esta fase ya puedes consultar cajas y distribuir montos por caja y por medio, pero el guardado definitivo se habilitará en la siguiente fase.');
+      showBox('info', 'Modo <strong>Multicaja</strong> activo. Ahora el egreso se registrará usando las cajas fuente seleccionadas en este formulario.');
       renderResumen();
     } else {
       showBox('', '');
       syncHiddenPayload([]);
+      renderResumen();
     }
   }
 
-  function resetState() {
+  function resetAll() {
     state.cajas = {};
     state.asignaciones = {};
-    state.payload = [];
     syncHiddenPayload([]);
     renderSeleccionadas();
     renderDistribucion();
     renderResumen();
     updateTotals();
+    setMode('NORMAL');
   }
 
   function syncHiddenPayload(payload) {
@@ -398,55 +399,37 @@
     return payload;
   }
 
-  function validatePayload() {
+  function validateCurrent() {
     const objetivo = getMontoObjetivo();
     const cajas = Object.values(state.cajas || {});
-    if (!(objetivo > 0)) {
-      return { ok: false, msg: 'Ingresa primero el monto del egreso antes de usar Multicaja.' };
-    }
-    if (cajas.length === 0) {
-      return { ok: false, msg: 'Agrega al menos una caja fuente.' };
-    }
+    if (!(objetivo > 0)) return { ok: false, msg: 'Ingresa primero el monto del egreso antes de usar Multicaja.' };
+    if (cajas.length === 0) return { ok: false, msg: 'Agrega al menos una caja fuente.' };
 
     let total = 0;
     const payload = collectPayload();
-
     for (let i = 0; i < payload.length; i++) {
       const item = payload[i];
       const caja = state.cajas[item.id_caja_diaria];
       const medio = getRowsCaja(caja).filter(function (r) { return r.key === item.key; })[0] || null;
       const disponible = round2((medio && medio.saldo_disponible) || 0);
-
       if (item.monto > disponible + 0.0001) {
-        return {
-          ok: false,
-          msg: 'El monto asignado supera el disponible de ' + (item.label || item.key) + ' en la caja ' + (item.caja_codigo || '')
-        };
+        return { ok: false, msg: 'El monto asignado supera el disponible de ' + (item.label || item.key) + ' en la caja ' + (item.caja_codigo || '') };
       }
-
       total += item.monto;
     }
-
     total = round2(total);
-    if (payload.length === 0) {
-      return { ok: false, msg: 'Debes asignar al menos un monto en alguna caja fuente.' };
-    }
+    if (payload.length === 0) return { ok: false, msg: 'Debes asignar al menos un monto en alguna caja fuente.' };
     if (Math.abs(total - objetivo) > 0.009) {
-      return {
-        ok: false,
-        msg: 'La suma distribuida en Multicaja no coincide con el monto del egreso. Objetivo: ' + money(objetivo) + ', asignado: ' + money(total)
-      };
+      return { ok: false, msg: 'La suma distribuida en Multicaja no coincide con el monto del egreso. Objetivo: ' + money(objetivo) + ', asignado: ' + money(total) };
     }
-
     return { ok: true, payload: payload, total: total, objetivo: objetivo };
   }
 
   function updateTotals() {
-    const res = validatePayload();
+    const res = validateCurrent();
     const objetivo = getMontoObjetivo();
     const total = res.ok ? round2(res.total) : round2(collectPayload().reduce(function (acc, item) { return acc + num(item.monto); }, 0));
     const diff = round2(objetivo - total);
-
     if (qs('#egMcMontoObjetivo')) qs('#egMcMontoObjetivo').textContent = money(objetivo);
     if (qs('#egMcMontoAsignado')) qs('#egMcMontoAsignado').textContent = money(total);
     if (qs('#egMcMontoDiff')) qs('#egMcMontoDiff').textContent = money(diff);
@@ -455,48 +438,36 @@
   function renderResumen() {
     const box = qs('#egMulticajaResumen');
     if (!box) return;
-
     const payload = state.payload || [];
     if (!Array.isArray(payload) || payload.length === 0) {
       box.innerHTML = '<span class="text-muted">Aun no hay cajas fuente seleccionadas.</span>';
       return;
     }
-
     const grouped = {};
     payload.forEach(function (item) {
       const key = String(item.id_caja_diaria);
-      if (!grouped[key]) {
-        grouped[key] = {
-          codigo: item.caja_codigo || '',
-          fecha: item.caja_fecha || '',
-          rows: []
-        };
-      }
+      if (!grouped[key]) grouped[key] = { codigo: item.caja_codigo || '', fecha: item.caja_fecha || '', rows: [] };
       grouped[key].rows.push(item);
     });
-
     const html = Object.keys(grouped).map(function (key) {
       const g = grouped[key];
       const rows = g.rows.map(function (item) {
         return esc(item.label || item.key) + ': <strong>' + esc(money(item.monto)) + '</strong>';
       }).join(' &nbsp; | &nbsp; ');
-
       return '<div class="mb-1"><strong>' + esc(g.codigo || ('Caja ' + key)) + '</strong> <span class="text-muted">(' + esc(fmtDate(g.fecha || '')) + ')</span><br>' + rows + '</div>';
     }).join('');
-
-    box.innerHTML = html + '<div class="mt-2 text-muted">La seleccion queda lista en el formulario. El guardado definitivo del egreso Multicaja se habilita en la siguiente fase.</div>';
+    box.innerHTML = html;
   }
 
   function aplicarSeleccion() {
-    const v = validatePayload();
+    const v = validateCurrent();
     if (!v.ok) {
       setModalMsg('danger', esc(v.msg));
       return;
     }
-
     syncHiddenPayload(v.payload);
     renderResumen();
-    showBox('success', 'Distribucion Multicaja aplicada al formulario. Ya puedes revisar la seleccion. El guardado definitivo se habilitara en la siguiente fase.');
+    showBox('success', 'Distribución Multicaja aplicada al formulario. Ahora ya se utilizará al guardar el egreso.');
     if (window.jQuery) window.jQuery('#egMulticajaModal').modal('hide');
   }
 
@@ -547,130 +518,63 @@
       if (monto) monto.focus();
       return;
     }
-
     updateTotals();
     renderSeleccionadas();
     renderDistribucion();
     buscarCajas();
-
     if (window.jQuery) window.jQuery('#egMulticajaModal').modal('show');
   }
 
-  function bindDelegates() {
-    document.addEventListener('click', function (ev) {
-      const addBtn = ev.target.closest('.js-egmc-add');
-      if (addBtn) {
-        ev.preventDefault();
-        agregarCaja(addBtn.getAttribute('data-id'));
-        return;
-      }
+  document.addEventListener('click', function (ev) {
+    const addBtn = ev.target.closest('.js-egmc-add');
+    if (addBtn) { ev.preventDefault(); agregarCaja(addBtn.getAttribute('data-id')); return; }
+    const removeBtn = ev.target.closest('.js-egmc-remove');
+    if (removeBtn) { ev.preventDefault(); quitarCaja(removeBtn.getAttribute('data-id')); }
+  });
 
-      const removeBtn = ev.target.closest('.js-egmc-remove');
-      if (removeBtn) {
-        ev.preventDefault();
-        quitarCaja(removeBtn.getAttribute('data-id'));
-      }
-    });
+  document.addEventListener('input', function (ev) {
+    const el = ev.target;
+    if (!el || !el.classList || !el.classList.contains('js-egmc-monto')) return;
+    const idCaja = parseInt(el.getAttribute('data-id') || '0', 10);
+    const key = canonKey(el.getAttribute('data-key') || '');
+    const monto = round2(num(el.value || 0));
+    if (!(idCaja > 0) || !key) return;
+    if (monto > 0) state.asignaciones[asignKey(idCaja, key)] = monto;
+    else delete state.asignaciones[asignKey(idCaja, key)];
+    updateTotals();
+  });
 
-    document.addEventListener('input', function (ev) {
-      const el = ev.target;
-      if (!el || !el.classList || !el.classList.contains('js-egmc-monto')) return;
-
-      const idCaja = parseInt(el.getAttribute('data-id') || '0', 10);
-      const key = canonKey(el.getAttribute('data-key') || '');
-      const monto = round2(num(el.value || 0));
-
-      if (!(idCaja > 0) || !key) return;
-      if (monto > 0) {
-        state.asignaciones[asignKey(idCaja, key)] = monto;
-      } else {
-        delete state.asignaciones[asignKey(idCaja, key)];
-      }
-
-      updateTotals();
-    });
+  const modeSel = qs('#egTipoEgresoModo');
+  if (modeSel) modeSel.addEventListener('change', function () { setMode(modeSel.value || 'NORMAL'); });
+  if (qs('#egMcBuscar')) qs('#egMcBuscar').addEventListener('click', buscarCajas);
+  if (qs('#egMcLimpiar')) qs('#egMcLimpiar').addEventListener('click', function () {
+    if (qs('#egMcQ')) qs('#egMcQ').value = '';
+    if (qs('#egMcFecha')) qs('#egMcFecha').value = '';
+    if (qs('#egMcDesde')) qs('#egMcDesde').value = '';
+    if (qs('#egMcHasta')) qs('#egMcHasta').value = '';
+    buscarCajas();
+  });
+  if (qs('#egMcAplicar')) qs('#egMcAplicar').addEventListener('click', aplicarSeleccion);
+  if (qs('#egMcAuto')) qs('#egMcAuto').addEventListener('click', autoCompletar);
+  if (qs('#egBtnLimpiar')) qs('#egBtnLimpiar').addEventListener('click', function () { window.setTimeout(resetAll, 0); });
+  if (qs('#egMonto')) qs('#egMonto').addEventListener('input', function () { updateTotals(); if (isMulticaja()) renderResumen(); });
+  if (qs('#egBtnDistribuir')) {
+    qs('#egBtnDistribuir').addEventListener('click', function (ev) {
+      if (!isMulticaja()) return;
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      openModalMulticaja();
+    }, true);
   }
 
-  function bindMain() {
-    const modeSel = qs('#egTipoEgresoModo');
-    if (modeSel) {
-      modeSel.addEventListener('change', function () {
-        setMode(modeSel.value || 'NORMAL');
-      });
-    }
-
-    const buscar = qs('#egMcBuscar');
-    if (buscar) buscar.addEventListener('click', buscarCajas);
-
-    const limpiar = qs('#egMcLimpiar');
-    if (limpiar) {
-      limpiar.addEventListener('click', function () {
-        if (qs('#egMcQ')) qs('#egMcQ').value = '';
-        if (qs('#egMcFecha')) qs('#egMcFecha').value = '';
-        if (qs('#egMcDesde')) qs('#egMcDesde').value = '';
-        if (qs('#egMcHasta')) qs('#egMcHasta').value = '';
-        buscarCajas();
-      });
-    }
-
-    const aplicar = qs('#egMcAplicar');
-    if (aplicar) aplicar.addEventListener('click', aplicarSeleccion);
-
-    const autoBtn = qs('#egMcAuto');
-    if (autoBtn) autoBtn.addEventListener('click', autoCompletar);
-
-    const clearBtn = qs('#egBtnLimpiar');
-    if (clearBtn) {
-      clearBtn.addEventListener('click', function () {
-        window.setTimeout(function () {
-          resetState();
-          setMode('NORMAL');
-        }, 0);
-      });
-    }
-
-    const monto = qs('#egMonto');
-    if (monto) {
-      monto.addEventListener('input', function () {
-        updateTotals();
-        if (isMulticaja()) {
-          renderResumen();
-        }
-      });
-    }
-
-    const btnDistribuir = qs('#egBtnDistribuir');
-    if (btnDistribuir) {
-      btnDistribuir.addEventListener('click', function (ev) {
-        if (!isMulticaja()) return;
-        ev.preventDefault();
-        ev.stopImmediatePropagation();
-        openModalMulticaja();
-      }, true);
-    }
-
-    const form = qs('#egForm');
-    if (form) {
-      form.addEventListener('submit', function (ev) {
-        if (!isMulticaja()) return;
-        ev.preventDefault();
-        ev.stopImmediatePropagation();
-        showBox('warning', 'La consulta y distribucion <strong>Multicaja</strong> ya esta lista en el formulario, pero el guardado definitivo se habilita en la siguiente fase. Por ahora el modo normal sigue operativo y sin cambios.');
-      }, true);
-    }
-
-    const previewBtn = qs('#egBtnVistaPrevia');
-    if (previewBtn) {
-      previewBtn.addEventListener('click', function (ev) {
-        if (!isMulticaja()) return;
-        ev.preventDefault();
-        ev.stopImmediatePropagation();
-        showBox('info', 'La vista previa del comprobante Multicaja se habilitara junto con la persistencia definitiva en la siguiente fase.');
-      }, true);
-    }
-  }
+  window.egMulticaja = {
+    isModeMulticaja: isMulticaja,
+    getPayload: function () { return Array.isArray(state.payload) ? state.payload.slice() : []; },
+    validateCurrent: validateCurrent,
+    resetAll: resetAll,
+    setMode: setMode,
+    renderResumen: renderResumen
+  };
 
   setMode((qs('#egTipoEgreso') || {}).value || 'NORMAL');
-  bindDelegates();
-  bindMain();
 })();
