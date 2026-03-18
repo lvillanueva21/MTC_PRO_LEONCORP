@@ -20,58 +20,119 @@ const normalizeFuentes=(m)=>{const o={};Object.keys(m||{}).forEach(k=>{const key
 const sumFuentes=(m)=>round2(Object.values(m||{}).reduce((a,v)=>a+num(v),0));
 const fuentesPayload=(m)=>{const o=normalizeFuentes(m);return FUENTE_ORDER.filter(k=>(o[k]||0)>0).map(k=>({key:k,monto:round2(o[k]),label:FUENTE_LABEL[k]||k}));};
 const rawMulticajaPayload=()=>{const raw=((qs('#egMulticajaPayload')||{}).value||'[]');try{const arr=JSON.parse(raw);return Array.isArray(arr)?arr:[];}catch(_e){return [];}};
+
+function cajaRegistroActualInfo(){
+  const cd=(((st.caja||{}).diaria)||{});
+  const cajaId=parseInt(cd.id||0,10);
+  return {
+    id_caja_diaria:(cajaId>0?cajaId:0),
+    caja_codigo:String(cd.codigo||''),
+    caja_fecha:String(cd.fecha||'')
+  };
+}
+
 function normalizeMulticajaPayload(items){
   const out=[];
+  const cajaActual=cajaRegistroActualInfo();
+
   (Array.isArray(items)?items:[]).forEach(item=>{
     const key=canonKey((item&&item.key)||(item&&item.fuente_key)||'');
     const monto=round2(num(item&&item.monto));
-    const cajaId=parseInt((item&&item.id_caja_diaria)||0,10);
-    if(!key||!(cajaId>0)||!(monto>0)) return;
+    const cajaIdRaw=parseInt((item&&item.id_caja_diaria)||(item&&item.caja_diaria_id)||(item&&item.caja_id)||0,10);
+    const cajaId=(cajaIdRaw>0?cajaIdRaw:cajaActual.id_caja_diaria);
+
+    if(!key||!(monto>0)||!(cajaId>0)) return;
+
     out.push({
       id_caja_diaria:cajaId,
       key:key,
       monto:monto,
-      label:String((item&&item.label)||FUENTE_LABEL[key]||key),
-      caja_codigo:String((item&&item.caja_codigo)||''),
-      caja_fecha:String((item&&item.caja_fecha)||'')
+      label:String((item&&item.label)||(item&&item.medio)||FUENTE_LABEL[key]||key),
+      caja_codigo:String((item&&item.caja_codigo)||(item&&item.caja_diaria_codigo)||cajaActual.caja_codigo||''),
+      caja_fecha:String((item&&item.caja_fecha)||(item&&item.caja_diaria_fecha)||cajaActual.caja_fecha||'')
     });
   });
+
   return out;
 }
+
+function enrichNormalFuentesPayload(items){
+  const cajaActual=cajaRegistroActualInfo();
+  return (Array.isArray(items)?items:[]).map(item=>{
+    const key=canonKey((item&&item.key)||'');
+    const monto=round2(num(item&&item.monto));
+    if(!key||!(monto>0)||!(cajaActual.id_caja_diaria>0)) return null;
+
+    return {
+      id_caja_diaria:cajaActual.id_caja_diaria,
+      key:key,
+      monto:monto,
+      label:String((item&&item.label)||FUENTE_LABEL[key]||key),
+      caja_codigo:cajaActual.caja_codigo,
+      caja_fecha:cajaActual.caja_fecha
+    };
+  }).filter(Boolean);
+}
+
 function groupedFuentesByCaja(items){
   const groups={};
+
   normalizeMulticajaPayload(items).forEach(item=>{
     const k=String(item.id_caja_diaria);
-    if(!groups[k]) groups[k]={id_caja_diaria:item.id_caja_diaria,caja_diaria_codigo:item.caja_codigo||('Caja '+k),caja_diaria_fecha:item.caja_fecha||'',rows:[],total:0};
+    if(!groups[k]){
+      groups[k]={
+        id_caja_diaria:item.id_caja_diaria,
+        caja_diaria_codigo:item.caja_codigo||('Caja '+k),
+        caja_diaria_fecha:item.caja_fecha||'',
+        rows:[],
+        total:0
+      };
+    }
     groups[k].rows.push(item);
     groups[k].total=round2(groups[k].total+item.monto);
   });
+
   return Object.values(groups);
 }
-function tipoEgresoLabel(tipo){return String(tipo||'').toUpperCase()==='MULTICAJA'?'Multicaja':'Normal';}
+
+function tipoEgresoLabel(tipo){
+  return String(tipo||'').toUpperCase()==='MULTICAJA'?'Multicaja':'Normal';
+}
+
 function buildFuentesForSubmit(monto){
   if(isMulticajaMode()){
     const helper=window.egMulticaja||null;
     const validation=helper&&typeof helper.validateCurrent==='function' ? helper.validateCurrent() : null;
     const payload=validation&&validation.payload ? validation.payload : normalizeMulticajaPayload(rawMulticajaPayload());
+
     if(!validation||!validation.ok){
       const msg=(validation&&validation.msg)||'Completa la distribucion Multicaja antes de guardar.';
       return {ok:false,msg:msg,multicaja:true};
     }
+
     const total=round2(payload.reduce((a,x)=>a+num(x.monto),0));
     if(Math.abs(total-round2(monto))>0.009){
       return {ok:false,msg:'La suma distribuida en Multicaja debe ser exactamente '+money(monto)+'.',multicaja:true};
     }
+
     return {ok:true,tipo_egreso:'MULTICAJA',payload:payload};
   }
+
   const vf=validateFuentes(st.fuentesAsignadas,monto);
   if(!vf.ok) return {ok:false,msg:vf.msg,multicaja:false};
-  return {ok:true,tipo_egreso:'NORMAL',payload:fuentesPayload(vf.map),vf:vf};
+
+  const payloadNormal=enrichNormalFuentesPayload(fuentesPayload(vf.map));
+  if(!payloadNormal.length){
+    return {ok:false,msg:'No se pudo determinar la caja de registro actual para las fuentes del egreso normal.',multicaja:false};
+  }
+
+  return {ok:true,tipo_egreso:'NORMAL',payload:payloadNormal,vf:vf};
 }
+
 function buildFuentesForPreview(monto){
-  const built=buildFuentesForSubmit(monto);
-  return built.ok ? built : built;
+  return buildFuentesForSubmit(monto);
 }
+
 function saldoMediosRows(saldo){
   const rows=Array.isArray(saldo&&saldo.por_medio)?saldo.por_medio:[];
   const byKey={};
