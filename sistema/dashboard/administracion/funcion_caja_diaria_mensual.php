@@ -206,116 +206,151 @@ if (!function_exists('adm_caja_widget_pick_mensual')) {
   }
 }
 
+
 if (!function_exists('adm_caja_widget_stats_diaria')) {
-  function adm_caja_widget_stats_diaria(mysqli $db, int $empresaId, int $cajaDiariaId): array {
-    if ($cajaDiariaId <= 0) {
-      return [
-        'ingresos' => 0.0,
-        'devoluciones' => 0.0,
-        'egresos' => 0.0,
-        'disponible' => 0.0,
-      ];
+    function adm_caja_widget_stats_diaria(mysqli $db, int $empresaId, int $cajaDiariaId): array
+    {
+        if ($cajaDiariaId <= 0) {
+            return [
+                'ingresos' => 0.0,
+                'devoluciones' => 0.0,
+                'egresos' => 0.0,
+                'disponible' => 0.0,
+            ];
+        }
+
+        $sql = "
+        SELECT
+          (
+            SELECT COALESCE(SUM(apl.monto_aplicado), 0)
+            FROM pos_abonos a
+            LEFT JOIN pos_abono_aplicaciones apl ON apl.abono_id = a.id
+            WHERE a.id_empresa=? AND a.caja_diaria_id=?
+          ) AS ingresos,
+          (
+            SELECT COALESCE(SUM(dv.monto_devuelto), 0)
+            FROM pos_devoluciones dv
+            WHERE dv.id_empresa=? AND dv.caja_diaria_id=?
+          ) AS devoluciones,
+          (
+            SELECT COALESCE(SUM(f.monto), 0)
+            FROM egr_egreso_fuentes f
+            INNER JOIN egr_egresos e
+              ON e.id = f.id_egreso
+             AND e.id_empresa = f.id_empresa
+            WHERE f.id_empresa=? AND f.id_caja_diaria=? AND e.estado='ACTIVO'
+          ) AS egresos_por_fuente,
+          (
+            SELECT COALESCE(SUM(e.monto), 0)
+            FROM egr_egresos e
+            LEFT JOIN egr_egreso_fuentes f
+              ON f.id_egreso = e.id
+             AND f.id_empresa = e.id_empresa
+            WHERE e.id_empresa=? AND e.id_caja_diaria=? AND e.estado='ACTIVO' AND f.id IS NULL
+          ) AS egresos_no_distribuidos
+        ";
+
+        $st = $db->prepare($sql);
+        $st->bind_param(
+            'iiiiiiii',
+            $empresaId, $cajaDiariaId,
+            $empresaId, $cajaDiariaId,
+            $empresaId, $cajaDiariaId,
+            $empresaId, $cajaDiariaId
+        );
+        $st->execute();
+        $row = $st->get_result()->fetch_assoc() ?: [];
+        $st->close();
+
+        $ingresos = round((float)($row['ingresos'] ?? 0), 2);
+        $devoluciones = round((float)($row['devoluciones'] ?? 0), 2);
+        $egresos = round(
+            (float)($row['egresos_por_fuente'] ?? 0) + (float)($row['egresos_no_distribuidos'] ?? 0),
+            2
+        );
+
+        return [
+            'ingresos' => $ingresos,
+            'devoluciones' => $devoluciones,
+            'egresos' => $egresos,
+            'disponible' => round($ingresos - $devoluciones - $egresos, 2),
+        ];
     }
-
-    $sql = "
-      SELECT
-        (
-          SELECT COALESCE(SUM(apl.monto_aplicado), 0)
-          FROM pos_abonos a
-          LEFT JOIN pos_abono_aplicaciones apl ON apl.abono_id = a.id
-          WHERE a.id_empresa=? AND a.caja_diaria_id=?
-        ) AS ingresos,
-        (
-          SELECT COALESCE(SUM(dv.monto_devuelto), 0)
-          FROM pos_devoluciones dv
-          WHERE dv.id_empresa=? AND dv.caja_diaria_id=?
-        ) AS devoluciones,
-        (
-          SELECT COALESCE(SUM(e.monto), 0)
-          FROM egr_egresos e
-          WHERE e.id_empresa=? AND e.id_caja_diaria=? AND e.estado='ACTIVO'
-        ) AS egresos
-    ";
-
-    $st = $db->prepare($sql);
-    $st->bind_param(
-      'iiiiii',
-      $empresaId, $cajaDiariaId,
-      $empresaId, $cajaDiariaId,
-      $empresaId, $cajaDiariaId
-    );
-    $st->execute();
-    $row = $st->get_result()->fetch_assoc() ?: [];
-    $st->close();
-
-    $ingresos = round((float)($row['ingresos'] ?? 0), 2);
-    $devoluciones = round((float)($row['devoluciones'] ?? 0), 2);
-    $egresos = round((float)($row['egresos'] ?? 0), 2);
-
-    return [
-      'ingresos' => $ingresos,
-      'devoluciones' => $devoluciones,
-      'egresos' => $egresos,
-      'disponible' => round($ingresos - $devoluciones - $egresos, 2),
-    ];
-  }
 }
 
 if (!function_exists('adm_caja_widget_stats_mensual')) {
-  function adm_caja_widget_stats_mensual(mysqli $db, int $empresaId, int $cajaMensualId): array {
-    if ($cajaMensualId <= 0) {
-      return [
-        'ingresos' => 0.0,
-        'devoluciones' => 0.0,
-        'egresos' => 0.0,
-        'disponible' => 0.0,
-      ];
+    function adm_caja_widget_stats_mensual(mysqli $db, int $empresaId, int $cajaMensualId): array
+    {
+        if ($cajaMensualId <= 0) {
+            return [
+                'ingresos' => 0.0,
+                'devoluciones' => 0.0,
+                'egresos' => 0.0,
+                'disponible' => 0.0,
+            ];
+        }
+
+        $sql = "
+        SELECT
+          (
+            SELECT COALESCE(SUM(apl.monto_aplicado), 0)
+            FROM pos_abonos a
+            INNER JOIN mod_caja_diaria cd ON cd.id = a.caja_diaria_id
+            LEFT JOIN pos_abono_aplicaciones apl ON apl.abono_id = a.id
+            WHERE a.id_empresa=? AND cd.id_caja_mensual=?
+          ) AS ingresos,
+          (
+            SELECT COALESCE(SUM(dv.monto_devuelto), 0)
+            FROM pos_devoluciones dv
+            INNER JOIN mod_caja_diaria cd ON cd.id = dv.caja_diaria_id
+            WHERE dv.id_empresa=? AND cd.id_caja_mensual=?
+          ) AS devoluciones,
+          (
+            SELECT COALESCE(SUM(f.monto), 0)
+            FROM egr_egreso_fuentes f
+            INNER JOIN egr_egresos e
+              ON e.id = f.id_egreso
+             AND e.id_empresa = f.id_empresa
+            INNER JOIN mod_caja_diaria cd
+              ON cd.id = f.id_caja_diaria
+            WHERE f.id_empresa=? AND cd.id_caja_mensual=? AND e.estado='ACTIVO'
+          ) AS egresos_por_fuente,
+          (
+            SELECT COALESCE(SUM(e.monto), 0)
+            FROM egr_egresos e
+            LEFT JOIN egr_egreso_fuentes f
+              ON f.id_egreso = e.id
+             AND f.id_empresa = e.id_empresa
+            WHERE e.id_empresa=? AND e.id_caja_mensual=? AND e.estado='ACTIVO' AND f.id IS NULL
+          ) AS egresos_no_distribuidos
+        ";
+
+        $st = $db->prepare($sql);
+        $st->bind_param(
+            'iiiiiiii',
+            $empresaId, $cajaMensualId,
+            $empresaId, $cajaMensualId,
+            $empresaId, $cajaMensualId,
+            $empresaId, $cajaMensualId
+        );
+        $st->execute();
+        $row = $st->get_result()->fetch_assoc() ?: [];
+        $st->close();
+
+        $ingresos = round((float)($row['ingresos'] ?? 0), 2);
+        $devoluciones = round((float)($row['devoluciones'] ?? 0), 2);
+        $egresos = round(
+            (float)($row['egresos_por_fuente'] ?? 0) + (float)($row['egresos_no_distribuidos'] ?? 0),
+            2
+        );
+
+        return [
+            'ingresos' => $ingresos,
+            'devoluciones' => $devoluciones,
+            'egresos' => $egresos,
+            'disponible' => round($ingresos - $devoluciones - $egresos, 2),
+        ];
     }
-
-    $sql = "
-      SELECT
-        (
-          SELECT COALESCE(SUM(apl.monto_aplicado), 0)
-          FROM pos_abonos a
-          INNER JOIN mod_caja_diaria cd ON cd.id = a.caja_diaria_id
-          LEFT JOIN pos_abono_aplicaciones apl ON apl.abono_id = a.id
-          WHERE a.id_empresa=? AND cd.id_caja_mensual=?
-        ) AS ingresos,
-        (
-          SELECT COALESCE(SUM(dv.monto_devuelto), 0)
-          FROM pos_devoluciones dv
-          INNER JOIN mod_caja_diaria cd ON cd.id = dv.caja_diaria_id
-          WHERE dv.id_empresa=? AND cd.id_caja_mensual=?
-        ) AS devoluciones,
-        (
-          SELECT COALESCE(SUM(e.monto), 0)
-          FROM egr_egresos e
-          WHERE e.id_empresa=? AND e.id_caja_mensual=? AND e.estado='ACTIVO'
-        ) AS egresos
-    ";
-
-    $st = $db->prepare($sql);
-    $st->bind_param(
-      'iiiiii',
-      $empresaId, $cajaMensualId,
-      $empresaId, $cajaMensualId,
-      $empresaId, $cajaMensualId
-    );
-    $st->execute();
-    $row = $st->get_result()->fetch_assoc() ?: [];
-    $st->close();
-
-    $ingresos = round((float)($row['ingresos'] ?? 0), 2);
-    $devoluciones = round((float)($row['devoluciones'] ?? 0), 2);
-    $egresos = round((float)($row['egresos'] ?? 0), 2);
-
-    return [
-      'ingresos' => $ingresos,
-      'devoluciones' => $devoluciones,
-      'egresos' => $egresos,
-      'disponible' => round($ingresos - $devoluciones - $egresos, 2),
-    ];
-  }
 }
 
 $admCajaDb = (isset($mysqli) && $mysqli instanceof mysqli) ? $mysqli : db();
