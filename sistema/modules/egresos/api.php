@@ -511,32 +511,54 @@ function eg_human_ymd(string $value): string
 function eg_saldo_diaria(mysqli $db, int $empId, int $cajaDiariaId): array
 {
     $sql = "SELECT
-              (SELECT COALESCE(SUM(apl.monto_aplicado),0)
-               FROM pos_abonos a
-               LEFT JOIN pos_abono_aplicaciones apl ON apl.abono_id = a.id
-               WHERE a.id_empresa=? AND a.caja_diaria_id=?) AS ingresos,
-              (SELECT COALESCE(SUM(dv.monto_devuelto),0)
-               FROM pos_devoluciones dv
-               WHERE dv.id_empresa=? AND dv.caja_diaria_id=?) AS devoluciones,
-              (SELECT COALESCE(SUM(e.monto),0)
-               FROM egr_egresos e
-               WHERE e.id_empresa=? AND e.id_caja_diaria=? AND e.estado='ACTIVO') AS egresos";
+              (
+                SELECT COALESCE(SUM(apl.monto_aplicado),0)
+                FROM pos_abonos a
+                LEFT JOIN pos_abono_aplicaciones apl ON apl.abono_id = a.id
+                WHERE a.id_empresa=? AND a.caja_diaria_id=?
+              ) AS ingresos,
+              (
+                SELECT COALESCE(SUM(dv.monto_devuelto),0)
+                FROM pos_devoluciones dv
+                WHERE dv.id_empresa=? AND dv.caja_diaria_id=?
+              ) AS devoluciones,
+              (
+                SELECT COALESCE(SUM(f.monto),0)
+                FROM egr_egreso_fuentes f
+                INNER JOIN egr_egresos e
+                  ON e.id = f.id_egreso
+                 AND e.id_empresa = f.id_empresa
+                WHERE f.id_empresa=? AND f.id_caja_diaria=? AND e.estado='ACTIVO'
+              ) AS egresos_por_fuente,
+              (
+                SELECT COALESCE(SUM(e.monto),0)
+                FROM egr_egresos e
+                LEFT JOIN egr_egreso_fuentes f
+                  ON f.id_egreso = e.id
+                 AND f.id_empresa = e.id_empresa
+                WHERE e.id_empresa=? AND e.id_caja_diaria=? AND e.estado='ACTIVO' AND f.id IS NULL
+              ) AS egresos_no_distribuidos";
+
     $st = $db->prepare($sql);
-    $st->bind_param('iiiiii', $empId, $cajaDiariaId, $empId, $cajaDiariaId, $empId, $cajaDiariaId);
+    $st->bind_param(
+        'iiiiiiii',
+        $empId, $cajaDiariaId,
+        $empId, $cajaDiariaId,
+        $empId, $cajaDiariaId,
+        $empId, $cajaDiariaId
+    );
     $st->execute();
     $r = $st->get_result()->fetch_assoc() ?: [];
     $st->close();
 
     $ingresos = (float)($r['ingresos'] ?? 0);
     $devoluciones = (float)($r['devoluciones'] ?? 0);
-    $egresos = (float)($r['egresos'] ?? 0);
+    $egresosFuentes = (float)($r['egresos_por_fuente'] ?? 0);
+    $egresosNoDistrib = (float)($r['egresos_no_distribuidos'] ?? 0);
+    $egresos = $egresosFuentes + $egresosNoDistrib;
     $saldo = $ingresos - $devoluciones - $egresos;
+
     $porMedio = fin_disponible_por_fuente_diaria($db, $empId, $cajaDiariaId);
-    $egresosFuentes = (float)($porMedio['totales']['egresos_activos'] ?? 0);
-    $egresosNoDistrib = $egresos - $egresosFuentes;
-    if (abs($egresosNoDistrib) < 0.005) {
-        $egresosNoDistrib = 0.0;
-    }
 
     return [
         'ingresos' => round($ingresos, 2),
