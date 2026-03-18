@@ -172,19 +172,44 @@ include __DIR__ . '/../../includes/header.php';
                 <span class="badge badge-light eg-card-head-status" id="egFormStateBadge">Verificando caja...</span>
               </div>
               <div id="egSaldoResumen" class="eg-saldo-box mb-2 d-none"></div>
-              <div id="egFormAlert"></div>
 
-              <form id="egForm" autocomplete="off">
-                <div class="form-group mb-3">
-                  <label class="mb-1">Tipo de comprobante</label>
-                  <div class="eg-chip-group" id="egTipoChipGroup">
-                    <button type="button" class="eg-chip active" data-tipo="RECIBO">Recibo interno</button>
-                    <button type="button" class="eg-chip" data-tipo="BOLETA">Boleta</button>
-                    <button type="button" class="eg-chip" data-tipo="FACTURA">Factura</button>
-                  </div>
-                  <input type="hidden" id="egTipo" value="RECIBO">
-                  <small class="form-text text-muted">Factura y boleta requieren serie y numero.</small>
-                </div>
+<div id="egFormAlert"></div>
+
+<form id="egForm" autocomplete="off">
+<input type="hidden" id="egTipoEgreso" value="NORMAL">
+<input type="hidden" id="egMulticajaPayload" value="[]">
+
+<div class="form-group mb-3">
+  <label class="mb-1">Modo de egreso</label>
+  <select class="form-control form-control-sm" id="egTipoEgresoModo">
+    <option value="NORMAL" selected>Egreso normal (caja diaria actual)</option>
+    <option value="MULTICAJA">Egreso Multicaja (seleccionar otras cajas)</option>
+  </select>
+  <small class="form-text text-muted">
+    En modo normal todo sigue como hoy. En modo Multicaja podrás consultar cajas históricas de la misma empresa y distribuir el retiro entre varias cajas.
+  </small>
+</div>
+
+<div id="egMulticajaBox" class="alert alert-info py-2 px-3 mb-3 d-none"></div>
+
+<div class="form-group mb-3">
+
+<label class="mb-1">Tipo de comprobante</label>
+
+<div class="eg-chip-group" id="egTipoChipGroup">
+
+<button type="button" class="eg-chip active" data-tipo="RECIBO">Recibo interno</button>
+
+<button type="button" class="eg-chip" data-tipo="BOLETA">Boleta</button>
+<button type="button" class="eg-chip" data-tipo="FACTURA">Factura</button>
+
+</div>
+
+<input type="hidden" id="egTipo" value="RECIBO">
+
+<small class="form-text text-muted">Factura y boleta requieren serie y numero.</small>
+
+</div>
                 <div class="form-row" id="egSerieNumeroGroup">
                   <div class="form-group col-4">
                     <label class="mb-1">Serie<span class="text-danger">*</span></label>
@@ -213,16 +238,31 @@ include __DIR__ . '/../../includes/header.php';
                   </div>
                 </div>
                 <div class="form-group mb-3">
-                  <div class="d-flex justify-content-between align-items-center mb-1">
-                    <label class="mb-0">Distribucion por fuente<span class="text-danger">*</span></label>
-                    <button type="button" class="btn btn-outline-primary btn-xs" id="egBtnDistribuir">
-                      <i class="fas fa-random mr-1"></i>Distribuir
-                    </button>
-                  </div>
-                  <div id="egFuentesResumen" class="eg-fuentes-resumen">
-                    Pendiente de distribucion.
-                  </div>
-                </div>
+
+<div class="d-flex justify-content-between align-items-center mb-1">
+
+<label class="mb-0">Distribucion por fuente<span class="text-danger">*</span></label>
+
+<button type="button" class="btn btn-outline-primary btn-xs" id="egBtnDistribuir">
+<i class="fas fa-random mr-1"></i>Distribuir
+</button>
+
+</div>
+
+<div id="egFuentesResumen" class="eg-fuentes-resumen">
+Pendiente de distribucion.
+</div>
+
+<div id="egMulticajaResumenWrap" class="alert alert-light border mt-2 mb-0 d-none">
+  <div class="font-weight-bold small mb-1">
+    <i class="fas fa-boxes mr-1 text-warning"></i>Resumen Multicaja
+  </div>
+  <div id="egMulticajaResumen" class="small text-muted mb-0">
+    Aun no hay cajas fuente seleccionadas.
+  </div>
+</div>
+
+</div>
                 <div class="form-row">
                   <div class="form-group col-6">
                     <label class="mb-1">Beneficiario / Proveedor</label>
@@ -411,7 +451,150 @@ include __DIR__ . '/../../includes/header.php';
           </div>
         </div>
       </div>
+<div class="modal fade" id="egMulticajaModal" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h5 class="modal-title">
+          <i class="fas fa-boxes mr-1"></i>Egreso Multicaja
+        </h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
 
+      <div class="modal-body">
+        <div id="egMcModalMsg" class="alert alert-info py-2 mb-3">
+          Busca cajas de la misma empresa, selecciónalas y distribuye el monto por medio. En esta fase solo quedará lista la selección para revisión.
+        </div>
+
+        <div class="card card-light mb-3">
+          <div class="card-header py-2">
+            <strong>Buscar cajas fuente</strong>
+          </div>
+          <div class="card-body py-2">
+            <div class="form-row">
+              <div class="form-group col-md-4">
+                <label class="mb-1">Codigo o caja mensual</label>
+                <input type="text" class="form-control form-control-sm" id="egMcQ" placeholder="Ej: CD-0001 o CM-202603">
+              </div>
+              <div class="form-group col-md-2">
+                <label class="mb-1">Fecha exacta</label>
+                <input type="date" class="form-control form-control-sm" id="egMcFecha">
+              </div>
+              <div class="form-group col-md-2">
+                <label class="mb-1">Desde</label>
+                <input type="date" class="form-control form-control-sm" id="egMcDesde">
+              </div>
+              <div class="form-group col-md-2">
+                <label class="mb-1">Hasta</label>
+                <input type="date" class="form-control form-control-sm" id="egMcHasta">
+              </div>
+              <div class="form-group col-md-2 d-flex align-items-end">
+                <div class="w-100">
+                  <button type="button" class="btn btn-primary btn-sm btn-block mb-1" id="egMcBuscar">
+                    <i class="fas fa-search mr-1"></i>Buscar
+                  </button>
+                  <button type="button" class="btn btn-light btn-sm btn-block" id="egMcLimpiar">
+                    Limpiar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-sm table-hover mb-0">
+                <thead class="thead-light">
+                  <tr>
+                    <th>Caja</th>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                    <th>Caja mensual</th>
+                    <th class="text-right">Disponible</th>
+                    <th style="width: 110px;">Accion</th>
+                  </tr>
+                </thead>
+                <tbody id="egMcCajaBody">
+                  <tr>
+                    <td colspan="6" class="text-muted small">Busca cajas para iniciar la distribucion Multicaja.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-light mb-3">
+          <div class="card-header py-2">
+            <strong>Cajas seleccionadas</strong>
+          </div>
+          <div class="card-body py-2">
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered mb-0">
+                <thead class="thead-light">
+                  <tr>
+                    <th>Caja</th>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                    <th class="text-right">Disponible</th>
+                    <th style="width: 90px;">Quitar</th>
+                  </tr>
+                </thead>
+                <tbody id="egMcSeleccionBody">
+                  <tr>
+                    <td colspan="5" class="text-muted small">Aun no has agregado cajas a la distribucion.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card card-light">
+          <div class="card-header py-2 d-flex justify-content-between align-items-center">
+            <strong>Distribucion por caja y medio</strong>
+            <button type="button" class="btn btn-outline-secondary btn-xs" id="egMcAuto">
+              <i class="fas fa-magic mr-1"></i>Auto completar
+            </button>
+          </div>
+          <div class="card-body py-2">
+            <div class="d-flex flex-wrap align-items-center mb-2 small">
+              <div class="mr-3"><strong>Monto egreso:</strong> <span id="egMcMontoObjetivo">S/ 0.00</span></div>
+              <div class="mr-3"><strong>Total asignado:</strong> <span id="egMcMontoAsignado">S/ 0.00</span></div>
+              <div><strong>Diferencia:</strong> <span id="egMcMontoDiff">S/ 0.00</span></div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered mb-0">
+                <thead class="thead-light">
+                  <tr>
+                    <th>Caja</th>
+                    <th>Fecha</th>
+                    <th>Fuente</th>
+                    <th class="text-right">Disponible</th>
+                    <th style="width: 150px;">A extraer</th>
+                  </tr>
+                </thead>
+                <tbody id="egMcDistribBody">
+                  <tr>
+                    <td colspan="5" class="text-muted small">Selecciona una o mas cajas para distribuir el egreso.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-light btn-sm" data-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-warning btn-sm" id="egMcAplicar">
+          <i class="fas fa-check mr-1"></i>Aplicar seleccion
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
       <div class="modal fade" id="egresoPrintModal" tabindex="-1" role="dialog" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
           <div class="modal-content">
@@ -432,6 +615,7 @@ include __DIR__ . '/../../includes/header.php';
 </div>
 
 <script src="<?= h(rel('modules/egresos/index.js?v=2')) ?>" defer></script>
+<script src="<?= h(rel('modules/egresos/egresos_multicaja.js?v=1')) ?>" defer></script>
 
 <?php include __DIR__ . '/../../includes/footer.php'; ?>
 
