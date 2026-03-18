@@ -872,6 +872,67 @@ function eg_select_fuentes(mysqli $db, int $empId, int $egresoId): array
     return $rows;
 }
 
+function eg_tipo_egreso_label(?string $tipo): string
+{
+    return eg_parse_tipo_egreso($tipo) === 'MULTICAJA' ? 'Multicaja' : 'Normal';
+}
+
+function eg_group_fuentes_by_caja(array $fuentes): array
+{
+    return function_exists('egm_agrupar_fuentes_por_caja')
+        ? egm_agrupar_fuentes_por_caja($fuentes)
+        : [];
+}
+
+function eg_html(string $text): string
+{
+    return htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+}
+
+function eg_pdf_build_grouped_fuentes_html(array $fuentes): string
+{
+    $groups = eg_group_fuentes_by_caja($fuentes);
+    if (!$groups) {
+        return '<tr><td style="border:1px solid #d8d8d8;padding:8px;border-radius:8px;">Sin fuentes registradas.</td></tr>';
+    }
+
+    $cells = [];
+    foreach ($groups as $group) {
+        $codigo = eg_html((string)($group['caja_diaria_codigo'] ?? ('Caja ' . (int)($group['id_caja_diaria'] ?? 0))));
+        $fecha = eg_html(eg_human_ymd((string)($group['caja_diaria_fecha'] ?? '')));
+        $total = number_format((float)($group['total'] ?? 0), 2, '.', ',');
+
+        $rows = '';
+        foreach ((array)($group['rows'] ?? []) as $row) {
+            $label = eg_html((string)($row['label'] ?? $row['medio'] ?? $row['key'] ?? 'Fuente'));
+            $monto = number_format((float)($row['monto'] ?? 0), 2, '.', ',');
+            $rows .= '<tr>'
+                . '<td style="border:1px solid #d8d8d8;padding:5px 6px;">' . $label . '</td>'
+                . '<td style="border:1px solid #d8d8d8;padding:5px 6px;text-align:right;">S/ ' . $monto . '</td>'
+                . '</tr>';
+        }
+
+        $cells[] = '<td style="width:50%;vertical-align:top;padding:4px;">'
+            . '<table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">'
+            . '<tr><td colspan="2" style="background:#eef3f8;border:1px solid #b8c6d6;padding:6px 7px;font-weight:bold;">'
+            . $codigo . ' | ' . $fecha . '</td></tr>'
+            . $rows
+            . '<tr><td style="border:1px solid #d8d8d8;padding:5px 6px;font-weight:bold;">Total caja</td>'
+            . '<td style="border:1px solid #d8d8d8;padding:5px 6px;text-align:right;font-weight:bold;">S/ ' . $total . '</td></tr>'
+            . '</table>'
+            . '</td>';
+    }
+
+    $html = '';
+    for ($i = 0; $i < count($cells); $i += 2) {
+        $left = $cells[$i] ?? '<td style="width:50%;"></td>';
+        $right = $cells[$i + 1] ?? '<td style="width:50%;"></td>';
+        $html .= '<tr>' . $left . $right . '</tr>';
+    }
+
+    return $html;
+}
+
 try {
     if ($accion === 'estado') {
         $schemaOk = eg_schema_ready($db);
@@ -1100,9 +1161,14 @@ if ($accion === 'listar') {
         }
         $offset = ($page - 1) * $per;
 
+        $tipoEgresoListExpr = eg_has_tipo_egreso_column($db)
+            ? "e.tipo_egreso AS tipo_egreso"
+            : "'NORMAL' AS tipo_egreso";
+
         $sql = "SELECT
                   e.id, e.codigo, e.tipo_comprobante, e.serie, e.numero, e.referencia,
                   e.fecha_emision, e.monto, e.beneficiario, e.documento, e.concepto, e.estado,
+                  {$tipoEgresoListExpr},
                   e.id_caja_diaria,
                   cd.codigo AS caja_diaria_codigo,
                   cd.fecha AS caja_diaria_fecha,
@@ -1254,7 +1320,6 @@ if ($accion === 'listar') {
             $cajaMensualId = (int)$caja['mensual_id'];
 
             $fuentesDetalleNormalizadas = [];
-            $fuentesExternas = [];
             foreach ($fuentesDetalle as $item) {
                 if (!is_array($item)) {
                     continue;
@@ -1270,9 +1335,6 @@ if ($accion === 'listar') {
                 if ($fuenteCajaId <= 0) {
                     $fuenteCajaId = $cajaDiariaId;
                 }
-                if ($fuenteCajaId !== $cajaDiariaId) {
-                    $fuentesExternas[$fuenteCajaId] = $fuenteCajaId;
-                }
 
                 $fuentesDetalleNormalizadas[] = [
                     'id_caja_diaria' => $fuenteCajaId,
@@ -1281,46 +1343,29 @@ if ($accion === 'listar') {
                 ];
             }
 
+            $validacionFuentes = egm_validar_distribucion_multicaja(
+                $db,
+                $empId,
+                $fuentesDetalleNormalizadas,
+                $cajaDiariaId,
+                $tipoEgreso
+            );
+            if (!$validacionFuentes['ok']) {
+                $db->rollback();
+                $error = (string)($validacionFuentes['error'] ?? 'La distribucion por fuente es invalida.');
+                unset($validacionFuentes['ok'], $validacionFuentes['error']);
+                eg_json_err_code(409, $error, $validacionFuentes);
+            }
+
+            $fuentesDetalleNormalizadas = $validacionFuentes['items'] ?? [];
             if (count($fuentesDetalleNormalizadas) === 0) {
                 $db->rollback();
                 eg_json_err('La distribucion por fuente es obligatoria. Selecciona al menos una fuente.');
             }
 
-            if ($fuentesExternas !== []) {
-                $db->rollback();
-                eg_json_err_code(409, 'La extraccion desde otras cajas todavia no esta habilitada en esta fase. Completa primero las siguientes fases de Multicaja.', [
-                    'tipo_egreso' => $tipoEgreso,
-                    'cajas_fuente_detectadas' => array_values($fuentesExternas),
-                    'caja_registro_actual' => $cajaDiariaId,
-                ]);
-            }
-
-            $saldo = eg_saldo_diaria($db, $empId, $cajaDiariaId);
-            if ($saldo['saldo_disponible'] + 0.0001 < $monto) {
-                $db->rollback();
-                eg_json_err_code(409, 'Saldo insuficiente para registrar el egreso en la caja diaria actual.', [
-                    'saldo' => $saldo
-                ]);
-            }
-
-            $fuentesDisponibles = eg_map_fuentes_by_key($saldo['por_medio'] ?? []);
-            foreach ($fuentesMap as $key => $montoFuente) {
-                $disp = round((float)($fuentesDisponibles[$key]['saldo_disponible'] ?? 0), 2);
-                if ($disp + 0.0001 < $montoFuente) {
-                    $db->rollback();
-                    eg_json_err_code(409, 'El monto solicitado supera el disponible en la fuente ' . $key . '.', [
-                        'saldo' => $saldo,
-                        'fuente_error' => [
-                            'key' => $key,
-                            'monto_solicitado' => round((float)$montoFuente, 2),
-                            'disponible' => round($disp, 2),
-                        ],
-                    ]);
-                }
-            }
-
             $catalogoFuentes = eg_catalogo_fuentes_medios($db);
-            foreach (array_keys($fuentesMap) as $key) {
+            foreach ($fuentesDetalleNormalizadas as $fuenteRow) {
+                $key = (string)($fuenteRow['key'] ?? '');
                 if (!isset($catalogoFuentes[$key]) || (int)($catalogoFuentes[$key]['medio_id'] ?? 0) <= 0) {
                     $db->rollback();
                     eg_json_err_code(409, 'No existe configuracion de medio de pago para la fuente ' . $key . '.');
@@ -1425,7 +1470,9 @@ if ($accion === 'listar') {
                 $row['fuentes'] = $fuentes;
             }
             eg_json_ok([
-                'msg' => 'Egreso registrado correctamente.',
+                'msg' => $tipoEgreso === 'MULTICAJA'
+                    ? 'Egreso Multicaja registrado correctamente.'
+                    : 'Egreso registrado correctamente.',
                 'id' => $egresoId,
                 'codigo' => $codigo,
                 'row' => $row,
@@ -1504,391 +1551,139 @@ if ($accion === 'listar') {
     }
 
     if ($accion === 'egreso_pdf') {
-    $id = (int)($_GET['id'] ?? 0);
-    if ($id <= 0) {
-        http_response_code(400);
-        echo 'ID de egreso invalido.';
-        exit;
-    }
-
-    $eg = eg_select_one($db, $empId, $id);
-    if (!$eg) {
-        http_response_code(404);
-        echo 'Egreso no encontrado.';
-        exit;
-    }
-
-    $egFuentes = eg_select_fuentes($db, $empId, $id);
-
-    require_once __DIR__ . '/../TCPDF/tcpdf.php';
-
-    $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
-    $pdf->SetCreator('MTC Pro');
-    $pdf->SetAuthor('MTC Pro');
-    $pdf->SetTitle('Recibo de egreso ' . (string)($eg['codigo'] ?? ''));
-    $pdf->SetMargins(0, 0, 0);
-    $pdf->SetAutoPageBreak(false, 0);
-    $pdf->setPrintHeader(false);
-    $pdf->setPrintFooter(false);
-    $pdf->AddPage();
-
-    $receiptX = 8.0;
-    $receiptY = 10.0;
-    $receiptW = 194.0;
-    $padX = 8.0;
-    $innerX = $receiptX + $padX;
-    $innerW = $receiptW - ($padX * 2);
-
-    $colInk = [20, 20, 20];
-    $colBrand = [47, 72, 104];
-    $colSoft = [145, 151, 158];
-    $colBg = [246, 246, 244];
-
-    $empresa = eg_pdf_clean_text((string)($eg['empresa_nombre'] ?? ''));
-    if ($empresa === '') {
-        $empresa = eg_pdf_clean_text((string)($eg['empresa_razon_social'] ?? ''));
-    }
-    if ($empresa === '') {
-        $empresa = 'EMPRESA';
-    }
-
-    $codigo = eg_pdf_clean_text((string)($eg['codigo'] ?? ''));
-    $comprobante = eg_pdf_comprobante_text($eg);
-    $estado = ((string)($eg['estado'] ?? '') === 'ANULADO') ? 'ANULADO' : 'EMITIDO';
-    $beneficiario = eg_pdf_clean_text((string)($eg['beneficiario'] ?? ''));
-    $documento = eg_pdf_clean_text((string)($eg['documento'] ?? ''));
-    $concepto = eg_pdf_clean_text((string)($eg['concepto'] ?? ''));
-    $responsable = eg_pdf_responsable_text($eg);
-    $monto = number_format((float)($eg['monto'] ?? 0), 2, '.', ',');
-
-    if ($beneficiario === '') {
-        $beneficiario = '-';
-    }
-    if ($documento === '') {
-        $documento = '-';
-    }
-    if ($concepto === '') {
-        $concepto = '-';
-    }
-
-    $tsFecha = strtotime((string)($eg['fecha_emision'] ?? ''));
-    $fechaHora = ($tsFecha === false)
-        ? eg_fmt_dt((string)($eg['fecha_emision'] ?? ''))
-        : date('d/m/Y H:i', $tsFecha);
-
-    $rowsFuentes = is_array($egFuentes) ? array_values($egFuentes) : [];
-    if (!$rowsFuentes) {
-        $rowsFuentes = [
-            ['label' => 'Sin fuentes', 'monto' => 0],
-        ];
-    }
-
-    $logoAbs = eg_logo_abs_fs($eg['empresa_logo_path'] ?? '');
-
-    /*
-     * ===== PRECALCULO DINAMICO =====
-     */
-
-    $logoSize = 16.0;
-    $headerGap = 6.0;
-    $amountBoxW = 36.0;
-    $amountBoxH = 14.0;
-    $amountCurrencyW = 12.0;
-    $headerY = $receiptY + 8.0;
-    $amountBoxX = $receiptX + $receiptW - $padX - $amountBoxW;
-    $currencyX = $amountBoxX - $amountCurrencyW - 2.0;
-    $titleX = $innerX + $logoSize + $headerGap;
-    $titleW = $currencyX - $titleX - 4.0;
-
-    $companyFont = eg_pdf_fit_font_size($pdf, $empresa, $titleW, 18.0, 10.8, 'dejavusans', 'B');
-    $subtitleText = 'RECIBO DE EGRESO - ' . $codigo;
-    $subtitleFont = eg_pdf_fit_font_size($pdf, $subtitleText, $titleW, 11.5, 8.2, 'dejavusans', '');
-    $amountFont = eg_pdf_fit_font_size($pdf, $monto, $amountBoxW - 5.0, 16.0, 8.4, 'dejavusans', 'B');
-    $currencyFont = eg_pdf_fit_font_size($pdf, 'S/.', $amountCurrencyW, 15.0, 9.0, 'dejavusans', 'B');
-
-    $bandX = $innerX;
-    $bandY = $receiptY + 31.0;
-    $bandW = $innerW;
-    $bandPadX = 3.0;
-    $bandGap = 4.0;
-    $bandContentW = $bandW - ($bandPadX * 2);
-    $bandDateW = 50.0;
-    $bandStateW = 30.0;
-    $bandCompW = $bandContentW - $bandDateW - $bandStateW - ($bandGap * 2);
-
-    $pdf->SetFont('dejavusans', 'B', 8.6);
-    $bandLineH = 4.2;
-    $dateLines = eg_pdf_wrap_text_lines($pdf, 'Fecha y hora: ' . $fechaHora, $bandDateW);
-    $compLines = eg_pdf_wrap_text_lines($pdf, 'Comprobante: ' . $comprobante, $bandCompW);
-    $stateLines = eg_pdf_wrap_text_lines($pdf, 'Estado: ' . $estado, $bandStateW);
-    $bandRows = max(count($dateLines), count($compLines), count($stateLines));
-    $bandH = max(11.5, 4.5 + ($bandRows * $bandLineH));
-
-    $infoY = $bandY + $bandH + 8.0;
-    $infoGap = 8.0;
-    $benefW = 108.0;
-    $docW = $innerW - $benefW - $infoGap;
-    $infoLabelH = 4.4;
-    $infoValueLineH = 4.8;
-
-    $pdf->SetFont('dejavusans', '', 9.4);
-    $benefLines = eg_pdf_wrap_text_lines($pdf, $beneficiario, $benefW);
-    $docLines = eg_pdf_wrap_text_lines($pdf, $documento, $docW);
-    $benefH = $infoLabelH + 1.6 + (count($benefLines) * $infoValueLineH);
-    $docH = $infoLabelH + 1.6 + (count($docLines) * $infoValueLineH);
-    $infoH = max($benefH, $docH);
-
-    $conceptY = $infoY + $infoH + 6.0;
-    $conceptLabelW = 22.0;
-    $conceptTextX = $innerX + $conceptLabelW + 3.0;
-    $conceptW = $innerW - $conceptLabelW - 3.0;
-    $conceptLineH = 5.2;
-    $pdf->SetFont('dejavusans', '', 9.6);
-    $conceptLines = eg_pdf_wrap_text_lines($pdf, $concepto, $conceptW);
-    $conceptRows = max(3, count($conceptLines));
-    $conceptH = ($conceptRows * $conceptLineH) + 1.6;
-
-    $bottomY = $conceptY + $conceptH + 8.0;
-    $sourcesW = 60.0;
-    $bottomGap = 10.0;
-    $signAreaW = $innerW - $sourcesW - $bottomGap;
-    $signGap = 10.0;
-    $signColW = ($signAreaW - $signGap) / 2;
-
-    $sourceTitleH = 8.2;
-    $sourceLabelW = 34.0;
-    $sourceAmountW = 20.0;
-    $sourceLineGap = 1.6;
-    $preparedSources = [];
-    $sourcesRowsH = 0.0;
-
-    $pdf->SetFont('dejavusans', '', 9.0);
-    foreach ($rowsFuentes as $src) {
-        $label = eg_pdf_clean_text((string)($src['label'] ?? $src['medio'] ?? $src['key'] ?? 'Fuente'));
-        if ($label === '') {
-            $label = 'Fuente';
+        $id = (int)($_GET['id'] ?? 0);
+        if ($id <= 0) {
+            http_response_code(400);
+            echo 'ID de egreso invalido.';
+            exit;
         }
-        $amountText = 'S/. ' . number_format((float)($src['monto'] ?? 0), 2, '.', ',');
-        $labelLines = eg_pdf_wrap_text_lines($pdf, $label, $sourceLabelW);
-        $rowH = max(5.8, count($labelLines) * 4.4);
 
-        $preparedSources[] = [
-            'label' => $label,
-            'label_lines' => $labelLines,
-            'amount' => $amountText,
-            'height' => $rowH,
-        ];
+        $eg = eg_select_one($db, $empId, $id);
+        if (!$eg) {
+            http_response_code(404);
+            echo 'Egreso no encontrado.';
+            exit;
+        }
 
-        $sourcesRowsH += $rowH + $sourceLineGap;
+        $egFuentes = eg_select_fuentes($db, $empId, $id);
+
+        require_once __DIR__ . '/../TCPDF/tcpdf.php';
+
+        $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
+        $pdf->SetCreator('MTC Pro');
+        $pdf->SetAuthor('MTC Pro');
+        $pdf->SetTitle('Recibo de egreso ' . (string)($eg['codigo'] ?? ''));
+        $pdf->SetMargins(10, 10, 10);
+        $pdf->SetAutoPageBreak(true, 12);
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+        $pdf->AddPage();
+
+        $empresa = eg_html((string)($eg['empresa_nombre'] ?? $eg['empresa_razon_social'] ?? 'EMPRESA'));
+        $codigo = eg_html((string)($eg['codigo'] ?? ''));
+        $fechaHora = eg_html(eg_fmt_dt((string)($eg['fecha_emision'] ?? '')));
+        $tipoComprobante = eg_html((string)($eg['tipo_comprobante'] ?? 'RECIBO'));
+        $tipoEgreso = eg_html(eg_tipo_egreso_label((string)($eg['tipo_egreso'] ?? 'NORMAL')));
+        $comprobante = eg_html(eg_pdf_comprobante_text($eg));
+        $estado = eg_html(((string)($eg['estado'] ?? '') === 'ANULADO') ? 'ANULADO' : 'EMITIDO');
+        $beneficiario = eg_html((string)($eg['beneficiario'] ?? '-'));
+        $documento = eg_html((string)($eg['documento'] ?? '-'));
+        $concepto = nl2br(eg_html((string)($eg['concepto'] ?? '-')));
+        $responsable = eg_html(eg_pdf_responsable_text($eg));
+        $monto = number_format((float)($eg['monto'] ?? 0), 2, '.', ',');
+        $cajaRegistro = eg_html((string)($eg['caja_diaria_codigo'] ?? '-'));
+        $fechaCajaRegistro = eg_html(eg_human_ymd((string)($eg['caja_diaria_fecha'] ?? '')));
+        $logoAbs = eg_logo_abs_fs($eg['empresa_logo_path'] ?? '');
+        $logoHtml = ($logoAbs && is_file($logoAbs))
+            ? '<img src="' . eg_html($logoAbs) . '" style="height:54px;">'
+            : '<div style="height:54px;line-height:54px;font-size:11px;color:#666;">LOGO</div>';
+
+        $fuentesHtml = eg_pdf_build_grouped_fuentes_html($egFuentes);
+        $showBeneficiarioFirma = strtoupper(trim((string)($eg['tipo_comprobante'] ?? 'RECIBO'))) === 'RECIBO';
+
+        $firmaLeft = $showBeneficiarioFirma
+            ? '<td style="width:50%;text-align:center;padding-top:20px;">'
+                . '<div style="border-top:1px solid #222; width:88%; margin:0 auto 6px;"></div>'
+                . '<div style="font-weight:bold;">' . $beneficiario . '</div>'
+                . '<div style="color:#52616b;">Beneficiario</div>'
+              . '</td>'
+            : '';
+        $firmaRightWidth = $showBeneficiarioFirma ? '50%' : '100%';
+        $firmaRight = '<td style="width:' . $firmaRightWidth . ';text-align:center;padding-top:20px;">'
+                . '<div style="border-top:1px solid #222; width:88%; margin:0 auto 6px;"></div>'
+                . '<div style="font-weight:bold;">' . $responsable . '</div>'
+                . '<div style="color:#52616b;">Responsable</div>'
+              . '</td>';
+
+        $html = '
+        <style>
+            table { border-collapse: collapse; }
+            .wrap { border: 1px solid #1f2d3d; border-radius: 10px; background: #fbfbfb; }
+            .head-title { font-size: 16px; font-weight: bold; color: #1f2d3d; }
+            .muted { color: #6c757d; }
+            .th { background: #eef3f8; font-weight: bold; }
+            .meta td { border: 1px solid #d8d8d8; padding: 6px 7px; }
+            .label { color: #3c4b5a; font-weight: bold; }
+        </style>
+        <table cellpadding="0" cellspacing="0" style="width:100%;" class="wrap">
+            <tr>
+                <td style="width:16%;padding:10px 10px 6px;">' . $logoHtml . '</td>
+                <td style="width:56%;padding:10px 4px 6px;text-align:center;">
+                    <div class="head-title">RECIBO DE EGRESO</div>
+                    <div style="font-size:14px;font-weight:bold;">' . $empresa . '</div>
+                    <div class="muted">Código: ' . $codigo . '</div>
+                </td>
+                <td style="width:28%;padding:10px 10px 6px;text-align:right;">
+                    <div class="muted">Monto</div>
+                    <div style="font-size:18px;font-weight:bold;">S/ ' . $monto . '</div>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="3" style="padding:0 10px 10px;">
+                    <table class="meta" cellpadding="0" cellspacing="0" style="width:100%;">
+                        <tr>
+                            <td style="width:25%;"><span class="label">Fecha y hora</span><br>' . $fechaHora . '</td>
+                            <td style="width:25%;"><span class="label">Estado</span><br>' . $estado . '</td>
+                            <td style="width:25%;"><span class="label">Tipo comprobante</span><br>' . $tipoComprobante . '</td>
+                            <td style="width:25%;"><span class="label">Tipo egreso</span><br>' . $tipoEgreso . '</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="3" style="padding:0 10px 10px;">
+                    <table class="meta" cellpadding="0" cellspacing="0" style="width:100%;">
+                        <tr>
+                            <td style="width:50%;"><span class="label">Beneficiario</span><br>' . $beneficiario . '</td>
+                            <td style="width:20%;"><span class="label">Documento</span><br>' . $documento . '</td>
+                            <td style="width:30%;"><span class="label">Comprobante</span><br>' . $comprobante . '</td>
+                        </tr>
+                        <tr>
+                            <td colspan="3"><span class="label">Caja de registro</span><br>' . $cajaRegistro . ' | ' . $fechaCajaRegistro . '</td>
+                        </tr>
+                        <tr>
+                            <td colspan="3"><span class="label">Concepto</span><br>' . $concepto . '</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="3" style="padding:0 10px 10px;">
+                    <div style="font-weight:bold;color:#1f2d3d;margin-bottom:5px;">Fuentes de dinero por caja</div>
+                    <table cellpadding="0" cellspacing="0" style="width:100%;">' . $fuentesHtml . '</table>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="3" style="padding:0 10px 16px;">
+                    <table cellpadding="0" cellspacing="0" style="width:100%;"><tr>' . $firmaLeft . $firmaRight . '</tr></table>
+                </td>
+            </tr>
+        </table>';
+
+        $pdf->writeHTML($html, true, false, true, false, '');
+        $pdf->Output('recibo_egreso_' . (string)($eg['codigo'] ?? 'egreso') . '.pdf', 'I');
+        exit;
     }
-
-    $sourcesH = $sourceTitleH + 2.0 + $sourcesRowsH;
-
-    $pdf->SetFont('dejavusans', '', 9.0);
-
-$showBeneficiarioFirma = strtoupper(trim((string)($eg['tipo_comprobante'] ?? 'RECIBO'))) === 'RECIBO';
-$signNameLineH = 4.2;
-
-if ($showBeneficiarioFirma) {
-    $benefSignLines = eg_pdf_wrap_text_lines($pdf, $beneficiario, $signColW - 2.0);
-    $respSignLines = eg_pdf_wrap_text_lines($pdf, $responsable, $signColW - 2.0);
-    $signNamesH = max(count($benefSignLines), count($respSignLines)) * $signNameLineH;
-} else {
-    $benefSignLines = [];
-    $respSignLines = eg_pdf_wrap_text_lines($pdf, $responsable, $signAreaW - 12.0);
-    $signNamesH = count($respSignLines) * $signNameLineH;
-}
-
-$signBlockH = 12.0 + $signNamesH + 7.0;
-$bottomSectionH = max($sourcesH, $signBlockH);
-$receiptH = ($bottomY - $receiptY) + $bottomSectionH + 10.0;
-$receiptH = max($receiptH, 126.0);
-
-/*
- * ===== DIBUJO =====
- */
-
-$pdf->SetLineWidth(0.35);
-$pdf->SetDrawColor($colInk[0], $colInk[1], $colInk[2]);
-$pdf->SetFillColor($colBg[0], $colBg[1], $colBg[2]);
-eg_pdf_round_rect($pdf, $receiptX, $receiptY, $receiptW, $receiptH, 8.0, 'DF');
-
-// Logo
-
-if ($logoAbs && is_file($logoAbs)) {
-    try {
-        $pdf->Image($logoAbs, $innerX - 1.6, $headerY - 0.2, $logoSize, $logoSize, '', '', '', false, 300);
-    } catch (Throwable $e) {
-        $pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
-        $pdf->SetFont('dejavusans', '', 7.5);
-        $pdf->SetXY($innerX - 0.5, $headerY + 5.0);
-        $pdf->Cell($logoSize, 4.0, 'LOGO', 0, 0, 'C');
-    }
-} else {
-    $pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
-    $pdf->SetFont('dejavusans', '', 7.5);
-    $pdf->SetXY($innerX - 0.5, $headerY + 5.0);
-    $pdf->Cell($logoSize, 4.0, 'LOGO', 0, 0, 'C');
-}
-
-// Empresa / subtitulo
-$pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
-$pdf->SetFont('dejavusans', 'B', $companyFont);
-$pdf->SetXY($titleX, $headerY + 1.0);
-$pdf->Cell($titleW, 7.0, $empresa, 0, 0, 'C');
-
-$pdf->SetFont('dejavusans', '', $subtitleFont);
-$pdf->SetXY($titleX, $headerY + 10.5);
-$pdf->Cell($titleW, 5.0, $subtitleText, 0, 0, 'C');
-
-// Monto
-$pdf->SetFont('dejavusans', 'B', $currencyFont);
-$pdf->SetXY($currencyX, $headerY + 2.3);
-$pdf->Cell($amountCurrencyW, 8.0, 'S/.', 0, 0, 'R');
-
-eg_pdf_round_rect($pdf, $amountBoxX, $headerY + 0.8, $amountBoxW, $amountBoxH, 3.0, 'D');
-$pdf->SetFont('dejavusans', 'B', $amountFont);
-$pdf->SetXY($amountBoxX, $headerY + 2.5);
-$pdf->Cell($amountBoxW, 8.0, $monto, 0, 0, 'C');
-
-// Banda gris dinámica
-$pdf->SetFillColor($colSoft[0], $colSoft[1], $colSoft[2]);
-$pdf->SetDrawColor($colBrand[0], $colBrand[1], $colBrand[2]);
-eg_pdf_round_rect($pdf, $bandX, $bandY, $bandW, $bandH, 2.4, 'DF');
-
-$pdf->SetTextColor(255, 255, 255);
-$pdf->SetFont('dejavusans', 'B', 8.6);
-
-$bandTextY = $bandY + 2.1;
-$col1X = $bandX + $bandPadX;
-$col2X = $col1X + $bandDateW + $bandGap;
-$col3X = $col2X + $bandCompW + $bandGap;
-
-eg_pdf_draw_text_lines($pdf, $col1X, $bandTextY, $bandDateW, $dateLines, $bandLineH, 'L');
-eg_pdf_draw_text_lines($pdf, $col2X, $bandTextY, $bandCompW, $compLines, $bandLineH, 'L');
-eg_pdf_draw_text_lines($pdf, $col3X, $bandTextY, $bandStateW, $stateLines, $bandLineH, 'L');
-
-// Beneficiario / documento en bloques separados
-$pdf->SetTextColor($colBrand[0], $colBrand[1], $colBrand[2]);
-$pdf->SetFont('dejavusans', 'B', 9.6);
-
-$benefX = $innerX;
-$docX = $innerX + $benefW + $infoGap;
-
-$pdf->SetXY($benefX, $infoY);
-$pdf->Cell($benefW, 4.5, 'BENEFICIARIO', 0, 0, 'L');
-
-$pdf->SetXY($docX, $infoY);
-$pdf->Cell($docW, 4.5, 'DOCUMENTO', 0, 0, 'L');
-
-$pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
-$pdf->SetFont('dejavusans', '', 9.4);
-
-eg_pdf_draw_text_lines($pdf, $benefX, $infoY + 5.8, $benefW, $benefLines, $infoValueLineH, 'L');
-eg_pdf_draw_text_lines($pdf, $docX, $infoY + 5.8, $docW, $docLines, $infoValueLineH, 'L');
-
-// Concepto dinámico
-$pdf->SetTextColor($colBrand[0], $colBrand[1], $colBrand[2]);
-$pdf->SetFont('dejavusans', 'B', 9.8);
-$pdf->SetXY($innerX, $conceptY);
-$pdf->Cell($conceptLabelW, 5.0, 'CONCEPTO', 0, 0, 'L');
-
-$pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
-$pdf->SetFont('dejavusans', '', 9.6);
-
-$conceptDrawY = $conceptY;
-for ($i = 0; $i < $conceptRows; $i++) {
-    $textLine = $conceptLines[$i] ?? '';
-    $lineY = $conceptDrawY + ($i * $conceptLineH);
-
-    $pdf->SetXY($conceptTextX, $lineY);
-    $pdf->Cell($conceptW, $conceptLineH, $textLine, 0, 0, 'L');
-
-    $pdf->SetDrawColor($colInk[0], $colInk[1], $colInk[2]);
-    $pdf->Line($conceptTextX, $lineY + $conceptLineH - 0.7, $conceptTextX + $conceptW, $lineY + $conceptLineH - 0.7);
-}
-
-// Seccion inferior
-$sourcesX = $innerX;
-$signsX = $innerX + $sourcesW + $bottomGap;
-
-$pdf->SetFillColor($colSoft[0], $colSoft[1], $colSoft[2]);
-$pdf->SetDrawColor($colBrand[0], $colBrand[1], $colBrand[2]);
-eg_pdf_round_rect($pdf, $sourcesX, $bottomY, $sourcesW, $sourceTitleH, 2.2, 'DF');
-
-$pdf->SetTextColor(255, 255, 255);
-$pdf->SetFont('dejavusans', 'B', 9.6);
-$pdf->SetXY($sourcesX, $bottomY + 1.6);
-$pdf->Cell($sourcesW, 5.0, 'FUENTES DE SALIDA', 0, 0, 'C');
-
-$pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
-$pdf->SetFont('dejavusans', '', 9.0);
-
-$sourceY = $bottomY + $sourceTitleH + 2.0;
-foreach ($preparedSources as $src) {
-    $rowH = (float)$src['height'];
-
-    eg_pdf_draw_text_lines($pdf, $sourcesX + 2.0, $sourceY, $sourceLabelW, $src['label_lines'], 4.4, 'L');
-
-    $pdf->SetXY($sourcesX + $sourcesW - $sourceAmountW - 1.0, $sourceY);
-    $pdf->Cell($sourceAmountW, $rowH, $src['amount'], 0, 0, 'R');
-
-    $pdf->SetDrawColor($colInk[0], $colInk[1], $colInk[2]);
-    $pdf->Line($sourcesX + 1.0, $sourceY + $rowH + 0.8, $sourcesX + $sourcesW - 1.0, $sourceY + $rowH + 0.8);
-
-    $sourceY += $rowH + $sourceLineGap;
-}
-
-// Firmas
-$signTopY = $bottomY + max(0, $bottomSectionH - $signBlockH);
-$pdf->SetDrawColor($colInk[0], $colInk[1], $colInk[2]);
-$pdf->SetTextColor($colInk[0], $colInk[1], $colInk[2]);
-$pdf->SetFont('dejavusans', '', 9.0);
-
-if ($showBeneficiarioFirma) {
-    $signLeftX = $signsX;
-    $signRightX = $signsX + $signColW + $signGap;
-    $signLineY = $signTopY + 7.0;
-
-    $pdf->Line($signLeftX, $signLineY, $signLeftX + $signColW, $signLineY);
-    $pdf->Line($signRightX, $signLineY, $signRightX + $signColW, $signLineY);
-
-    eg_pdf_draw_text_lines($pdf, $signLeftX, $signLineY + 2.2, $signColW, $benefSignLines, $signNameLineH, 'C');
-    eg_pdf_draw_text_lines($pdf, $signRightX, $signLineY + 2.2, $signColW, $respSignLines, $signNameLineH, 'C');
-
-    $roleY = $signLineY + 2.2 + $signNamesH + 1.8;
-
-    $pdf->SetTextColor($colBrand[0], $colBrand[1], $colBrand[2]);
-    $pdf->SetFont('dejavusans', '', 8.8);
-
-    $pdf->SetXY($signLeftX, $roleY);
-    $pdf->Cell($signColW, 4.5, 'Beneficiario', 0, 0, 'C');
-
-    $pdf->SetXY($signRightX, $roleY);
-    $pdf->Cell($signColW, 4.5, 'Responsable', 0, 0, 'C');
-} else {
-    $singleSignW = min(72.0, $signAreaW - 6.0);
-    if ($singleSignW < 40.0) {
-        $singleSignW = $signAreaW - 2.0;
-    }
-
-    $singleSignX = $signsX + (($signAreaW - $singleSignW) / 2.0);
-    $signLineY = $signTopY + 7.0;
-
-    $pdf->Line($singleSignX, $signLineY, $singleSignX + $singleSignW, $signLineY);
-    eg_pdf_draw_text_lines($pdf, $singleSignX, $signLineY + 2.2, $singleSignW, $respSignLines, $signNameLineH, 'C');
-
-    $roleY = $signLineY + 2.2 + $signNamesH + 1.8;
-
-    $pdf->SetTextColor($colBrand[0], $colBrand[1], $colBrand[2]);
-    $pdf->SetFont('dejavusans', '', 8.8);
-    $pdf->SetXY($singleSignX, $roleY);
-    $pdf->Cell($singleSignW, 4.5, 'Responsable', 0, 0, 'C');
-}
-
-$pdf->Output('recibo_egreso_' . $codigo . '.pdf', 'I');
-exit;
-}
 
     eg_json_err('Accion no reconocida.');
 } catch (Throwable $e) {
