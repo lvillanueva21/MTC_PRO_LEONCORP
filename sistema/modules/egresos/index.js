@@ -14,9 +14,65 @@ const fmt=(x)=>{if(!x)return '-';const d=new Date(String(x).replace(' ','T'));if
 const fmtDate=(x)=>{if(!x)return '-';const d=new Date(String(x)+'T00:00:00');if(isNaN(d))return '-';return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();};
 const canonKey=(k)=>{const n=String(k||'').toUpperCase().trim();if(FUENTE_ORDER.includes(n))return n;if(n.includes('EFECTIVO')||n.includes('CASH'))return 'EFECTIVO';if(n.includes('YAPE'))return 'YAPE';if(n.includes('PLIN'))return 'PLIN';if(n.includes('TRANSFER'))return 'TRANSFERENCIA';return '';};
 const montoObjetivo=()=>round2(num((qs('#egMonto')||{}).value));
+const tipoEgresoActual=()=>String((qs('#egTipoEgreso')||{}).value||'NORMAL').toUpperCase()==='MULTICAJA'?'MULTICAJA':'NORMAL';
+const isMulticajaMode=()=>tipoEgresoActual()==='MULTICAJA';
 const normalizeFuentes=(m)=>{const o={};Object.keys(m||{}).forEach(k=>{const key=canonKey(k),v=round2(num(m[k]));if(!key||v<=0)return;o[key]=round2((o[key]||0)+v);});return o;};
 const sumFuentes=(m)=>round2(Object.values(m||{}).reduce((a,v)=>a+num(v),0));
-const fuentesPayload=(m)=>{const o=normalizeFuentes(m);return FUENTE_ORDER.filter(k=>(o[k]||0)>0).map(k=>({key:k,monto:round2(o[k]),label:FUENTE_LABEL[k]||k}));};function saldoMediosRows(saldo){
+const fuentesPayload=(m)=>{const o=normalizeFuentes(m);return FUENTE_ORDER.filter(k=>(o[k]||0)>0).map(k=>({key:k,monto:round2(o[k]),label:FUENTE_LABEL[k]||k}));};
+const rawMulticajaPayload=()=>{const raw=((qs('#egMulticajaPayload')||{}).value||'[]');try{const arr=JSON.parse(raw);return Array.isArray(arr)?arr:[];}catch(_e){return [];}};
+function normalizeMulticajaPayload(items){
+  const out=[];
+  (Array.isArray(items)?items:[]).forEach(item=>{
+    const key=canonKey((item&&item.key)||(item&&item.fuente_key)||'');
+    const monto=round2(num(item&&item.monto));
+    const cajaId=parseInt((item&&item.id_caja_diaria)||0,10);
+    if(!key||!(cajaId>0)||!(monto>0)) return;
+    out.push({
+      id_caja_diaria:cajaId,
+      key:key,
+      monto:monto,
+      label:String((item&&item.label)||FUENTE_LABEL[key]||key),
+      caja_codigo:String((item&&item.caja_codigo)||''),
+      caja_fecha:String((item&&item.caja_fecha)||'')
+    });
+  });
+  return out;
+}
+function groupedFuentesByCaja(items){
+  const groups={};
+  normalizeMulticajaPayload(items).forEach(item=>{
+    const k=String(item.id_caja_diaria);
+    if(!groups[k]) groups[k]={id_caja_diaria:item.id_caja_diaria,caja_diaria_codigo:item.caja_codigo||('Caja '+k),caja_diaria_fecha:item.caja_fecha||'',rows:[],total:0};
+    groups[k].rows.push(item);
+    groups[k].total=round2(groups[k].total+item.monto);
+  });
+  return Object.values(groups);
+}
+function tipoEgresoLabel(tipo){return String(tipo||'').toUpperCase()==='MULTICAJA'?'Multicaja':'Normal';}
+function buildFuentesForSubmit(monto){
+  if(isMulticajaMode()){
+    const helper=window.egMulticaja||null;
+    const validation=helper&&typeof helper.validateCurrent==='function' ? helper.validateCurrent() : null;
+    const payload=validation&&validation.payload ? validation.payload : normalizeMulticajaPayload(rawMulticajaPayload());
+    if(!validation||!validation.ok){
+      const msg=(validation&&validation.msg)||'Completa la distribucion Multicaja antes de guardar.';
+      return {ok:false,msg:msg,multicaja:true};
+    }
+    const total=round2(payload.reduce((a,x)=>a+num(x.monto),0));
+    if(Math.abs(total-round2(monto))>0.009){
+      return {ok:false,msg:'La suma distribuida en Multicaja debe ser exactamente '+money(monto)+'.',multicaja:true};
+    }
+    return {ok:true,tipo_egreso:'MULTICAJA',payload:payload};
+  }
+  const vf=validateFuentes(st.fuentesAsignadas,monto);
+  if(!vf.ok) return {ok:false,msg:vf.msg,multicaja:false};
+  return {ok:true,tipo_egreso:'NORMAL',payload:fuentesPayload(vf.map),vf:vf};
+}
+function buildFuentesForPreview(monto){
+  const built=buildFuentesForSubmit(monto);
+  return built.ok ? built : built;
+}
+function saldoMediosRows(saldo){
   const rows=Array.isArray(saldo&&saldo.por_medio)?saldo.por_medio:[];
   const byKey={};
   rows.forEach(r=>{const k=canonKey((r&&r.key)||'');if(k)byKey[k]=r;});
@@ -164,12 +220,33 @@ function egDetailBodyId(id){return 'egDetailBody_'+String(id);}
 function egDetailRowId(id){return 'egDetailRow_'+String(id);}
 function egToggleId(id){return 'egToggleIcon_'+String(id);}
 
+function detalleFuentesAgrupadasHTML(row){
+  const groups=groupedFuentesByCaja((row&&row.fuentes)||[]);
+  if(!groups.length){
+    return '<div class="text-muted small">Sin fuentes registradas.</div>';
+  }
+  return groups.map(g=>{
+    const rows=(g.rows||[]).map(item=>'<tr><td>'+esc(item.label||item.key||'Fuente')+'</td><td class="text-right">'+esc(money(item.monto||0))+'</td></tr>').join('');
+    return '<div class="mb-2"><div class="font-weight-bold">'+esc(g.caja_diaria_codigo||('Caja '+g.id_caja_diaria))+' <span class="text-muted">('+esc(fmtDate(g.caja_diaria_fecha||''))+')</span></div><div class="table-responsive"><table class="table table-sm table-bordered mb-0"><thead class="thead-light"><tr><th>Fuente</th><th class="text-right">Monto</th></tr></thead><tbody>'+rows+'<tr><th>Total caja</th><th class="text-right">'+esc(money(g.total||0))+'</th></tr></tbody></table></div></div>';
+  }).join('');
+}
 function egDetailHTML(row){
   const concepto=((row&&row.concepto)||'').toString().trim()||'-';
   const obs=((row&&row.observaciones)||'').toString().trim()||'Sin observaciones internas.';
+  const tipo=tipoEgresoLabel((row&&row.tipo_egreso)||'NORMAL');
+  const caja=((row&&row.caja_diaria_codigo)||'-').toString();
+  const fechaCaja=((row&&row.caja_diaria_fecha)||'').toString();
   return `
     <div class="eg-detail-box">
       <div class="eg-detail-grid">
+        <div class="eg-detail-item">
+          <span class="eg-detail-label">Tipo de egreso</span>
+          <div class="eg-detail-text">${esc(tipo)}</div>
+        </div>
+        <div class="eg-detail-item">
+          <span class="eg-detail-label">Caja de registro</span>
+          <div class="eg-detail-text">${esc(caja)}${fechaCaja?' <span class="text-muted">('+esc(fmtDate(fechaCaja))+')</span>':''}</div>
+        </div>
         <div class="eg-detail-item">
           <span class="eg-detail-label">Concepto</span>
           <div class="eg-detail-text">${egNl2BrEsc(concepto)}</div>
@@ -177,6 +254,10 @@ function egDetailHTML(row){
         <div class="eg-detail-item">
           <span class="eg-detail-label">Observaciones internas</span>
           <div class="eg-detail-text">${egNl2BrEsc(obs)}</div>
+        </div>
+        <div class="eg-detail-item" style="grid-column:1/-1;">
+          <span class="eg-detail-label">Fuentes de dinero por caja</span>
+          <div class="eg-detail-text">${detalleFuentesAgrupadasHTML(row)}</div>
         </div>
       </div>
     </div>
@@ -223,11 +304,14 @@ function rowsHTML(rows){
 
   return rows.map(r=>{
     const tipo=(r.tipo_comprobante||'').toUpperCase();
+    const tipoEgreso=String(r.tipo_egreso||'NORMAL').toUpperCase();
     const an=((r.estado||'').toUpperCase()==='ANULADO');
     const tBadge=tipo==='FACTURA'?'badge-info':(tipo==='BOLETA'?'badge-primary':'badge-secondary');
     const tLbl=tipo==='FACTURA'?'Factura':(tipo==='BOLETA'?'Boleta':'Recibo');
+    const teBadge=tipoEgreso==='MULTICAJA'?'badge-warning':'badge-light';
+    const teLbl=tipoEgreso==='MULTICAJA'?'Multicaja':'Normal';
     const comp=egCompText(r);
-    const cajaTxt=r.caja_diaria_codigo?('<div class="small text-muted">Caja: '+esc(r.caja_diaria_codigo)+'</div>'):'';
+    const cajaTxt=r.caja_diaria_codigo?('<div class="small text-muted">Caja registro: '+esc(r.caja_diaria_codigo)+'</div>'):''; 
 
     return `
       <tr class="eg-row-main ${an?'eg-row-anulado':''}" data-role="eg-row-main" data-id="${r.id}">
@@ -243,6 +327,7 @@ function rowsHTML(rows){
         </td>
         <td class="eg-type-cell">
           <span class="badge ${tBadge}">${tLbl}</span>
+          <span class="badge ${teBadge} ml-1">${teLbl}</span>
           <div class="eg-type-ref">${esc(comp)}</div>
         </td>
         <td>${esc(r.beneficiario||'-')}</td>
@@ -256,12 +341,13 @@ function rowsHTML(rows){
       </tr>
       <tr class="eg-detail-row" id="${egDetailRowId(r.id)}">
         <td colspan="${egListCols()}" class="eg-detail-cell">
-          <div id="${egDetailBodyId(r.id)}" class="eg-detail-placeholder p-3">Haz clic para ver concepto y observaciones internas.</div>
+          <div id="${egDetailBodyId(r.id)}" class="eg-detail-placeholder p-3">Haz clic para ver concepto, observaciones y fuentes del egreso.</div>
         </td>
       </tr>
     `;
   }).join('');
 }
+
 function pager(tp,p){
   const ul=qs('#egPager');if(tp<=1){ul.innerHTML='';return;}
   const it=[],add=(x,l,d,a)=>it.push('<li class="page-item '+(d?'disabled':'')+' '+(a?'active':'')+'"><a href="#" class="page-link" data-page="'+x+'">'+l+'</a></li>');
@@ -337,26 +423,11 @@ function voucherResponsable(v){
 }
 
 function voucherFuentesRows(v){
-  const fuentes=Array.isArray(v.fuentes)?v.fuentes:[];
-  const order={EFECTIVO:1,YAPE:2,PLIN:3,TRANSFERENCIA:4};
-
-  if(!fuentes.length){
+  const groups=groupedFuentesByCaja((v&&v.fuentes)||[]);
+  if(!groups.length){
     return `<div class="egpv-source-row"><span>Sin fuentes registradas</span><strong>S/. 0.00</strong></div>`;
   }
-
-  return fuentes
-    .slice()
-    .sort((a,b)=>{
-      const ka=canonKey((a&&a.key)||(a&&a.fuente_key)||'');
-      const kb=canonKey((b&&b.key)||(b&&b.fuente_key)||'');
-      return (order[ka]||99)-(order[kb]||99);
-    })
-    .map(f=>{
-      const key=canonKey((f&&f.key)||(f&&f.fuente_key)||'');
-      const lbl=(f&&f.label)||FUENTE_LABEL[key]||key||'Fuente';
-      return `<div class="egpv-source-row"><span>${esc(lbl)}</span><strong>${esc(money((f&&f.monto)||0))}</strong></div>`;
-    })
-    .join('');
+  return groups.map(g=>`<div class="egpv-source-row"><span>${esc(g.caja_diaria_codigo||('Caja '+g.id_caja_diaria))}</span><strong>${esc(money(g.total||0))}</strong></div>`).join('');
 }
 
 function voucherCompText(v){
@@ -398,23 +469,27 @@ function voucherAmountFontSize(amountText){
 }
 
 function voucherFuentesHtml(v){
-  const fuentes=Array.isArray(v.fuentes)?v.fuentes:[];
-  if(!fuentes.length){
-    return `
-      <div class="egpv3-source-row">
-        <div class="egpv3-source-name">Sin fuentes</div>
-        <div class="egpv3-source-amount">S/. 0.00</div>
-      </div>
-    `;
+  const groups=groupedFuentesByCaja((v&&v.fuentes)||[]);
+  if(!groups.length){
+    return '<div class="egpv3-source-card"><div class="egpv3-source-card-head">Sin fuentes</div><div class="egpv3-source-row"><div class="egpv3-source-name">Sin fuentes registradas</div><div class="egpv3-source-amount">S/ 0.00</div></div></div>';
   }
 
-  return fuentes.map(f=>{
-    const key=canonKey((f&&f.key)||(f&&f.fuente_key)||'');
-    const lbl=(f&&f.label)||FUENTE_LABEL[key]||key||'Fuente';
-    return `
+  return groups.map(g=>{
+    const rows=(g.rows||[]).map(item=>`
       <div class="egpv3-source-row">
-        <div class="egpv3-source-name">${esc(lbl)}</div>
-        <div class="egpv3-source-amount">${esc(money((f&&f.monto)||0))}</div>
+        <div class="egpv3-source-name">${esc(item.label||item.key||'Fuente')}</div>
+        <div class="egpv3-source-amount">${esc(money(item.monto||0))}</div>
+      </div>
+    `).join('');
+
+    return `
+      <div class="egpv3-source-card">
+        <div class="egpv3-source-card-head">${esc(g.caja_diaria_codigo||('Caja '+g.id_caja_diaria))} <span class="text-muted">(${esc(fmtDate(g.caja_diaria_fecha||''))})</span></div>
+        ${rows}
+        <div class="egpv3-source-row egpv3-source-total">
+          <div class="egpv3-source-name">Total caja</div>
+          <div class="egpv3-source-amount">${esc(money(g.total||0))}</div>
+        </div>
       </div>
     `;
   }).join('');
@@ -426,6 +501,7 @@ function voucherHTML(v,logo){
   const fecha=fmt(v.fecha_emision||v.fecha||'');
   const comprobante=voucherCompText(v);
   const estado=voucherEstadoText(v);
+  const tipoEgreso=tipoEgresoLabel(v.tipo_egreso||'NORMAL');
   const beneficiario=voucherText(v.beneficiario||'-')||'-';
   const documento=voucherText(v.documento||'-')||'-';
   const concepto=voucherText(v.concepto||'-')||'-';
@@ -434,6 +510,8 @@ function voucherHTML(v,logo){
   const fuentesHtml=voucherFuentesHtml(v);
   const companySize=voucherCompanyFontSize(empresa);
   const amountSize=voucherAmountFontSize(montoValor);
+  const cajaRegistro=voucherText(v.caja_diaria_codigo||'-')||'-';
+  const cajaRegistroFecha=(v.caja_diaria_fecha?fmtDate(v.caja_diaria_fecha):'-');
 
   const logoHtml=logo
     ? `<div class="egpv3-logo"><img src="${esc(logo)}" alt="Logo"></div>`
@@ -441,324 +519,104 @@ function voucherHTML(v,logo){
 
   return `
     <style>
-      #egVoucher{
-        background:transparent;
-        padding:0;
-      }
-      #egVoucher .egpv3-wrap{
-        width:100%;
-        max-width:1120px;
-        margin:0 auto;
-        background:#f5f5f3;
-        border:2px solid #1f1f1f;
-        border-radius:32px;
-        padding:22px 28px 24px;
-        color:#111;
-        font-family:Arial,Helvetica,sans-serif;
-        box-sizing:border-box;
-      }
-      #egVoucher .egpv3-head{
-        display:grid;
-        grid-template-columns:84px minmax(0,1fr) 220px;
-        gap:16px;
-        align-items:start;
-      }
-      #egVoucher .egpv3-logo{
-  width:80px;
-  height:80px;
-  background:transparent;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  overflow:hidden;
-}
-      #egVoucher .egpv3-logo img{
-        width:100%;
-        height:100%;
-        object-fit:contain;
-      }
-      #egVoucher .egpv3-logo span{
-        font-size:12px;
-        font-weight:700;
-      }
-      #egVoucher .egpv3-title{
-        min-width:0;
-        text-align:center;
-        padding-top:4px;
-      }
-      #egVoucher .egpv3-company{
-        font-weight:800;
-        line-height:1.08;
-        word-break:break-word;
-      }
-      #egVoucher .egpv3-subtitle{
-        margin-top:8px;
-        font-size:13px;
-        line-height:1.2;
-        word-break:break-word;
-      }
-      #egVoucher .egpv3-amount{
-        display:grid;
-        grid-template-columns:52px 1fr;
-        gap:10px;
-        align-items:center;
-        padding-top:8px;
-      }
-      #egVoucher .egpv3-currency{
-        font-size:24px;
-        font-weight:800;
-        text-align:right;
-      }
-      #egVoucher .egpv3-amount-box{
-        min-height:64px;
-        border:2px solid #1f1f1f;
-        border-radius:14px;
-        background:#fff;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        padding:6px 10px;
-        box-sizing:border-box;
-        font-weight:800;
-      }
-      #egVoucher .egpv3-band{
-        margin-top:20px;
-        background:#949ba1;
-        color:#fff;
-        border:2px solid #4d6178;
-        border-radius:12px;
-        padding:10px 14px;
-        display:grid;
-        grid-template-columns:1fr 1.35fr .72fr;
-        gap:14px;
-        align-items:start;
-      }
-      #egVoucher .egpv3-band-item{
-        min-width:0;
-      }
-      #egVoucher .egpv3-band-label{
-        font-size:12px;
-        font-weight:700;
-        line-height:1.15;
-        opacity:.95;
-      }
-      #egVoucher .egpv3-band-value{
-        font-size:14px;
-        font-weight:800;
-        line-height:1.25;
-        margin-top:2px;
-        white-space:normal;
-        word-break:break-word;
-      }
-      #egVoucher .egpv3-main{
-        margin-top:22px;
-        display:grid;
-        grid-template-columns:1.15fr .7fr;
-        gap:18px;
-        align-items:start;
-      }
-      #egVoucher .egpv3-field{
-        min-width:0;
-      }
-      #egVoucher .egpv3-field-label{
-        color:#2f4868;
-        font-size:14px;
-        font-weight:800;
-        line-height:1.15;
-      }
-      #egVoucher .egpv3-field-value{
-        margin-top:5px;
-        font-size:14px;
-        line-height:1.35;
-        white-space:normal;
-        word-break:break-word;
-      }
-      #egVoucher .egpv3-concept{
-        margin-top:18px;
-        display:grid;
-        grid-template-columns:120px 1fr;
-        gap:14px;
-        align-items:start;
-      }
-      #egVoucher .egpv3-concept-label{
-        color:#000;
-        font-size:16px;
-        font-weight:800;
-        line-height:1.15;
-        padding-top:3px;
-      }
-      #egVoucher .egpv3-concept-box{
-        min-height:76px;
-        padding:2px 0 0;
-        box-sizing:border-box;
-        background-image:repeating-linear-gradient(
-          to bottom,
-          transparent 0,
-          transparent 23px,
-          #1f1f1f 23px,
-          #1f1f1f 24px
-        );
-      }
-      #egVoucher .egpv3-concept-text{
-        font-size:14px;
-        line-height:24px;
-        white-space:normal;
-        word-break:break-word;
-        padding-right:8px;
-      }
-      #egVoucher .egpv3-bottom{
-        margin-top:24px;
-        display:grid;
-        grid-template-columns:320px 1fr;
-        gap:28px;
-        align-items:end;
-      }
-      #egVoucher .egpv3-sources{
-        min-width:0;
-      }
-      #egVoucher .egpv3-sources-title{
-        display:block;
-        width:100%;
-        background:#949ba1;
-        color:#fff;
-        border:2px solid #4d6178;
-        border-radius:12px;
-        padding:10px 14px;
-        text-align:center;
-        font-size:15px;
-        font-weight:800;
-        box-sizing:border-box;
-      }
-      #egVoucher .egpv3-sources-list{
-        margin-top:10px;
-      }
-      #egVoucher .egpv3-source-row{
-        display:grid;
-        grid-template-columns:minmax(0,1fr) auto;
-        gap:16px;
-        align-items:start;
-        padding:9px 10px 8px;
-        border-bottom:2px solid #1f1f1f;
-      }
-      #egVoucher .egpv3-source-name{
-        font-size:14px;
-        line-height:1.3;
-        word-break:break-word;
-      }
-      #egVoucher .egpv3-source-amount{
-        font-size:14px;
-        line-height:1.3;
-        font-weight:700;
-        white-space:nowrap;
-      }
-      #egVoucher .egpv3-signatures{
-        display:grid;
-        grid-template-columns:1fr 1fr;
-        gap:36px;
-        align-items:end;
-      }
-      #egVoucher .egpv3-sign{
-        min-width:0;
-        text-align:center;
-      }
-      #egVoucher .egpv3-sign-line{
-        border-bottom:2px solid #1f1f1f;
-        height:18px;
-        margin-bottom:8px;
-      }
-      #egVoucher .egpv3-sign-name{
-        font-size:14px;
-        line-height:1.25;
-        word-break:break-word;
-      }
-      #egVoucher .egpv3-sign-role{
-        margin-top:10px;
-        font-size:13px;
-        line-height:1.2;
-        color:#2f4868;
-      }
-      @media (max-width: 992px){
-        #egVoucher .egpv3-head,
-        #egVoucher .egpv3-band,
-        #egVoucher .egpv3-main,
-        #egVoucher .egpv3-concept,
-        #egVoucher .egpv3-bottom,
-        #egVoucher .egpv3-signatures{
-          grid-template-columns:1fr;
-        }
-        #egVoucher .egpv3-amount{
-          max-width:260px;
-        }
-      }
+      #egVoucher{ background:transparent; padding:0; }
+      #egVoucher .egpv3-wrap{ width:100%; max-width:1120px; margin:0 auto; background:#f5f5f3; border:2px solid #1f1f1f; border-radius:32px; padding:22px 28px 24px; color:#111; font-family:Arial,Helvetica,sans-serif; box-sizing:border-box; }
+      #egVoucher .egpv3-head{ display:grid; grid-template-columns:84px minmax(0,1fr) 220px; gap:16px; align-items:start; }
+      #egVoucher .egpv3-logo{ width:80px; height:80px; background:transparent; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+      #egVoucher .egpv3-logo img{ width:100%; height:100%; object-fit:contain; }
+      #egVoucher .egpv3-logo span{ font-size:12px; font-weight:700; }
+      #egVoucher .egpv3-title{ min-width:0; text-align:center; padding-top:4px; }
+      #egVoucher .egpv3-company{ font-weight:800; line-height:1.08; word-break:break-word; }
+      #egVoucher .egpv3-subtitle{ margin-top:8px; font-size:13px; line-height:1.2; word-break:break-word; }
+      #egVoucher .egpv3-amount{ display:grid; grid-template-columns:52px 1fr; gap:10px; align-items:center; padding-top:8px; }
+      #egVoucher .egpv3-currency{ font-size:24px; font-weight:800; text-align:right; }
+      #egVoucher .egpv3-amount-box{ min-height:64px; border:2px solid #1f1f1f; border-radius:14px; background:#fff; display:flex; align-items:center; justify-content:center; padding:6px 10px; }
+      #egVoucher .egpv3-band{ margin-top:14px; background:#6d7782; color:#fff; border-radius:16px; padding:10px 14px; display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px; font-size:12px; }
+      #egVoucher .egpv3-band-label{ font-weight:700; display:block; margin-bottom:2px; }
+      #egVoucher .egpv3-grid2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px; }
+      #egVoucher .egpv3-block{ background:#fff; border:1px solid #d8dde3; border-radius:14px; padding:12px 14px; }
+      #egVoucher .egpv3-block-label{ font-size:11px; font-weight:700; color:#4a5b6c; margin-bottom:6px; text-transform:uppercase; }
+      #egVoucher .egpv3-block-text{ font-size:14px; line-height:1.45; word-break:break-word; }
+      #egVoucher .egpv3-sources-wrap{ margin-top:16px; }
+      #egVoucher .egpv3-sources-title{ font-size:13px; font-weight:800; color:#1f2d3d; margin-bottom:8px; text-transform:uppercase; }
+      #egVoucher .egpv3-sources-grid{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+      #egVoucher .egpv3-source-card{ background:#fff; border:1px solid #d8dde3; border-radius:14px; padding:10px 12px; }
+      #egVoucher .egpv3-source-card-head{ font-weight:800; font-size:13px; color:#1f2d3d; margin-bottom:8px; }
+      #egVoucher .egpv3-source-row{ display:flex; justify-content:space-between; gap:10px; border-bottom:1px solid #eceff2; padding:6px 0; font-size:13px; }
+      #egVoucher .egpv3-source-row:last-child{ border-bottom:none; }
+      #egVoucher .egpv3-source-total{ font-weight:800; }
+      #egVoucher .egpv3-signs{ margin-top:18px; display:grid; grid-template-columns:${String((String(v.tipo_comprobante||'RECIBO').toUpperCase()==='RECIBO')?'1fr 1fr':'1fr')}; gap:22px; }
+      #egVoucher .egpv3-sign{ padding-top:26px; text-align:center; }
+      #egVoucher .egpv3-sign-line{ border-top:1.5px solid #111; margin:0 auto 8px; width:82%; }
+      #egVoucher .egpv3-sign-name{ font-weight:800; font-size:13px; }
+      #egVoucher .egpv3-sign-role{ color:#556371; font-size:12px; margin-top:2px; }
+      #egVoucher .text-muted{ color:#6c757d; }
     </style>
-
     <div class="egpv3-wrap">
       <div class="egpv3-head">
         ${logoHtml}
-
         <div class="egpv3-title">
           <div class="egpv3-company" style="font-size:${companySize}px;">${esc(empresa)}</div>
-          <div class="egpv3-subtitle">RECIBO DE EGRESO - ${esc(codigo)}</div>
+          <div class="egpv3-subtitle">RECIBO DE EGRESO · ${esc(codigo)}</div>
         </div>
-
         <div class="egpv3-amount">
           <div class="egpv3-currency">S/.</div>
-          <div class="egpv3-amount-box" style="font-size:${amountSize}px;">${esc(montoValor)}</div>
+          <div class="egpv3-amount-box"><div style="font-size:${amountSize}px;font-weight:800;">${esc(montoValor)}</div></div>
         </div>
       </div>
 
       <div class="egpv3-band">
-        <div class="egpv3-band-item">
-          <div class="egpv3-band-label">Fecha y hora</div>
-          <div class="egpv3-band-value">${esc(fecha)}</div>
+        <div><span class="egpv3-band-label">Fecha y hora</span>${esc(fecha)}</div>
+        <div><span class="egpv3-band-label">Estado</span>${esc(estado)}</div>
+        <div><span class="egpv3-band-label">Comprobante</span>${esc(comprobante)}</div>
+        <div><span class="egpv3-band-label">Tipo egreso</span>${esc(tipoEgreso)}</div>
+      </div>
+
+      <div class="egpv3-grid2">
+        <div class="egpv3-block">
+          <div class="egpv3-block-label">Beneficiario</div>
+          <div class="egpv3-block-text">${esc(beneficiario)}</div>
         </div>
-        <div class="egpv3-band-item">
-          <div class="egpv3-band-label">Comprobante</div>
-          <div class="egpv3-band-value">${esc(comprobante)}</div>
-        </div>
-        <div class="egpv3-band-item">
-          <div class="egpv3-band-label">Estado</div>
-          <div class="egpv3-band-value">${esc(estado)}</div>
+        <div class="egpv3-block">
+          <div class="egpv3-block-label">Documento</div>
+          <div class="egpv3-block-text">${esc(documento)}</div>
         </div>
       </div>
 
-      <div class="egpv3-main">
-        <div class="egpv3-field">
-          <div class="egpv3-field-label">BENEFICIARIO</div>
-          <div class="egpv3-field-value">${esc(beneficiario)}</div>
+      <div class="egpv3-grid2">
+        <div class="egpv3-block">
+          <div class="egpv3-block-label">Caja de registro</div>
+          <div class="egpv3-block-text">${esc(cajaRegistro)} <span class="text-muted">(${esc(cajaRegistroFecha)})</span></div>
         </div>
-        <div class="egpv3-field">
-          <div class="egpv3-field-label">DOCUMENTO</div>
-          <div class="egpv3-field-value">${esc(documento)}</div>
-        </div>
-      </div>
-
-      <div class="egpv3-concept">
-        <div class="egpv3-concept-label">CONCEPTO</div>
-        <div class="egpv3-concept-box">
-          <div class="egpv3-concept-text">${esc(concepto)}</div>
+        <div class="egpv3-block">
+          <div class="egpv3-block-label">Responsable</div>
+          <div class="egpv3-block-text">${esc(responsable)}</div>
         </div>
       </div>
 
-      <div class="egpv3-bottom">
-        <div class="egpv3-sources">
-          <div class="egpv3-sources-title">FUENTES DE SALIDA</div>
-          <div class="egpv3-sources-list">
-            ${fuentesHtml}
-          </div>
-        </div>
+      <div class="egpv3-block" style="margin-top:16px;">
+        <div class="egpv3-block-label">Concepto</div>
+        <div class="egpv3-block-text">${esc(concepto)}</div>
+      </div>
 
-        <div class="egpv3-signatures">
+      <div class="egpv3-sources-wrap">
+        <div class="egpv3-sources-title">Fuentes de dinero por caja</div>
+        <div class="egpv3-sources-grid">
+          ${fuentesHtml}
+        </div>
+      </div>
+
+      <div class="egpv3-signs">
+        ${String(v.tipo_comprobante||'RECIBO').toUpperCase()==='RECIBO' ? `
           <div class="egpv3-sign">
             <div class="egpv3-sign-line"></div>
             <div class="egpv3-sign-name">${esc(beneficiario)}</div>
             <div class="egpv3-sign-role">Beneficiario</div>
-          </div>
-          <div class="egpv3-sign">
-            <div class="egpv3-sign-line"></div>
-            <div class="egpv3-sign-name">${esc(responsable)}</div>
-            <div class="egpv3-sign-role">Responsable</div>
-          </div>
+          </div>` : ''}
+        <div class="egpv3-sign">
+          <div class="egpv3-sign-line"></div>
+          <div class="egpv3-sign-name">${esc(responsable)}</div>
+          <div class="egpv3-sign-role">Responsable</div>
         </div>
       </div>
     </div>
@@ -788,23 +646,68 @@ function showVoucher(v,logo){
 }
 
 async function previewId(id){const r=await get('detalle',{id:id});showVoucher(r.row,r.row.empresa_logo_web||'../../dist/img/AdminLTELogo.png');}
-function clearForm(){const f=qs('#egForm');if(!f)return;f.reset();setTipo('RECIBO');setNow();countC();st.fuentesAsignadas={};renderFuentesResumen();alertF('info','Formulario limpio. Completa los datos y registra el egreso.');}
+function clearForm(){
+  const f=qs('#egForm');
+  if(!f)return;
+  f.reset();
+  setTipo('RECIBO');
+  setNow();
+  countC();
+  st.fuentesAsignadas={};
+  renderFuentesResumen();
+  if(window.egMulticaja&&typeof window.egMulticaja.resetAll==='function'){
+    window.egMulticaja.resetAll();
+  }
+  alertF('info','Formulario limpio. Completa los datos y registra el egreso.');
+}
 async function save(e){
   e.preventDefault();
   if(!st.schema){alertF('danger','No se puede registrar: falta migracion SQL de tablas egr_.');return;}
   if(!st.caja||!st.caja.puede_registrar){alertF('warning','No hay caja diaria abierta. Abre caja desde el modulo Caja.');return;}
   const d=datos();if(!validar(d))return;
-  const vf=validateFuentes(st.fuentesAsignadas,d.monto);
-  if(!vf.ok){alertF('warning',esc(vf.msg)+'<br>Haz clic en <strong>Distribuir</strong> para corregir.');if(qs('#egBtnDistribuir'))qs('#egBtnDistribuir').click();return;}
+  const dist=buildFuentesForSubmit(d.monto);
+  if(!dist.ok){
+    alertF('warning',esc(dist.msg)+'<br>Haz clic en <strong>Distribuir</strong> para corregir.');
+    if(qs('#egBtnDistribuir'))qs('#egBtnDistribuir').click();
+    return;
+  }
   const b=qs('#egBtnGuardar');b.disabled=true;
   try{
-    const r=await post('crear',{tipo_comprobante:d.tipo,serie:d.serie,numero:d.numero,referencia:d.referencia,fecha_emision:d.fecha,monto:d.monto,beneficiario:d.benef,documento:d.doc,concepto:d.concepto,observaciones:d.obs,fuentes_json:JSON.stringify(fuentesPayload(vf.map))});
-    alertF('success',esc(r.msg||'Egreso registrado.'));await loadCaja();st.p=1;await loadList();if(r.id)await previewId(r.id);clearForm();
+    const r=await post('crear',{
+      tipo_comprobante:d.tipo,
+      tipo_egreso:dist.tipo_egreso,
+      serie:d.serie,
+      numero:d.numero,
+      referencia:d.referencia,
+      fecha_emision:d.fecha,
+      monto:d.monto,
+      beneficiario:d.benef,
+      documento:d.doc,
+      concepto:d.concepto,
+      observaciones:d.obs,
+      fuentes_json:JSON.stringify(dist.payload)
+    });
+    alertF('success',esc(r.msg||'Egreso registrado.'));
+    await loadCaja();
+    st.p=1;
+    await loadList();
+    if(r.id) await previewId(r.id);
+    clearForm();
   }catch(err){
-    const p=err.payload||{},sd=p.saldo,fe=p.fuente_error;
-    if(fe){const k=canonKey(fe.key);alertF('warning',esc(err.message||'No se pudo guardar el egreso.')+'<br>Fuente: <strong>'+esc(FUENTE_LABEL[k]||k)+'</strong><br>Solicitado: <strong>'+esc(money(fe.monto_solicitado))+'</strong> · Disponible: <strong>'+esc(money(fe.disponible))+'</strong>');await loadCaja();if(qs('#egBtnDistribuir'))qs('#egBtnDistribuir').click();}
-    else if(sd)alertF('warning',esc(err.message)+'<br>Saldo disponible: <strong>'+esc(money(sd.saldo_disponible))+'</strong>');
-    else alertF('danger',esc(err.message||'No se pudo guardar el egreso.'));
+    const p=err.payload||{},sd=p.saldo,fe=p.fuente_error,ce=p.caja_error;
+    if(fe){
+      const k=canonKey(fe.key);
+      const cajaInfo=fe.caja_codigo ? ('<br>Caja fuente: <strong>'+esc(fe.caja_codigo)+'</strong>'+(fe.caja_fecha?(' <span class="text-muted">('+esc(fmtDate(fe.caja_fecha))+')</span>'):'')) : '';
+      alertF('warning',esc(err.message||'No se pudo guardar el egreso.')+'<br>Fuente: <strong>'+esc(FUENTE_LABEL[k]||k)+'</strong>'+cajaInfo+'<br>Solicitado: <strong>'+esc(money(fe.monto_solicitado))+'</strong> · Disponible: <strong>'+esc(money(fe.disponible))+'</strong>');
+      await loadCaja();
+      if(qs('#egBtnDistribuir'))qs('#egBtnDistribuir').click();
+    } else if(ce&&ce.saldo){
+      alertF('warning',esc(err.message||'No se pudo guardar el egreso.')+'<br>Caja fuente: <strong>'+esc(ce.codigo||'-')+'</strong><br>Disponible: <strong>'+esc(money((((ce||{}).saldo||{}).saldo_disponible)||0))+'</strong>');
+    } else if(sd) {
+      alertF('warning',esc(err.message)+'<br>Saldo disponible: <strong>'+esc(money(sd.saldo_disponible))+'</strong>');
+    } else {
+      alertF('danger',esc(err.message||'No se pudo guardar el egreso.'));
+    }
   }finally{b.disabled=false;}
 }
 async function anular(id){
@@ -813,6 +716,7 @@ async function anular(id){
   try{await post('anular',{id:id,motivo:motivo});alertF('success','Egreso anulado correctamente.');await loadCaja();await loadList();}
   catch(e){alertF('danger',esc(e.message||'No se pudo anular el egreso.'));}
 }
+
 function bind(){
   document.addEventListener('click',ev=>{
     const chip=ev.target.closest('#egTipoChipGroup .eg-chip');
@@ -883,9 +787,9 @@ function bind(){
       alertF('warning','Para la vista previa, completa al menos concepto y monto.');
       return;
     }
-    const vf=validateFuentes(st.fuentesAsignadas,d.monto);
-    if(!vf.ok){
-      alertF('warning',esc(vf.msg));
+    const built=buildFuentesForPreview(d.monto);
+    if(!built.ok){
+      alertF('warning',esc(built.msg));
       if(qs('#egBtnDistribuir')) qs('#egBtnDistribuir').click();
       return;
     }
@@ -893,6 +797,7 @@ function bind(){
       id:0,
       codigo:'SIN GUARDAR',
       tipo_comprobante:d.tipo,
+      tipo_egreso:built.tipo_egreso,
       serie:d.serie,
       numero:d.numero,
       referencia:d.referencia,
@@ -904,7 +809,9 @@ function bind(){
       estado:'ACTIVO',
       empresa_nombre:EMP,
       creado_nombre:USR,
-      fuentes:fuentesPayload(vf.map)
+      caja_diaria_codigo:(((st.caja||{}).diaria||{}).codigo)||'-',
+      caja_diaria_fecha:(((st.caja||{}).diaria||{}).fecha)||'',
+      fuentes:built.payload
     },'../../dist/img/AdminLTELogo.png');
   });
 
