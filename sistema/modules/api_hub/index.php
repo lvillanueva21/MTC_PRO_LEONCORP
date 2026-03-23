@@ -9,7 +9,7 @@ verificarPermiso(['Desarrollo']);
 
 include __DIR__ . '/../../includes/header.php';
 ?>
-<link rel="stylesheet" href="<?= BASE_URL ?>/modules/api_hub/api_hub.css?v=1">
+<link rel="stylesheet" href="<?= BASE_URL ?>/modules/api_hub/api_hub.css?v=2">
 <div class="content-wrapper">
   <div class="content-header">
     <div class="container-fluid">
@@ -20,7 +20,7 @@ include __DIR__ . '/../../includes/header.php';
   <section class="content pb-3">
     <div class="container-fluid">
       <div class="alert alert-info">
-        Área de api hub para usuarios desarrollo, en construcción.
+        Dashboard de uso de consultas DNI/RUC por empresa y proveedor.
       </div>
 
       <div class="card shadow-sm mb-3">
@@ -36,15 +36,21 @@ include __DIR__ . '/../../includes/header.php';
               </button>
             </div>
           </div>
-          <div id="ahMsg" class="small text-muted mt-2">Consultas API por empresa (éxitos y fallos).</div>
+          <div id="ahMsg" class="small text-muted mt-2">Consultas API por empresa (exitos y fallos).</div>
         </div>
       </div>
 
-      <div class="row g-2 mb-3" id="ahCards">
+      <div class="row g-2 mb-3" id="ahCardsMain">
         <div class="col-6 col-lg-3"><div class="ah-stat-card"><div class="ah-stat-label">DNI OK</div><div id="ahDniOk" class="ah-stat-num">0</div></div></div>
         <div class="col-6 col-lg-3"><div class="ah-stat-card"><div class="ah-stat-label">DNI FAIL</div><div id="ahDniFail" class="ah-stat-num">0</div></div></div>
         <div class="col-6 col-lg-3"><div class="ah-stat-card"><div class="ah-stat-label">RUC OK</div><div id="ahRucOk" class="ah-stat-num">0</div></div></div>
         <div class="col-6 col-lg-3"><div class="ah-stat-card"><div class="ah-stat-label">RUC FAIL</div><div id="ahRucFail" class="ah-stat-num">0</div></div></div>
+      </div>
+
+      <div class="row g-2 mb-3" id="ahCardsProviders">
+        <div class="col-4 col-lg-2"><div class="ah-stat-card"><div class="ah-stat-label">APISPERU</div><div id="ahProvApisperu" class="ah-stat-num">0</div></div></div>
+        <div class="col-4 col-lg-2"><div class="ah-stat-card"><div class="ah-stat-label">DECOLECTA</div><div id="ahProvDecolecta" class="ah-stat-num">0</div></div></div>
+        <div class="col-4 col-lg-2"><div class="ah-stat-card"><div class="ah-stat-label">JSON.PE</div><div id="ahProvJsonpe" class="ah-stat-num">0</div></div></div>
       </div>
 
       <div class="card shadow-sm">
@@ -59,12 +65,15 @@ include __DIR__ . '/../../includes/header.php';
                   <th class="text-end">RUC OK</th>
                   <th class="text-end">RUC FAIL</th>
                   <th class="text-end">Total</th>
-                  <th>Última consulta</th>
-                  <th>Último estado</th>
+                  <th>DNI AP/DE/JS</th>
+                  <th>RUC AP/DE/JS</th>
+                  <th>Ult. proveedor</th>
+                  <th>Ultima consulta</th>
+                  <th>Ultimo estado</th>
                 </tr>
               </thead>
               <tbody id="ahBody">
-                <tr><td colspan="8" class="text-muted small">Cargando...</td></tr>
+                <tr><td colspan="11" class="text-muted small">Cargando...</td></tr>
               </tbody>
             </table>
           </div>
@@ -78,5 +87,6 @@ include __DIR__ . '/../../includes/header.php';
     api: <?= json_encode(BASE_URL . '/modules/api_hub/api.php') ?>
   };
 </script>
-<script src="<?= BASE_URL ?>/modules/api_hub/api_hub.js?v=1"></script>
+<script src="<?= BASE_URL ?>/modules/api_hub/api_hub.js?v=2"></script>
 <?php include __DIR__ . '/../../includes/footer.php'; ?>
+

@@ -11,7 +11,7 @@
   }
   function n(v){ return Number(v || 0); }
   function fmtDT(raw){
-    if (!raw) return '—';
+    if (!raw) return '-';
     var dt = new Date(String(raw).replace(' ', 'T'));
     if (isNaN(dt.getTime())) return String(raw);
     var dd = String(dt.getDate()).padStart(2, '0');
@@ -32,24 +32,49 @@
   }
 
   function renderTotals(t){
+    var providers = t.provider_calls || {};
     qs('#ahDniOk').textContent = n(t.dni_ok);
     qs('#ahDniFail').textContent = n(t.dni_fail);
     qs('#ahRucOk').textContent = n(t.ruc_ok);
     qs('#ahRucFail').textContent = n(t.ruc_fail);
+    qs('#ahProvApisperu').textContent = n(providers.apisperu);
+    qs('#ahProvDecolecta').textContent = n(providers.decolecta);
+    qs('#ahProvJsonpe').textContent = n(providers.jsonpe);
+  }
+
+  function compactProviderTriplet(prefix, row){
+    var ap = n(row[prefix + '_apisperu']);
+    var de = n(row[prefix + '_decolecta']);
+    var js = n(row[prefix + '_jsonpe']);
+    return 'AP:' + ap + ' DE:' + de + ' JS:' + js;
+  }
+
+  function providerBadge(provider, fallback){
+    var p = String(provider || '').toLowerCase();
+    if (!p) return '-';
+    var label = (p === 'jsonpe') ? 'JSON.PE' : p.toUpperCase();
+    if (fallback === 1 || fallback === '1') {
+      return '<span class="badge badge-warning">' + esc(label + ' (FB)') + '</span>';
+    }
+    return '<span class="badge badge-info">' + esc(label) + '</span>';
   }
 
   function renderRows(rows){
     var body = qs('#ahBody');
     if (!rows || !rows.length){
-      body.innerHTML = '<tr><td colspan="8" class="text-muted small">Sin registros para el periodo.</td></tr>';
+      body.innerHTML = '<tr><td colspan="11" class="text-muted small">Sin registros para el periodo.</td></tr>';
       return;
     }
 
     body.innerHTML = rows.map(function(r){
       var total = n(r.total_consultas);
-      var estado = esc(r.ultima_estado || '—');
+      var estado = esc(r.ultima_estado || '-');
       if (estado === 'OK') estado = '<span class="badge badge-success">OK</span>';
       else if (estado === 'FAIL') estado = '<span class="badge badge-danger">FAIL</span>';
+
+      var dniProv = compactProviderTriplet('dni_calls', r);
+      var rucProv = compactProviderTriplet('ruc_calls', r);
+      var ultProv = providerBadge(r.ultima_proveedor, r.ultima_fallback);
 
       return '' +
         '<tr>' +
@@ -59,6 +84,9 @@
           '<td class="text-end">' + n(r.ruc_ok) + '</td>' +
           '<td class="text-end">' + n(r.ruc_fail) + '</td>' +
           '<td class="text-end fw-bold">' + total + '</td>' +
+          '<td class="small">' + esc(dniProv) + '</td>' +
+          '<td class="small">' + esc(rucProv) + '</td>' +
+          '<td>' + ultProv + '</td>' +
           '<td>' + esc(fmtDT(r.ultima_consulta_at)) + '</td>' +
           '<td>' + estado + '</td>' +
         '</tr>';
@@ -82,7 +110,10 @@
       renderRows(j.rows || []);
       setMsg('Periodo consultado: ' + String(j.periodo || periodo), false);
     }catch(err){
-      renderTotals({ dni_ok:0, dni_fail:0, ruc_ok:0, ruc_fail:0 });
+      renderTotals({
+        dni_ok:0, dni_fail:0, ruc_ok:0, ruc_fail:0,
+        provider_calls: { apisperu:0, decolecta:0, jsonpe:0 }
+      });
       renderRows([]);
       setMsg(err.message || 'No se pudo cargar el dashboard.', true);
     }

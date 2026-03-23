@@ -32,10 +32,16 @@ function api_hub_current_empresa_id(): int
     return (int)($u['empresa']['id'] ?? 0);
 }
 
+function api_hub_current_user_id(): int
+{
+    $u = currentUser();
+    return (int)($u['id'] ?? 0);
+}
+
 function api_hub_require_lookup_access(): void
 {
     requireAuth();
-    // Desarrollo, Recepción, Administración o Control con permiso especial para Caja.
+    // Desarrollo, Recepcion, Administracion o Control con permiso especial para Caja.
     if (!acl_can_ids_or_control_special([1, 3, 4], 'caja')) {
         api_hub_err(403, 'No tienes permiso para consultar este servicio.');
     }
@@ -50,13 +56,13 @@ function api_hub_require_dashboard_access(): void
     }
 }
 
-function api_hub_lookup_response(string $tipo, array $res): void
+function api_hub_lookup_response(string $tipo, string $documento, array $res): void
 {
     global $db;
 
     $empresaId = api_hub_current_empresa_id();
     if ($empresaId <= 0) {
-        api_hub_err(403, 'No se encontró empresa asociada al usuario.');
+        api_hub_err(403, 'No se encontro empresa asociada al usuario.');
     }
 
     $countable = (bool)($res['countable'] ?? false);
@@ -66,9 +72,22 @@ function api_hub_lookup_response(string $tipo, array $res): void
     if ($countable) {
         try {
             $logMsg = $userMessage !== '' ? $userMessage : (string)($res['provider_message'] ?? '');
-            apihub_register_usage($db, $empresaId, $tipo, $ok, $logMsg);
+            apihub_register_usage($db, [
+                'empresa_id' => $empresaId,
+                'user_id' => api_hub_current_user_id(),
+                'tipo' => $tipo,
+                'ok' => $ok,
+                'message' => $logMsg,
+                'provider_name' => (string)($res['provider_name'] ?? ''),
+                'provider_token_label' => (string)($res['provider_token_label'] ?? ''),
+                'fallback_used' => !empty($res['fallback_used']),
+                'provider_calls' => $res['provider_calls'] ?? [],
+                'attempts' => $res['attempts'] ?? [],
+                'documento' => $documento,
+                'duration_ms' => (int)($res['duration_ms'] ?? 0),
+            ]);
         } catch (Throwable $e) {
-            // No bloqueamos la operación de consulta por fallas de logging.
+            // No bloqueamos la operacion de consulta por fallas de logging.
         }
     }
 
@@ -77,6 +96,9 @@ function api_hub_lookup_response(string $tipo, array $res): void
             'tipo' => $tipo,
             'data' => $res['data'] ?? [],
             'provider' => [
+                'name' => (string)($res['provider_name'] ?? ''),
+                'token_label' => (string)($res['provider_token_label'] ?? ''),
+                'fallback_used' => !empty($res['fallback_used']),
                 'status' => (int)($res['provider_status'] ?? 200),
                 'message' => (string)($res['provider_message'] ?? ''),
             ],
@@ -85,7 +107,7 @@ function api_hub_lookup_response(string $tipo, array $res): void
 
     $code = (string)($res['code'] ?? 'error');
     $status = 400;
-    if ($code === 'service_unavailable') {
+    if ($code === 'service_unavailable' || $code === 'limit_reached') {
         $status = 503;
     } elseif ($code === 'not_configured') {
         $status = 500;
@@ -99,10 +121,25 @@ function api_hub_lookup_response(string $tipo, array $res): void
         'code' => $code,
         'tipo' => $tipo,
         'provider' => [
+            'name' => (string)($res['provider_name'] ?? ''),
+            'token_label' => (string)($res['provider_token_label'] ?? ''),
+            'fallback_used' => !empty($res['fallback_used']),
             'status' => (int)($res['provider_status'] ?? 0),
             'message' => (string)($res['provider_message'] ?? ''),
         ],
     ]);
+}
+
+function api_hub_get_provider_month_calls(mysqli $db, int $empresaId): array
+{
+    if ($empresaId <= 0) {
+        return apihub_empty_provider_counts();
+    }
+    try {
+        return apihub_get_company_month_provider_calls($db, $empresaId);
+    } catch (Throwable $e) {
+        return apihub_empty_provider_counts();
+    }
 }
 
 try {
@@ -112,15 +149,21 @@ try {
     if ($action === 'consultar_dni') {
         api_hub_require_lookup_access();
         $dni = trim((string)($_POST['numero'] ?? ''));
-        $res = apihub_consultar_dni($dni);
-        api_hub_lookup_response('DNI', $res);
+        $empresaId = api_hub_current_empresa_id();
+        $res = apihub_consultar_dni($dni, [
+            'provider_month_calls' => api_hub_get_provider_month_calls($db, $empresaId),
+        ]);
+        api_hub_lookup_response('DNI', $dni, $res);
     }
 
     if ($action === 'consultar_ruc') {
         api_hub_require_lookup_access();
         $ruc = trim((string)($_POST['numero'] ?? ''));
-        $res = apihub_consultar_ruc($ruc);
-        api_hub_lookup_response('RUC', $res);
+        $empresaId = api_hub_current_empresa_id();
+        $res = apihub_consultar_ruc($ruc, [
+            'provider_month_calls' => api_hub_get_provider_month_calls($db, $empresaId),
+        ]);
+        api_hub_lookup_response('RUC', $ruc, $res);
     }
 
     if ($action === 'dashboard_month') {
@@ -136,7 +179,8 @@ try {
         api_hub_ok($dash);
     }
 
-    api_hub_err(400, 'Acción no válida.');
+    api_hub_err(400, 'Accion no valida.');
 } catch (Throwable $e) {
     api_hub_err(500, 'Error interno de ApiHub.');
 }
+

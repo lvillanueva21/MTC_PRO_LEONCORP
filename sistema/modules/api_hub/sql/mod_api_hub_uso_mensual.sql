@@ -2,14 +2,23 @@
 CREATE TABLE IF NOT EXISTS mod_api_hub_uso_mensual (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   empresa_id INT NOT NULL,
-  periodo_mes DATE NOT NULL COMMENT 'Primer día del mes, p.ej. 2026-03-01',
+  periodo_mes DATE NOT NULL COMMENT 'Primer dia del mes, p.ej. 2026-03-01',
   dni_ok INT UNSIGNED NOT NULL DEFAULT 0,
   dni_fail INT UNSIGNED NOT NULL DEFAULT 0,
   ruc_ok INT UNSIGNED NOT NULL DEFAULT 0,
   ruc_fail INT UNSIGNED NOT NULL DEFAULT 0,
+  dni_calls_apisperu INT UNSIGNED NOT NULL DEFAULT 0,
+  dni_calls_decolecta INT UNSIGNED NOT NULL DEFAULT 0,
+  dni_calls_jsonpe INT UNSIGNED NOT NULL DEFAULT 0,
+  ruc_calls_apisperu INT UNSIGNED NOT NULL DEFAULT 0,
+  ruc_calls_decolecta INT UNSIGNED NOT NULL DEFAULT 0,
+  ruc_calls_jsonpe INT UNSIGNED NOT NULL DEFAULT 0,
   ultima_consulta_at DATETIME NULL,
   ultima_tipo ENUM('DNI','RUC') NULL,
   ultima_estado ENUM('OK','FAIL') NULL,
+  ultima_proveedor ENUM('apisperu','decolecta','jsonpe') NULL,
+  ultima_token_label VARCHAR(60) NOT NULL DEFAULT '',
+  ultima_fallback TINYINT(1) NOT NULL DEFAULT 0,
   ultima_mensaje VARCHAR(255) NOT NULL DEFAULT '',
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
@@ -18,3 +27,4 @@ CREATE TABLE IF NOT EXISTS mod_api_hub_uso_mensual (
   KEY idx_api_hub_periodo (periodo_mes),
   KEY idx_api_hub_empresa (empresa_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_spanish_ci;
+

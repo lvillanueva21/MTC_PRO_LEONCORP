@@ -278,3 +278,167 @@ Criterio recomendado y adoptado:
   - `documento_hash` (SHA-256) para trazabilidad tecnica sin exponer PII completa.
 
 Esto es mas seguro y profesional para auditoria y soporte.
+
+## 9) Bitacora de implementacion
+
+### 2026-03-23 - Inicio de implementacion
+
+Contexto confirmado antes de editar:
+
+- `api.php` consume solo `apisperu_client.php`.
+- `usage_repo.php` solo registra OK/FAIL por tipo (sin proveedor).
+- `index.php` y `api_hub.js` no muestran proveedor ni contadores por proveedor.
+- `config.php` aun tiene estructura antigua (`api_hub.apisperu.token` unico).
+
+Plan de ejecucion aplicado:
+
+1. Implementar orquestador multiproveedor con fallback y rotacion de tokens.
+2. Extender repositorio de uso con:
+   - contador de llamadas por proveedor (DNI/RUC)
+   - ultimo proveedor/token/fallback
+   - log detallado por consulta con documento enmascarado y hash
+3. Actualizar dashboard para mostrar contadores compactos por proveedor.
+4. Validar compatibilidad con flujo actual de Caja (mismos endpoints y formato base).
+
+### 2026-03-23 - Avance backend y persistencia
+
+Cambios implementados:
+
+- `sistema/includes/config.php`
+  - Estructura multiproveedor agregada:
+    - `providers.apisperu`
+    - `providers.decolecta`
+    - `providers.jsonpe`
+  - `fallback_order` fijo para DNI/RUC.
+  - `monthly_limit` configurado:
+    - decolecta = 100
+    - jsonpe = 100
+
+- `sistema/modules/api_hub/apisperu_client.php`
+  - Reescrito como orquestador multiproveedor conservando funciones publicas:
+    - `apihub_consultar_dni()`
+    - `apihub_consultar_ruc()`
+  - Implementado:
+    - fallback `apisperu -> decolecta -> jsonpe`
+    - rotacion de token por `401/403`
+    - continuidad por `not_found`
+    - aceptacion de payload incompleto para DNI
+    - normalizacion de salida:
+      - DNI: `dni`, `nombres`, `apellido_paterno`, `apellido_materno`
+      - RUC: `ruc`, `razon_social`
+    - control de limite mensual por proveedor (skip por limite alcanzado)
+    - traza de intentos (`attempts`) y contadores de llamadas por proveedor (`provider_calls`)
+
+- `sistema/modules/api_hub/usage_repo.php`
+  - Reescrito para registrar:
+    - acumulado mensual con contadores por proveedor (DNI y RUC)
+    - ultimo proveedor/token/fallback
+    - detalle por consulta en tabla nueva
+  - Implementado log profesional:
+    - `documento_masked`
+    - `documento_hash` (SHA-256)
+    - `intentos_json`
+    - `duracion_ms`
+
+- `sistema/modules/api_hub/api.php`
+  - Integrado con nuevo orquestador.
+  - Pasa consumo mensual por empresa al orquestador para evaluar limites.
+  - Respuesta API ahora incluye metadata de proveedor:
+    - `provider.name`
+    - `provider.token_label`
+    - `provider.fallback_used`
+    - `provider.status`
+    - `provider.message`
+  - Logging ampliado con payload estructurado.
+
+- `sistema/modules/api_hub/index.php`
+- `sistema/modules/api_hub/api_hub.js`
+  - Dashboard ampliado con:
+    - contadores compactos por proveedor (APISPERU, DECOLECTA, JSON.PE)
+    - columnas compactas por empresa:
+      - `DNI AP/DE/JS`
+      - `RUC AP/DE/JS`
+      - ultimo proveedor (con marca fallback)
+
+- SQL versionado:
+  - `db/migrations/2026-03-23_api_hub_multiproveedor.sql`
+  - `sistema/modules/api_hub/sql/mod_api_hub_uso_mensual.sql` (actualizado)
+  - `sistema/modules/api_hub/sql/mod_api_hub_consulta_detalle.sql` (nuevo)
+
+Pendiente inmediato:
+
+1. Validacion sintactica y de integracion.
+2. Ajustes puntuales detectados en validacion.
+
+### 2026-03-23 - Validacion y ajustes
+
+Validaciones ejecutadas:
+
+- Se intento ejecutar lint PHP (`php -l`) en:
+  - `sistema/includes/config.php`
+  - `sistema/modules/api_hub/api.php`
+  - `sistema/modules/api_hub/apisperu_client.php`
+  - `sistema/modules/api_hub/usage_repo.php`
+  - `sistema/modules/api_hub/index.php`
+- Resultado: no fue posible en este entorno porque `php` no esta instalado en PATH.
+
+Revision tecnica manual realizada:
+
+1. Compatibilidad de firmas entre:
+   - `api.php` -> `apihub_consultar_dni/ruc(..., ctx)`
+   - `api.php` -> `apihub_register_usage($db, array $payload)`
+2. Verificacion de nombres de columnas nuevas usadas en SQL de `usage_repo.php`.
+3. Revision del flujo de respuesta para mantener contrato con frontend de Caja:
+   - `ok`, `tipo`, `data`, `provider`
+4. Revision del dashboard:
+   - nuevas columnas y tarjetas coherentes con claves devueltas por backend.
+5. Correccion de bind types en `usage_repo.php`:
+   - ajuste de `bind_param` para insercion mensual
+   - ajuste de `bind_param` para insercion de detalle
+
+Estado tras validacion:
+
+- Implementacion lista para prueba funcional en servidor con PHP/MySQL.
+- Se requiere aplicar migracion `db/migrations/2026-03-23_api_hub_multiproveedor.sql` antes de probar consultas.
+
+### 2026-03-23 - Cierre de implementacion
+
+Checklist de despliegue inmediato:
+
+1. Ejecutar migracion:
+   - `db/migrations/2026-03-23_api_hub_multiproveedor.sql`
+2. Configurar tokens en:
+   - `sistema/includes/config.php`
+   - `api_hub.providers.apisperu.tokens`
+   - `api_hub.providers.decolecta.tokens`
+   - `api_hub.providers.jsonpe.tokens`
+3. Probar en Caja:
+   - DNI valido (RENIEC) con fallback forzado cuando APISPERU falle.
+   - RUC valido (SUNAT) con fallback forzado cuando APISPERU falle.
+4. Revisar dashboard de ApiHub:
+   - incremento de `APISPERU/DECOLECTA/JSON.PE`
+   - ultima consulta y ultimo proveedor.
+
+Resultado esperado:
+
+- El frontend de Caja sigue usando el mismo endpoint interno.
+- ApiHub decide proveedor y fallback de forma transparente.
+- Queda trazabilidad mensual y detalle por consulta.
+
+### 2026-03-23 - Ajuste de claridad de mensajes (No encontrado)
+
+Regla ajustada por requerimiento de negocio:
+
+- Si se consultan los 3 proveedores y los 3 responden `not_found`,
+  el resultado final debe ser `not_found` con mensaje claro:
+  - DNI: `No se encontro informacion para ese DNI.`
+  - RUC: `No se encontro informacion para ese RUC.`
+
+Adicional para evitar confusion:
+
+- Si hay mezcla de respuestas (`not_found` + fallas tecnicas), se usa estado `inconclusive`
+  con mensaje amigable y neutral:
+  - DNI: `No se pudo confirmar el DNI en este momento. Intenta nuevamente en unos minutos.`
+  - RUC: `No se pudo confirmar el RUC en este momento. Intenta nuevamente en unos minutos.`
+
+Este enfoque evita exponer detalle tecnico al usuario comun.
