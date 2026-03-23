@@ -9,7 +9,7 @@ verificarPermiso(['Desarrollo']);
 
 include __DIR__ . '/../../includes/header.php';
 ?>
-<link rel="stylesheet" href="<?= BASE_URL ?>/modules/interfaces_control/assets/interfaces_control.css?v=1">
+<link rel="stylesheet" href="<?= BASE_URL ?>/modules/interfaces_control/assets/interfaces_control.css?v=2">
 <div class="content-wrapper">
   <div class="content-header">
     <div class="container-fluid">
@@ -47,6 +47,19 @@ include __DIR__ . '/../../includes/header.php';
           </div>
         </div>
       </div>
+
+      <div class="ic-pane mt-3">
+        <div class="ic-pane-head">Modulos clasicos elegibles (Control Especial)</div>
+        <div class="ic-pane-body">
+          <div class="text-muted small mb-2">
+            Usa el mismo usuario seleccionado arriba. Esta seccion solo guarda permisos especiales por modulo.
+          </div>
+          <div id="icClassicModules" class="ic-iface-list"></div>
+          <button type="button" class="btn btn-success mt-3" id="icSaveClassic">
+            <i class="fas fa-save mr-1"></i>Guardar permisos especiales
+          </button>
+        </div>
+      </div>
     </div>
   </section>
 </div>
@@ -55,5 +68,5 @@ include __DIR__ . '/../../includes/header.php';
     api: <?= json_encode(BASE_URL . '/modules/interfaces_control/api.php') ?>
   };
 </script>
-<script src="<?= BASE_URL ?>/modules/interfaces_control/assets/interfaces_control.js?v=1"></script>
+<script src="<?= BASE_URL ?>/modules/interfaces_control/assets/interfaces_control.js?v=2"></script>
 <?php include __DIR__ . '/../../includes/footer.php'; ?>

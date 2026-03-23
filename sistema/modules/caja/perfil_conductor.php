@@ -2,6 +2,11 @@
 // modules/caja/perfil_conductor.php
 // Helpers para manejar el perfil opcional de conductor.
 
+if (basename(__FILE__) === basename($_SERVER['SCRIPT_FILENAME'])) {
+  http_response_code(403);
+  exit('Acceso directo no permitido.');
+}
+
 function pos_perfil_doc_tipos_permitidos(): array {
   return ['DNI', 'CE', 'BREVETE'];
 }

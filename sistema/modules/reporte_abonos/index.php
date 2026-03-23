@@ -8,9 +8,11 @@ require_once __DIR__ . '/../../includes/conexion.php';
 $PAGE_TITLE = 'Central de Abonos';
 $ALLOWED_ROLE_IDS   = [3,4];                       // Recepción, Administración
 $ALLOWED_ROLE_NAMES = ['Recepción','Administración'];
+$CONTROL_SPECIAL_SLUG = 'reporte_abonos';
 
-acl_require_ids($ALLOWED_ROLE_IDS);
-if (function_exists('verificarPermiso')) {
+$hasNormalRoleByAcl = acl_can_ids($ALLOWED_ROLE_IDS);
+acl_require_ids_or_control_special($ALLOWED_ROLE_IDS, $CONTROL_SPECIAL_SLUG);
+if ($hasNormalRoleByAcl && function_exists('verificarPermiso')) {
     verificarPermiso($ALLOWED_ROLE_NAMES);
 }
 

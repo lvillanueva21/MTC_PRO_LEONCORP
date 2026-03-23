@@ -35,8 +35,8 @@ function api_hub_current_empresa_id(): int
 function api_hub_require_lookup_access(): void
 {
     requireAuth();
-    // Desarrollo, Recepción, Administración
-    if (!acl_can_ids([1, 3, 4])) {
+    // Desarrollo, Recepción, Administración o Control con permiso especial para Caja.
+    if (!acl_can_ids_or_control_special([1, 3, 4], 'caja')) {
         api_hub_err(403, 'No tienes permiso para consultar este servicio.');
     }
 }

@@ -3,14 +3,8 @@ require_once __DIR__ . '/../../includes/acl.php';
 require_once __DIR__ . '/../../includes/permisos.php';
 require_once __DIR__ . '/../../includes/conexion.php';
 
-$ALLOWED_ROLE_IDS = [3, 4];
-$CONTROL_SPECIAL_SLUG = 'egresos';
-
-$hasNormalRoleByAcl = acl_can_ids($ALLOWED_ROLE_IDS);
-acl_require_ids_or_control_special($ALLOWED_ROLE_IDS, $CONTROL_SPECIAL_SLUG);
-if ($hasNormalRoleByAcl) {
-    verificarPermiso([3, 4]);
-}
+acl_require_ids([3, 4]);
+verificarPermiso([3, 4]);
 
 function h($value): string
 {

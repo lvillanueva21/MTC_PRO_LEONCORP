@@ -2,6 +2,11 @@
 // /modules/caja/voucher_history_service.php
 // Servicio compartido para construir y persistir snapshots de comprobantes.
 
+if (basename(__FILE__) === basename($_SERVER['SCRIPT_FILENAME'])) {
+  http_response_code(403);
+  exit('Acceso directo no permitido.');
+}
+
 if (!function_exists('vh_money2')) {
   function vh_money2($n): float {
     return round((float)$n, 2);
@@ -580,4 +585,3 @@ if (!function_exists('vh_decode_snapshot_payload')) {
     return is_array($data) ? $data : null;
   }
 }
-

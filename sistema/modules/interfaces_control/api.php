@@ -43,6 +43,25 @@ function ic_parse_slugs_from_request()
     return array_keys($clean);
 }
 
+function ic_parse_control_special_slugs_from_request()
+{
+    $slugs = array();
+    if (isset($_POST['slugs']) && is_array($_POST['slugs'])) {
+        $slugs = $_POST['slugs'];
+    } elseif (isset($_POST['slugs']) && is_string($_POST['slugs'])) {
+        $slugs = explode(',', $_POST['slugs']);
+    }
+
+    $clean = array();
+    foreach ((array)$slugs as $s) {
+        $slug = trim((string)$s);
+        if ($slug !== '' && control_especial_catalog_has_slug($slug)) {
+            $clean[$slug] = true;
+        }
+    }
+    return array_keys($clean);
+}
+
 try {
     $mysqli = db();
     $mysqli->set_charset('utf8mb4');
@@ -83,6 +102,19 @@ try {
         ic_jok(array('data' => $rs->fetch_all(MYSQLI_ASSOC)));
     }
 
+    if ($action === 'list_control_special_catalog') {
+        $catalog = control_especial_catalog_modulos();
+        $rows = array();
+        foreach ($catalog as $slug => $meta) {
+            $rows[] = array(
+                'slug' => (string)($meta['slug'] ?? $slug),
+                'label' => (string)($meta['label'] ?? $slug),
+                'path' => (string)($meta['path'] ?? ''),
+            );
+        }
+        ic_jok(array('data' => $rows));
+    }
+
     if ($action === 'get_assignments') {
         $uid = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
         if ($uid <= 0) {
@@ -92,6 +124,18 @@ try {
             ic_jerror(400, 'El usuario no tiene rol Control.');
         }
         $slugs = ic_get_user_assigned_slugs($mysqli, $uid);
+        ic_jok(array('user_id' => $uid, 'slugs' => $slugs));
+    }
+
+    if ($action === 'get_control_special_assignments') {
+        $uid = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
+        if ($uid <= 0) {
+            ic_jerror(400, 'Usuario invalido.');
+        }
+        if (!ic_user_has_role_control($mysqli, $uid)) {
+            ic_jerror(400, 'El usuario no tiene rol Control.');
+        }
+        $slugs = acl_control_special_assigned_slugs($uid);
         ic_jok(array('user_id' => $uid, 'slugs' => $slugs));
     }
 
@@ -162,6 +206,65 @@ try {
         } catch (Throwable $e) {
             $mysqli->rollback();
             ic_jerror(500, 'No se pudo guardar asignaciones.', array('dev' => $e->getMessage()));
+        }
+    }
+
+    if ($action === 'save_control_special_assignments') {
+        $uid = isset($_POST['user_id']) ? (int)$_POST['user_id'] : 0;
+        if ($uid <= 0) {
+            ic_jerror(400, 'Usuario invalido.');
+        }
+        if (!ic_user_has_role_control($mysqli, $uid)) {
+            ic_jerror(400, 'El usuario no tiene rol Control.');
+        }
+
+        $filtered = ic_parse_control_special_slugs_from_request();
+        $updatedBy = (int)($_SESSION['user']['id'] ?? 0);
+
+        $mysqli->begin_transaction();
+        try {
+            $off = $mysqli->prepare("
+                UPDATE mtp_control_modulos_usuario
+                   SET estado=0,
+                       actualizado_en=CURRENT_TIMESTAMP,
+                       actualizado_por=?
+                 WHERE id_usuario=?
+            ");
+            if (!$off) {
+                throw new RuntimeException('Tabla de asignaciones especiales no disponible.');
+            }
+            $off->bind_param('ii', $updatedBy, $uid);
+            $off->execute();
+            $off->close();
+
+            if (!empty($filtered)) {
+                $ins = $mysqli->prepare("
+                    INSERT INTO mtp_control_modulos_usuario
+                        (id_usuario, modulo_slug, estado, actualizado_por)
+                    VALUES (?, ?, 1, ?)
+                    ON DUPLICATE KEY UPDATE
+                        estado=1,
+                        actualizado_por=VALUES(actualizado_por),
+                        actualizado_en=CURRENT_TIMESTAMP
+                ");
+                if (!$ins) {
+                    throw new RuntimeException('No se pudo preparar insercion de permisos especiales.');
+                }
+                foreach ($filtered as $slug) {
+                    $ins->bind_param('isi', $uid, $slug, $updatedBy);
+                    $ins->execute();
+                }
+                $ins->close();
+            }
+
+            $mysqli->commit();
+            if ($uid === (int)($_SESSION['user']['id'] ?? 0)) {
+                acl_control_special_cache_forget();
+            }
+            ic_jok(array('user_id' => $uid, 'saved' => $filtered));
+        } catch (Throwable $e) {
+            $mysqli->rollback();
+            ic_jerror(500, 'No se pudo guardar permisos especiales.', array('dev' => $e->getMessage()));
         }
     }
 

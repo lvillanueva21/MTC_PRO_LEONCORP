@@ -4,8 +4,14 @@ require_once __DIR__ . '/../../includes/acl.php';
 require_once __DIR__ . '/../../includes/permisos.php';
 require_once __DIR__ . '/../../includes/conexion.php';
 
-acl_require_ids([3,4]);
-verificarPermiso(['Recepción','Administración']);
+$ALLOWED_ROLE_IDS = [3,4];
+$CONTROL_SPECIAL_SLUG = 'caja';
+
+$hasNormalRoleByAcl = acl_can_ids($ALLOWED_ROLE_IDS);
+acl_require_ids_or_control_special($ALLOWED_ROLE_IDS, $CONTROL_SPECIAL_SLUG);
+if ($hasNormalRoleByAcl) {
+    verificarPermiso(['Recepción','Administración']);
+}
 
 function h($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
 
@@ -455,6 +461,16 @@ include __DIR__ . '/../../includes/header.php';
                   <div class="col-12 col-md-8">
                     <label class="form-label small mb-1">Documento*</label>
                     <input id="pmCoDocNum" class="form-control form-control-sm" maxlength="20">
+                  </div>
+                  <div class="col-12">
+                    <div class="pm-doc-lookup-wrap">
+                      <button type="button" class="btn btn-sm pm-btn-lookup pm-btn-reniec d-none" id="pmCoLookupReniec">
+                        <i class="fas fa-id-card mr-1"></i>RENIEC
+                      </button>
+                      <div id="pmCoLookupHint" class="small text-muted">
+                        Selecciona DNI para consultar RENIEC y autocompletar el nombre del conductor.
+                      </div>
+                    </div>
                   </div>
                   <div class="col-12 col-md-6">
                     <label class="form-label small mb-1">Nombres*</label>
@@ -1616,11 +1632,13 @@ function clearDriverBox(){
   qs('#pmCoNombres').value = '';
   qs('#pmCoApellidos').value = '';
   qs('#pmCoTel').value = '';
+  syncDriverLookupButtons();
 }
 function showDriverBox(v){
   const box = qs('#pmDriverBox');
   box.classList.toggle('d-none', !v);
   if (!v) clearDriverBox();
+  else syncDriverLookupButtons();
   if (!qs('#pmConductorExtraBox').classList.contains('d-none')){
     PM_EXTRA.docKey = '';
     const t = getConductorTargetDoc();
@@ -1653,6 +1671,18 @@ function syncLookupButtons(){
     if (t === 'DNI') hint.textContent = 'Consulta DNI en RENIEC para autocompletar nombres y apellidos.';
     else if (t === 'RUC') hint.textContent = 'Consulta RUC en SUNAT para autocompletar la razón social.';
     else hint.textContent = 'Selecciona DNI o RUC para usar consulta automática.';
+  }
+}
+
+function syncDriverLookupButtons(){
+  const t = (qs('#pmCoDocTipo')?.value || '').trim().toUpperCase();
+  const reniec = qs('#pmCoLookupReniec');
+  const hint   = qs('#pmCoLookupHint');
+  if (reniec) reniec.classList.toggle('d-none', t !== 'DNI');
+
+  if (hint){
+    if (t === 'DNI') hint.textContent = 'Consulta DNI en RENIEC para autocompletar el nombre del conductor.';
+    else hint.textContent = 'Selecciona DNI para usar la consulta automática del conductor.';
   }
 }
 
@@ -1716,6 +1746,36 @@ async function doLookupSunat(){
   }
 }
 
+async function doLookupReniecDriver(){
+  clearInlineAlert('payModal');
+  const docTipo = (qs('#pmCoDocTipo')?.value || '').trim().toUpperCase();
+  const dni = (qs('#pmCoDocNum')?.value || '').trim();
+  if (docTipo !== 'DNI'){
+    showInlineAlert('payModal','warning','Para usar RENIEC en el conductor selecciona tipo de documento DNI.');
+    return;
+  }
+  if (!/^\d{8}$/.test(dni)){
+    showInlineAlert('payModal','danger','El DNI del conductor debe tener 8 dígitos.');
+    return;
+  }
+
+  const btn = qs('#pmCoLookupReniec');
+  try{
+    if (btn) btn.disabled = true;
+    const j = await apiHubLookup('consultar_dni', dni);
+    const d = j.data || {};
+    const nombres = String(d.nombres || '').trim();
+    const apellidos = [d.apellido_paterno || '', d.apellido_materno || ''].join(' ').replace(/\s+/g,' ').trim();
+    if (nombres) qs('#pmCoNombres').value = nombres;
+    if (apellidos) qs('#pmCoApellidos').value = apellidos;
+    showInlineAlert('payModal','success','Datos del conductor obtenidos desde RENIEC.');
+  }catch(err){
+    showInlineAlert('payModal','danger', esc(err.message || 'No se pudo consultar RENIEC.'));
+  }finally{
+    if (btn) btn.disabled = false;
+  }
+}
+
 function resetPayModal(){
   PM.abonos = [];
   qs('#pmDocTipo').value = 'DNI';
@@ -1776,6 +1836,9 @@ document.addEventListener('change', (e)=>{
     refreshExtraEdad();
   }
   if (e.target && ['pmDocTipo','pmDocNum','pmCtDocTipo','pmCtDocNum','pmCoDocTipo','pmCoDocNum'].includes(e.target.id)) {
+    if (e.target.id === 'pmCoDocTipo' || e.target.id === 'pmCoDocNum') {
+      syncDriverLookupButtons();
+    }
     if (!qs('#pmConductorExtraBox').classList.contains('d-none')){
       PM_EXTRA.docKey = '';
       openConductorExtraBox();
@@ -1811,6 +1874,10 @@ document.addEventListener('click',(e)=>{
   }
   if (e.target.closest('#pmLookupSunat')){
     doLookupSunat();
+    return;
+  }
+  if (e.target.closest('#pmCoLookupReniec')){
+    doLookupReniecDriver();
     return;
   }
   if (e.target.closest('#pmClientMore') || e.target.closest('#pmDriverMore')){

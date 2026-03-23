@@ -1,5 +1,10 @@
 <?php
 // /modules/caja/prueba.php
+
+if (basename(__FILE__) === basename($_SERVER['SCRIPT_FILENAME'])) {
+  http_response_code(403);
+  exit('Acceso directo no permitido.');
+}
 ?>
 <!-- Paneles de prueba (solo fase de pruebas) -->
 <div class="row g-3 mt-1" id="posDebugRow">

@@ -61,6 +61,17 @@ return [
 
         // ---------- Administración (4) ----------
         ['path' => 'modules/caja/', 'icon' => 'fas fa-cash-register', 'label' => 'Caja', 'roles' => [$R['ADM']]],
+        [
+            'path' => 'modules/caja/',
+            'icon' => 'fas fa-cash-register',
+            'label' => 'Caja',
+            'roles' => [$R['CON']],
+            'when'  => function ($u) {
+                return function_exists('acl_user_has_control_special_module')
+                    ? acl_user_has_control_special_module('caja')
+                    : false;
+            },
+        ],
 
         // ---------- COTI (5) ----------
         ['path' => '/modules/hardware/', 'icon' => 'fas fa-tools', 'label' => 'Hardware', 'roles' => [$R['COT']]],
@@ -78,13 +89,50 @@ return [
         [
             'label'    => 'FINANZAS',
             'icon'     => 'fas fa-coins',
-            'roles'    => $RA,
+            'roles'    => [$R['REC'], $R['ADM'], $R['CON']],
+            'when'     => function ($u) {
+                $rolActivoId = (int)($u['rol_activo_id'] ?? ($_SESSION['user']['rol_activo_id'] ?? 0));
+                if ($rolActivoId === 2) {
+                    if (!function_exists('acl_user_has_control_special_module')) {
+                        return false;
+                    }
+                    return acl_user_has_control_special_module('reporte_ventas')
+                        || acl_user_has_control_special_module('reporte_abonos')
+                        || acl_user_has_control_special_module('reporte_clientes')
+                        || acl_user_has_control_special_module('egresos');
+                }
+                return true;
+            },
             'children' => [
-                ['path' => 'modules/reporte_ventas/', 'icon' => 'fas fa-receipt', 'label' => 'Ventas'],
-                ['path' => 'modules/reporte_abonos/', 'icon' => 'fas fa-hand-holding-usd', 'label' => 'Abonos'],
-                ['path' => 'modules/egresos/', 'icon' => 'fas fa-wallet', 'label' => 'Egresos'],
-                ['path' => 'modules/reporte_clientes/', 'icon' => 'fas fa-users', 'label' => 'Clientes'],
-                ['path' => 'modules/alerta/', 'icon' => 'fas fa-bell', 'label' => 'Alertas'],
+                [
+                    'path' => 'modules/reporte_ventas/',
+                    'icon' => 'fas fa-receipt',
+                    'label' => 'Ventas',
+                    'roles' => $RA,
+                    'control_special_slug' => 'reporte_ventas',
+                ],
+                [
+                    'path' => 'modules/reporte_abonos/',
+                    'icon' => 'fas fa-hand-holding-usd',
+                    'label' => 'Abonos',
+                    'roles' => $RA,
+                    'control_special_slug' => 'reporte_abonos',
+                ],
+                [
+                    'path' => 'modules/egresos/',
+                    'icon' => 'fas fa-wallet',
+                    'label' => 'Egresos',
+                    'roles' => $RA,
+                    'control_special_slug' => 'egresos',
+                ],
+                [
+                    'path' => 'modules/reporte_clientes/',
+                    'icon' => 'fas fa-users',
+                    'label' => 'Clientes',
+                    'roles' => $RA,
+                    'control_special_slug' => 'reporte_clientes',
+                ],
+                ['path' => 'modules/alerta/', 'icon' => 'fas fa-bell', 'label' => 'Alertas', 'roles' => $RA],
             ],
         ],
         [

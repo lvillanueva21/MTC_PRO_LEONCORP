@@ -1,11 +1,6 @@
 <?php
 // modules/egresos/multicaja_service.php
 
-if (basename(__FILE__) === basename($_SERVER['SCRIPT_FILENAME'])) {
-    http_response_code(403);
-    exit('Acceso directo no permitido.');
-}
-
 if (!function_exists('egm_parse_date')) {
     function egm_parse_date(?string $raw): ?string
     {

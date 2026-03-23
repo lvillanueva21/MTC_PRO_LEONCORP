@@ -14,8 +14,14 @@ require_once __DIR__ . '/../../includes/conexion.php';
 require_once __DIR__ . '/perfil_conductor.php';
 require_once __DIR__ . '/voucher_history_service.php';
 
-acl_require_ids([3,4]); // Recepción (3) o Administración (4)
-verificarPermiso(['Recepción','Administración']);
+$ALLOWED_ROLE_IDS = [3,4]; // Recepción (3) o Administración (4)
+$CONTROL_SPECIAL_SLUG = 'caja';
+
+$hasNormalRoleByAcl = acl_can_ids($ALLOWED_ROLE_IDS);
+acl_require_ids_or_control_special($ALLOWED_ROLE_IDS, $CONTROL_SPECIAL_SLUG);
+if ($hasNormalRoleByAcl) {
+  verificarPermiso(['Recepción','Administración']);
+}
 
 /* ===== Config MySQLi estricto + TZ Lima ===== */
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);

@@ -3,11 +3,6 @@
 // Utilidades para resumen de ingresos/devoluciones por medio de pago.
 // Se mantiene dentro del modulo egresos para facilitar evolucion funcional.
 
-if (basename(__FILE__) === basename($_SERVER['SCRIPT_FILENAME'])) {
-    http_response_code(403);
-    exit('Acceso directo no permitido.');
-}
-
 if (!function_exists('fin_normalize_token')) {
     function fin_normalize_token(string $value): string
     {

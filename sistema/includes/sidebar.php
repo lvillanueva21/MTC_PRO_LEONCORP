@@ -10,6 +10,7 @@
  */
 
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/acl.php';
 
 $u          = currentUser();
 $rolActivo  = $u['rol_activo'] ?? '';
@@ -172,7 +173,24 @@ function empresa_badge_class($tipoId)
               $MM = require __DIR__ . '/menu_matrix.php';
 
               // 3) Permisos y normalización
-              $isAllowed=function(array $it,?int $rolId,array $u):bool{ $roles=$it['roles']??'*'; $ok=($roles==='*')||(is_array($roles)&&$rolId&&in_array($rolId,$roles,true)); if(!$ok)return false; return isset($it['when'])&&is_callable($it['when']) ? (bool)($it['when'])($u) : true; };
+              $isAllowed=function(array $it,?int $rolId,array $u):bool{
+                $roles = $it['roles'] ?? '*';
+                $ok = ($roles === '*') || (is_array($roles) && $rolId && in_array($rolId, $roles, true));
+
+                // Infraestructura base para permiso especial Control.
+                // No tiene efecto mientras los items no declaren control_special_slug.
+                if (
+                  !$ok &&
+                  is_array($roles) &&
+                  isset($it['control_special_slug']) &&
+                  is_string($it['control_special_slug'])
+                ) {
+                  $ok = acl_can_ids_or_control_special($roles, $it['control_special_slug']);
+                }
+
+                if (!$ok) return false;
+                return isset($it['when']) && is_callable($it['when']) ? (bool)($it['when'])($u) : true;
+              };
               $normalize=function($p){ $x=parse_url($p,PHP_URL_PATH)??''; $x=preg_replace('#/index\.php$#','',$x); return rtrim($x,'/')?:'/'; };
               $current=$normalize($_SERVER['REQUEST_URI']??'/');
 

@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // dashboard/administracion/funcion_card_medios_pago.php
 // Widget: resumen por medios de pago en la caja diaria abierta.
 
